@@ -1,6 +1,6 @@
 // src/pages/auth/Signup.jsx
 import { useState } from 'react'
-import { Link, useSearchParams, useNavigate } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { User, Mail, Lock, Eye, EyeOff, Gift } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { Input } from '../../components/ui/Input'
@@ -10,7 +10,6 @@ import toast from 'react-hot-toast'
 export const Signup = () => {
   const { register, isLoading } = useAuth()
   const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
   const refCode = searchParams.get('ref') || ''
 
   const [form, setForm] = useState({
@@ -40,14 +39,7 @@ export const Signup = () => {
 
     const result = await register(form)
     if (result.success) {
-      // If BREVO configured — go to OTP page
-      // If not configured — go to login (auto-verified)
-      if (result.requiresVerification) {
-        navigate(`/verify-email?userId=${result.userId}&email=${encodeURIComponent(form.email)}`)
-      } else {
-        toast.success('Registration successful! Please login.')
-        navigate('/login')
-      }
+      setSuccess(true)
     } else {
       toast.error(result.message || 'Registration failed')
       if (result.message?.includes('Email')) {
