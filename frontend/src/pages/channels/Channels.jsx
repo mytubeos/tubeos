@@ -1,14 +1,12 @@
 // src/pages/channels/Channels.jsx
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Youtube, Plus, RefreshCw, Star, Trash2, ExternalLink, Zap } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
 import { useChannel } from '../../hooks/useChannel'
 import { useAuthStore } from '../../store/authStore'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Badge, StatusBadge } from '../../components/ui/Badge'
 import { ConfirmModal } from '../../components/ui/Modal'
-import toast from 'react-hot-toast'
 import { formatNumber, formatDate } from '../../utils/formatters'
 import { PLANS } from '../../utils/constants'
 
@@ -131,7 +129,7 @@ const ChannelCard = ({ channel, onSync, onDisconnect, onSetPrimary, syncing }) =
 export const Channels = () => {
   const { user } = useAuthStore()
   const {
-    channels, isLoading, fetchChannels,
+    channels, isLoading,
     connectChannel, disconnectChannel,
     syncChannel, setPrimary, isAtLimit,
   } = useChannel()
@@ -140,32 +138,6 @@ export const Channels = () => {
   const [disconnecting, setDisconnecting] = useState(false)
   const [syncingId, setSyncingId] = useState(null)
   const [connecting, setConnecting] = useState(false)
-  const [searchParams, setSearchParams] = useSearchParams()
-
-  useEffect(() => {
-    fetchChannels()
-  }, [fetchChannels])
-
-  // Handle YouTube OAuth callback result
-  useEffect(() => {
-    const ytError = searchParams.get('youtube_error')
-    const ytConnected = searchParams.get('youtube_connected')
-    const channelName = searchParams.get('channel')
-
-    if (ytConnected) {
-      toast.success(`✅ ${decodeURIComponent(channelName || 'Channel')} connected!`)
-      fetchChannels()
-      setSearchParams({}) // Clear URL params
-    } else if (ytError) {
-      const errorMsg = {
-        access_denied: 'You denied YouTube access',
-        missing_params: 'OAuth failed — try again',
-        invalid_state: 'Session expired — try again',
-      }[ytError] || decodeURIComponent(ytError)
-      toast.error(`YouTube Error: ${errorMsg}`)
-      setSearchParams({}) // Clear URL params
-    }
-  }, [searchParams, fetchChannels, setSearchParams])
 
   const planLimit = PLANS[user?.plan]?.channels || 1
   const atLimit = channels.length >= planLimit
