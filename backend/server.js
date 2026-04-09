@@ -6,7 +6,7 @@ if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();
 }
 
-const { validateEnv, config } = require("./src/config/env");
+const { validateEnv } = require("./src/config/env");
 const { connectDB } = require("./src/config/db");
 const redisConfig = require("./src/config/redis");
 const app = require("./src/app");
@@ -16,22 +16,21 @@ const startServer = async () => {
   try {
     console.log("\n🚀 Starting TubeOS Server...\n");
 
-    // ✅ Safe env validation (won't crash server)
+    // ✅ Safe env validation (never crash)
     try {
       validateEnv();
     } catch (err) {
       console.warn("⚠️ Env validation skipped:", err.message);
     }
 
-    // ✅ MongoDB (safe)
-    try {
-      await connectDB();
-      console.log("✅ MongoDB connected");
-    } catch (err) {
-      console.error("❌ MongoDB failed:", err.message);
-    }
+    // ✅ MongoDB (non-blocking)
+    connectDB()
+      .then(() => console.log("✅ MongoDB connected"))
+      .catch((err) =>
+        console.error("❌ MongoDB failed:", err.message)
+      );
 
-    // ✅ Redis (safe)
+    // ✅ Redis (non-blocking)
     try {
       const connectRedisFn =
         redisConfig.connectRedis || redisConfig.default || redisConfig;
@@ -39,14 +38,12 @@ const startServer = async () => {
       if (typeof connectRedisFn === "function") {
         connectRedisFn();
         console.log("✅ Redis connected");
-      } else {
-        console.warn("⚠️ Redis connectRedis not found, skipping...");
       }
     } catch (err) {
       console.error("❌ Redis failed:", err.message);
     }
 
-    // ✅ Workers (safe)
+    // ✅ Workers (non-blocking)
     try {
       const { startWorkers } = require("./src/jobs/index");
       startWorkers();
@@ -55,8 +52,8 @@ const startServer = async () => {
       console.error("❌ Workers failed:", err.message);
     }
 
-    // ✅ IMPORTANT: Cloud Run port fix
-    const PORT = process.env.PORT || config.port || 8080;
+    // ✅ CRITICAL: Cloud Run PORT (no config.port now)
+    const PORT = process.env.PORT || 8080;
 
     const server = app.listen(PORT, () => {
       console.log(`\n✅ TubeOS Server running!`);
@@ -102,7 +99,7 @@ const startServer = async () => {
       process.exit(1);
     });
 
-    process.on("unhandledRejection", (reason, promise) => {
+    process.on("unhandledRejection", (reason) => {
       console.error("🚨 Unhandled Rejection:", reason);
       process.exit(1);
     });
