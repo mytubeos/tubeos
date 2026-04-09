@@ -33,7 +33,7 @@ const startServer = async () => {
     startWorkers();
 
     // 5. Start Express server
-    const PORT = config.port;
+    const PORT = process.env.PORT || config.port || 8080;
     const server = app.listen(PORT, () => {
       console.log(`\n✅ TubeOS Server running!`);
       console.log(`🌐 URL:         http://localhost:${PORT}`);
