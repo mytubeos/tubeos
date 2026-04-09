@@ -2,16 +2,19 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# 🔥 Step 1: copy package files
 COPY package*.json ./
 
-# 🔥 FIX: full install karo
-RUN npm install --legacy-peer-deps
+# 🔥 Step 2: install ALL deps properly
+RUN npm install
 
+# 🔥 Step 3: copy rest code
 COPY . .
 
-EXPOSE 8080
-
+# 🔥 Cloud Run port
 ENV PORT=8080
 ENV NODE_ENV=production
+
+EXPOSE 8080
 
 CMD ["node", "server.js"]
