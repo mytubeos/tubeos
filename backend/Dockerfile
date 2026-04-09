@@ -1,17 +1,15 @@
-FROM node:18-alpine
+
+FROM node:18-bullseye
 
 WORKDIR /app
 
-# 🔥 Step 1: copy package files
 COPY package*.json ./
 
-# 🔥 Step 2: install ALL deps properly
-RUN npm install
+# 🔥 stable install fix
+RUN npm install --no-audit --no-fund
 
-# 🔥 Step 3: copy rest code
 COPY . .
 
-# 🔥 Cloud Run port
 ENV PORT=8080
 ENV NODE_ENV=production
 
