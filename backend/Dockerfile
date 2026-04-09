@@ -1,11 +1,9 @@
-
-FROM node:18-bullseye
+FROM node:18-alpine
 
 WORKDIR /app
 
 COPY package*.json ./
 
-# 🔥 stable install fix
 RUN npm install --no-audit --no-fund
 
 COPY . .
