@@ -7,6 +7,10 @@ const requiredEnvVars = [
   'JWT_ACCESS_SECRET',
   'JWT_REFRESH_SECRET',
   'REDIS_URL',
+  'CLIENT_URL',
+  'YOUTUBE_CLIENT_ID',
+  'YOUTUBE_CLIENT_SECRET',
+  'YOUTUBE_REDIRECT_URI',
 ];
 
 const validateEnv = () => {
@@ -65,4 +69,3 @@ const config = {
 };
 
 module.exports = { config, validateEnv };
-
