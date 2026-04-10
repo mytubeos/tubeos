@@ -1,16 +1,13 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json package-lock.json ./
 
-RUN npm install --no-audit --no-fund
+RUN npm ci --omit=dev || (echo "npm install FAILED" && exit 1)
 
 COPY . .
 
-ENV PORT=8080
-ENV NODE_ENV=production
+EXPOSE 5000
 
-EXPOSE 8080
-
-CMD ["node", "server.js"]
+CMD ["node", "src/server.js"]
