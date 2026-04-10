@@ -4,31 +4,35 @@
 const mongoose = require('mongoose');
 const { config } = require('./env');
 
-const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(config.mongodb.uri, {
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
+const connectDB = async (retries = 5) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const conn = await mongoose.connect(config.mongodb.uri, {
+        serverSelectionTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
+      });
 
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+      console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
 
-    // Connection event handlers
-    mongoose.connection.on('error', (err) => {
-      console.error('❌ MongoDB connection error:', err);
-    });
+      mongoose.connection.on('error', (err) => {
+        console.error('❌ MongoDB connection error:', err);
+      });
 
-    mongoose.connection.on('disconnected', () => {
-      console.warn('⚠️  MongoDB disconnected. Attempting reconnect...');
-    });
+      mongoose.connection.on('disconnected', () => {
+        console.warn('⚠️  MongoDB disconnected. Attempting reconnect...');
+      });
 
-    mongoose.connection.on('reconnected', () => {
-      console.log('✅ MongoDB reconnected');
-    });
+      mongoose.connection.on('reconnected', () => {
+        console.log('✅ MongoDB reconnected');
+      });
 
-  } catch (error) {
-    console.error('❌ MongoDB connection failed:', error.message);
-    throw error;
+      return; // success — loop se bahar
+
+    } catch (error) {
+      console.error(`❌ MongoDB attempt ${i + 1}/${retries} failed:`, error.message);
+      if (i === retries - 1) throw error; // last retry pe throw karo
+      await new Promise((res) => setTimeout(res, 3000)); // 3s wait
+    }
   }
 };
 
@@ -38,5 +42,3 @@ const disconnectDB = async () => {
 };
 
 module.exports = { connectDB, disconnectDB };
-
-
