@@ -8,6 +8,7 @@ const { config } = require('./env');
 const redisConnection = {
   host: new URL(config.redis.url).hostname,
   port: parseInt(new URL(config.redis.url).port) || 6379,
+  username: new URL(config.redis.url).username || 'default',
   password: new URL(config.redis.url).password || undefined,
   tls: config.redis.url.startsWith('rediss://') ? {} : undefined,
   maxRetriesPerRequest: null, // Required for BullMQ
