@@ -1,0 +1,10 @@
+steps:
+  - name: 'gcr.io/k8s-skaffold/pack'
+    args:
+      - build
+      - 'europe-west1-docker.pkg.dev/$PROJECT_ID/tubeos/tubeos'
+      - '--builder=gcr.io/buildpacks/builder:v1'
+      - '--path=backend'
+
+images:
+  - 'europe-west1-docker.pkg.dev/$PROJECT_ID/tubeos/tubeos'
