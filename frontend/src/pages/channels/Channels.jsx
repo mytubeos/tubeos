@@ -1,266 +1,241 @@
 // src/pages/channels/Channels.jsx
-import { useState } from 'react'
-import { Youtube, Plus, RefreshCw, Star, Trash2, ExternalLink, Zap } from 'lucide-react'
+// YouTube channel management page
+//
+// FIXES:
+// 1. useEffect mein handleOAuthReturn call karo — URL params se success/error handle
+// 2. Connect button — connectYouTube hook function use karo
+// 3. Loading states sahi jagah
+
+import { useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { Youtube, RefreshCw, Star, Trash2, Plus, Wifi, WifiOff } from 'lucide-react'
 import { useChannel } from '../../hooks/useChannel'
-import { useAuthStore } from '../../store/authStore'
-import { Card, CardHeader } from '../../components/ui/Card'
+import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../../components/ui/Button'
-import { Badge, StatusBadge } from '../../components/ui/Badge'
-import { ConfirmModal } from '../../components/ui/Modal'
-import { formatNumber, formatDate } from '../../utils/formatters'
-import { PLANS } from '../../utils/constants'
-
-const ChannelCard = ({ channel, onSync, onDisconnect, onSetPrimary, syncing }) => (
-  <div className="glass rounded-2xl p-5 hover:border-white/12 transition-all">
-    <div className="flex items-start gap-4">
-      {/* Avatar */}
-      <div className="relative shrink-0">
-        <img
-          src={channel.thumbnail || `https://ui-avatars.com/api/?name=${channel.channelName}&background=4F46E5&color=fff&size=48`}
-          alt={channel.channelName}
-          className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white/10"
-        />
-        {channel.isPrimary && (
-          <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-amber rounded-full
-                          flex items-center justify-center shadow-lg">
-            <Star size={11} className="text-white fill-white" />
-          </div>
-        )}
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2 mb-1">
-          <div>
-            <h3 className="font-display font-semibold text-white text-base leading-tight">
-              {channel.channelName}
-            </h3>
-            {channel.channelHandle && (
-              <p className="text-xs text-gray-500">{channel.channelHandle}</p>
-            )}
-          </div>
-          <StatusBadge status={channel.connectionStatus || 'connected'} />
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mt-3 mb-4">
-          {[
-            { label: 'Subscribers', value: formatNumber(channel.stats?.subscriberCount) },
-            { label: 'Videos', value: formatNumber(channel.stats?.videoCount) },
-            { label: 'Total Views', value: formatNumber(channel.stats?.viewCount) },
-          ].map(({ label, value }) => (
-            <div key={label} className="glass p-2.5 rounded-xl text-center">
-              <p className="font-display font-bold text-white text-sm">{value}</p>
-              <p className="text-2xs text-gray-500 mt-0.5">{label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Quota */}
-        {channel.quota && (
-          <div className="mb-4">
-            <div className="flex items-center justify-between text-2xs text-gray-500 mb-1">
-              <span>API Quota</span>
-              <span>{channel.quota.dailyUsed || 0}/{channel.quota.dailyLimit || 10000}/day</span>
-            </div>
-            <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${
-                  ((channel.quota.dailyUsed / channel.quota.dailyLimit) * 100) > 80
-                    ? 'bg-rose'
-                    : 'bg-brand'
-                }`}
-                style={{ width: `${Math.min(100, ((channel.quota.dailyUsed || 0) / (channel.quota.dailyLimit || 10000)) * 100)}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {!channel.isPrimary && (
-            <Button
-              size="xs"
-              variant="ghost"
-              icon={Star}
-              onClick={() => onSetPrimary(channel._id)}
-            >
-              Set Primary
-            </Button>
-          )}
-          <Button
-            size="xs"
-            variant="ghost"
-            icon={RefreshCw}
-            onClick={() => onSync(channel._id)}
-            loading={syncing}
-          >
-            Sync
-          </Button>
-          <a
-            href={`https://youtube.com/channel/${channel.channelId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button size="xs" variant="ghost" icon={ExternalLink}>
-              View
-            </Button>
-          </a>
-          <Button
-            size="xs"
-            variant="danger"
-            icon={Trash2}
-            onClick={() => onDisconnect(channel._id)}
-          >
-            Disconnect
-          </Button>
-        </div>
-
-        {channel.stats?.lastSyncedAt && (
-          <p className="text-2xs text-gray-600 mt-2">
-            Last synced: {formatDate(channel.stats.lastSyncedAt, 'datetime')}
-          </p>
-        )}
-      </div>
-    </div>
-  </div>
-)
+import { Card } from '../../components/ui/Card'
+import { Badge } from '../../components/ui/Badge'
+import { Spinner } from '../../components/ui/Spinner'
 
 export const Channels = () => {
-  const { user } = useAuthStore()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { user } = useAuth()
   const {
-    channels, isLoading,
-    connectChannel, disconnectChannel,
-    syncChannel, setPrimary, isAtLimit,
+    channels,
+    isLoading,
+    connectYouTube,
+    handleOAuthReturn,
+    syncChannel,
+    disconnectChannel,
+    setPrimary,
   } = useChannel()
 
-  const [disconnectId, setDisconnectId] = useState(null)
-  const [disconnecting, setDisconnecting] = useState(false)
-  const [syncingId, setSyncingId] = useState(null)
-  const [connecting, setConnecting] = useState(false)
+  // FIX 1: Page load pe URL params check karo
+  // Google OAuth callback ke baad yahan redirect hota hai
+  // ?youtube_connected=true ya ?youtube_error=... handle karo
+  useEffect(() => {
+    if (searchParams.get('youtube_connected') || searchParams.get('youtube_error')) {
+      handleOAuthReturn(searchParams)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const planLimit = PLANS[user?.plan]?.channels || 1
-  const atLimit = channels.length >= planLimit
+  // Plan limits
+  const planLimits  = { free: 1, creator: 1, pro: 3, agency: 25 }
+  const channelLimit = planLimits[user?.plan] || 1
+  const canAdd       = channels.length < channelLimit
 
-  const handleConnect = async () => {
-    setConnecting(true)
-    await connectChannel()
-    setConnecting(false)
+  const statusColor = {
+    connected:         'success',
+    token_expired:     'warning',
+    reconnect_required: 'danger',
+    disconnected:      'default',
   }
 
-  const handleSync = async (id) => {
-    setSyncingId(id)
-    await syncChannel(id)
-    setSyncingId(null)
-  }
-
-  const handleDisconnect = async () => {
-    if (!disconnectId) return
-    setDisconnecting(true)
-    await disconnectChannel(disconnectId)
-    setDisconnecting(false)
-    setDisconnectId(null)
+  const statusLabel = {
+    connected:          'Connected',
+    token_expired:      'Token Expired',
+    reconnect_required: 'Reconnect Required',
+    disconnected:       'Disconnected',
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-5">
+    <div className="p-6 max-w-4xl mx-auto">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <p className="text-gray-500 text-sm">
-            {channels.length}/{planLimit} channels connected
-            {atLimit && (
-              <span className="text-amber ml-2">· Limit reached</span>
+          <h1 className="text-2xl font-bold text-white font-display">YouTube Channels</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            {channels.length} / {channelLimit} channels connected
+            {user?.plan && (
+              <span className="ml-2 text-brand capitalize">({user.plan} plan)</span>
             )}
           </p>
         </div>
+
+        {/* FIX 2: connectYouTube directly call karo */}
         <Button
-          icon={Plus}
-          onClick={handleConnect}
-          loading={connecting}
-          disabled={atLimit}
+          onClick={connectYouTube}
+          disabled={!canAdd || isLoading}
+          loading={isLoading}
         >
+          <Plus size={16} className="mr-2" />
           Connect Channel
         </Button>
       </div>
 
-      {/* Plan limit bar */}
-      <div className="glass p-4 rounded-xl">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Youtube size={16} className="text-rose" />
-            <span className="text-sm font-medium text-white">Channel Slots</span>
-          </div>
-          <Badge variant={atLimit ? 'rose' : 'emerald'} size="sm">
-            {channels.length}/{planLimit} used
-          </Badge>
-        </div>
-        <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-700 ${atLimit ? 'bg-rose' : 'bg-brand-gradient'}`}
-            style={{ width: `${(channels.length / planLimit) * 100}%` }}
-          />
-        </div>
-        {atLimit && (
-          <p className="text-xs text-amber mt-2">
-            Upgrade to PRO for 3 channels or AGENCY for 25 channels
+      {/* Plan limit reached */}
+      {!canAdd && (
+        <div className="mb-4 p-4 rounded-xl border border-amber/20 bg-amber/5">
+          <p className="text-amber text-sm">
+            <span className="font-medium">Channel limit reached.</span>{' '}
+            Your {user?.plan} plan allows {channelLimit} channel(s).{' '}
+            <a href="/pricing" className="underline hover:text-amber-300">Upgrade to add more.</a>
           </p>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Channels */}
-      {isLoading ? (
-        <div className="space-y-4">
-          {Array(2).fill(0).map((_, i) => <div key={i} className="shimmer h-52 rounded-2xl" />)}
+      {/* Loading */}
+      {isLoading && channels.length === 0 && (
+        <div className="flex justify-center py-12">
+          <Spinner size="lg" />
         </div>
-      ) : channels.length === 0 ? (
-        <div className="text-center py-20">
-          <div className="w-20 h-20 bg-rose/10 rounded-3xl flex items-center justify-center mx-auto mb-6">
-            <Youtube size={36} className="text-rose" />
-          </div>
-          <h2 className="font-display font-bold text-white text-2xl mb-3">
-            Connect your first channel
-          </h2>
-          <p className="text-gray-500 text-sm max-w-sm mx-auto mb-8">
-            Link your YouTube channel via OAuth to start using TubeOS
+      )}
+
+      {/* No channels */}
+      {!isLoading && channels.length === 0 && (
+        <Card className="text-center py-14">
+          <Youtube size={48} className="mx-auto mb-4 text-gray-600" />
+          <h3 className="text-white font-semibold mb-2">No channels connected</h3>
+          <p className="text-gray-500 text-sm mb-6">
+            Connect your YouTube channel to start managing your content.
           </p>
-          <Button icon={Plus} size="lg" onClick={handleConnect} loading={connecting}>
+          <Button onClick={connectYouTube} loading={isLoading}>
+            <Plus size={16} className="mr-2" />
             Connect YouTube Channel
           </Button>
-          <div className="mt-6 flex items-center justify-center gap-2">
-            <Zap size={14} className="text-brand" />
-            <p className="text-xs text-gray-500">
-              Secure OAuth2 — we never store your password
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {channels.map(channel => (
-            <ChannelCard
-              key={channel._id}
-              channel={channel}
-              onSync={handleSync}
-              onDisconnect={setDisconnectId}
-              onSetPrimary={setPrimary}
-              syncing={syncingId === channel._id}
-            />
+        </Card>
+      )}
+
+      {/* Channels list */}
+      {channels.length > 0 && (
+        <div className="space-y-3">
+          {channels.map((channel) => (
+            <Card key={channel._id} className="flex items-center gap-4">
+
+              {/* Thumbnail */}
+              <div className="relative flex-shrink-0">
+                {channel.thumbnail ? (
+                  <img
+                    src={channel.thumbnail}
+                    alt={channel.channelName}
+                    className="w-12 h-12 rounded-full object-cover border-2 border-gray-700"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center">
+                    <Youtube size={20} className="text-gray-500" />
+                  </div>
+                )}
+
+                {/* Connection status dot */}
+                <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-surface
+                  ${channel.connectionStatus === 'connected' ? 'bg-green-500' : 'bg-yellow-500'}`}
+                />
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-white font-semibold truncate">
+                    {channel.channelName}
+                  </h3>
+                  {channel.isPrimary && (
+                    <Badge variant="brand" size="sm">Primary</Badge>
+                  )}
+                  <Badge variant={statusColor[channel.connectionStatus] || 'default'} size="sm">
+                    {statusLabel[channel.connectionStatus] || channel.connectionStatus}
+                  </Badge>
+                </div>
+
+                {channel.channelHandle && (
+                  <p className="text-gray-500 text-xs mt-0.5">@{channel.channelHandle.replace('@', '')}</p>
+                )}
+
+                {/* Stats */}
+                <div className="flex gap-4 mt-1.5 text-xs text-gray-500">
+                  <span>{Number(channel.stats?.subscriberCount || 0).toLocaleString()} subscribers</span>
+                  <span>{Number(channel.stats?.videoCount || 0).toLocaleString()} videos</span>
+                  <span>{Number(channel.stats?.viewCount || 0).toLocaleString()} views</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+
+                {/* Reconnect required warning */}
+                {(channel.connectionStatus === 'reconnect_required' ||
+                  channel.connectionStatus === 'token_expired') && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={connectYouTube}
+                    className="text-amber border-amber/40 hover:bg-amber/10"
+                  >
+                    <WifiOff size={14} className="mr-1.5" />
+                    Reconnect
+                  </Button>
+                )}
+
+                {/* Sync */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => syncChannel(channel._id)}
+                  title="Sync stats"
+                >
+                  <RefreshCw size={14} />
+                </Button>
+
+                {/* Set Primary */}
+                {!channel.isPrimary && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setPrimary(channel._id)}
+                    title="Set as primary"
+                  >
+                    <Star size={14} />
+                  </Button>
+                )}
+
+                {/* Disconnect */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (window.confirm(`Disconnect "${channel.channelName}"?`)) {
+                      disconnectChannel(channel._id)
+                    }
+                  }}
+                  className="text-gray-500 hover:text-rose-400"
+                  title="Disconnect"
+                >
+                  <Trash2 size={14} />
+                </Button>
+              </div>
+            </Card>
           ))}
         </div>
       )}
 
-      {/* Disconnect confirm */}
-      <ConfirmModal
-        isOpen={!!disconnectId}
-        onClose={() => setDisconnectId(null)}
-        onConfirm={handleDisconnect}
-        title="Disconnect Channel"
-        message="This will remove the channel from TubeOS. Your YouTube channel and videos won't be affected."
-        confirmLabel="Disconnect"
-        confirmVariant="danger"
-        loading={disconnecting}
-      />
+      {/* Info box */}
+      <div className="mt-6 p-4 rounded-xl border border-gray-800 bg-gray-900/50">
+        <p className="text-gray-500 text-xs leading-relaxed">
+          <span className="text-gray-300 font-medium">How it works: </span>
+          Clicking "Connect Channel" opens a Google OAuth popup. After you grant access,
+          the popup closes and your channel appears here automatically.
+          Your credentials are stored securely and never shared.
+        </p>
+      </div>
     </div>
   )
 }
