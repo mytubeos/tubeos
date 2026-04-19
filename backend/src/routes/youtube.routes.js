@@ -1,5 +1,9 @@
 // src/routes/youtube.routes.js
-// All YouTube OAuth + channel management routes
+// YouTube OAuth + channel management routes
+//
+// IMPORTANT: /callback route pe 'protect' middleware NAHI lagana
+// Callback Google se aata hai — uske paas JWT token nahi hota
+// State verification Redis se hoti hai (youtube.service.js mein)
 
 const express = require('express');
 const router = express.Router();
@@ -8,49 +12,49 @@ const { protect } = require('../middlewares/auth.middleware');
 
 /**
  * @route   GET /api/v1/youtube/auth
- * @desc    Get YouTube OAuth URL to connect channel
- * @access  Private
+ * @desc    YouTube OAuth URL generate karo
+ * @access  Private — logged-in user
  */
 router.get('/auth', protect, youtubeController.getAuthUrl);
 
 /**
  * @route   GET /api/v1/youtube/callback
- * @desc    Handle YouTube OAuth callback
- * @access  Public (called by Google, then redirects to frontend)
+ * @desc    Google OAuth callback — protect middleware NAHI lagana
+ * @access  Public — Google redirect karta hai yahan
  */
 router.get('/callback', youtubeController.handleCallback);
 
 /**
  * @route   GET /api/v1/youtube/channels
- * @desc    Get all connected YouTube channels
+ * @desc    Logged-in user ke connected channels
  * @access  Private
  */
 router.get('/channels', protect, youtubeController.getMyChannels);
 
 /**
  * @route   POST /api/v1/youtube/channels/:channelId/sync
- * @desc    Sync channel stats from YouTube
+ * @desc    Channel stats YouTube se sync karo
  * @access  Private
  */
 router.post('/channels/:channelId/sync', protect, youtubeController.syncChannel);
 
 /**
- * @route   PATCH /api/v1/youtube/channels/:channelId/primary
- * @desc    Set a channel as primary/default
- * @access  Private
- */
-router.patch('/channels/:channelId/primary', protect, youtubeController.setPrimary);
-
-/**
  * @route   DELETE /api/v1/youtube/channels/:channelId
- * @desc    Disconnect a YouTube channel
+ * @desc    Channel disconnect karo
  * @access  Private
  */
 router.delete('/channels/:channelId', protect, youtubeController.disconnectChannel);
 
 /**
+ * @route   PATCH /api/v1/youtube/channels/:channelId/primary
+ * @desc    Primary channel set karo
+ * @access  Private
+ */
+router.patch('/channels/:channelId/primary', protect, youtubeController.setPrimary);
+
+/**
  * @route   GET /api/v1/youtube/channels/:channelId/quota
- * @desc    Get API quota usage for a channel
+ * @desc    Channel quota status
  * @access  Private
  */
 router.get('/channels/:channelId/quota', protect, youtubeController.getQuota);
