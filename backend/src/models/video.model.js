@@ -25,7 +25,7 @@ const videoSchema = new mongoose.Schema(
     youtubeVideoId: {
       type: String,
       default: null,
-      index: true,
+      // index removed — duplicate tha, schema.index() se defined hai neeche
       sparse: true,
     },
 
