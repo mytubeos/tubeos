@@ -1,71 +1,73 @@
 // src/config/queue.config.js
-// BullMQ queue setup — all queue names and connections
+// FIX: Redis URL parse for rediss:// (SSL) — safe port extraction
 
 const { Queue, Worker, QueueEvents } = require('bullmq');
 const { config } = require('./env');
 
-// Redis connection for BullMQ
-const redisConnection = {
-  host: new URL(config.redis.url).hostname,
-  port: parseInt(new URL(config.redis.url).port) || 6379,
-  username: new URL(config.redis.url).username || 'default',
-  password: new URL(config.redis.url).password || undefined,
-  tls: config.redis.url.startsWith('rediss://') ? {} : undefined,
-  maxRetriesPerRequest: null, // Required for BullMQ
+// FIX: Safe Redis URL parsing for both redis:// and rediss:// (SSL)
+const buildRedisConnection = (redisUrl) => {
+  try {
+    const parsed = new URL(redisUrl);
+    return {
+      host:     parsed.hostname,
+      port:     parseInt(parsed.port) || (redisUrl.startsWith('rediss://') ? 6380 : 6379),
+      username: parsed.username || 'default',
+      password: parsed.password || undefined,
+      tls:      redisUrl.startsWith('rediss://') ? {} : undefined,
+      maxRetriesPerRequest: null, // Required for BullMQ
+    };
+  } catch (err) {
+    console.error('Invalid REDIS_URL for BullMQ:', err.message);
+    throw new Error('Cannot parse REDIS_URL for BullMQ connection');
+  }
 };
+
+const redisConnection = buildRedisConnection(config.redis.url);
 
 // Queue Names
 const QUEUE_NAMES = {
-  VIDEO_PUBLISH:   'video-publish',
-  VIDEO_PROCESS:   'video-process',
-  ANALYTICS_SYNC:  'analytics-sync',
-  AI_COMMENT:      'ai-comment',
-  EMAIL:           'email',
-  REPORT:          'weekly-report',
+  VIDEO_PUBLISH:  'video-publish',
+  VIDEO_PROCESS:  'video-process',
+  ANALYTICS_SYNC: 'analytics-sync',
+  AI_COMMENT:     'ai-comment',
+  EMAIL:          'email',
+  REPORT:         'weekly-report',
 };
 
 // Default job options
 const DEFAULT_JOB_OPTIONS = {
   attempts: 3,
   backoff: {
-    type: 'exponential',
-    delay: 5000, // 5s, 10s, 20s
+    type:  'exponential',
+    delay: 5000,
   },
-  removeOnComplete: { count: 100 },  // Keep last 100 completed
-  removeOnFail: { count: 200 },      // Keep last 200 failed
+  removeOnComplete: { count: 100 },
+  removeOnFail:     { count: 200 },
 };
 
-// Create queues
+// Queues
 const videoPublishQueue = new Queue(QUEUE_NAMES.VIDEO_PUBLISH, {
-  connection: redisConnection,
-  defaultJobOptions: DEFAULT_JOB_OPTIONS,
+  connection:         redisConnection,
+  defaultJobOptions:  DEFAULT_JOB_OPTIONS,
 });
 
 const analyticsQueue = new Queue(QUEUE_NAMES.ANALYTICS_SYNC, {
-  connection: redisConnection,
-  defaultJobOptions: {
-    ...DEFAULT_JOB_OPTIONS,
-    attempts: 5,
-  },
+  connection:        redisConnection,
+  defaultJobOptions: { ...DEFAULT_JOB_OPTIONS, attempts: 5 },
 });
 
 const emailQueue = new Queue(QUEUE_NAMES.EMAIL, {
-  connection: redisConnection,
-  defaultJobOptions: {
-    ...DEFAULT_JOB_OPTIONS,
-    attempts: 3,
-  },
+  connection:        redisConnection,
+  defaultJobOptions: { ...DEFAULT_JOB_OPTIONS, attempts: 3 },
 });
 
 const reportQueue = new Queue(QUEUE_NAMES.REPORT, {
-  connection: redisConnection,
+  connection:        redisConnection,
   defaultJobOptions: DEFAULT_JOB_OPTIONS,
 });
 
-// Queue Events (for monitoring)
-const videoPublishEvents = new QueueEvents(QUEUE_NAMES.VIDEO_PUBLISH, {
-  connection: redisConnection,
-});
+// Queue Events
+const videoPublishEvents = new QueueEvents(QUEUE_NAMES.VIDEO_PUBLISH, { connection: redisConnection });
 
 videoPublishEvents.on('completed', ({ jobId }) => {
   console.log(`✅ Video publish job ${jobId} completed`);
@@ -75,7 +77,8 @@ videoPublishEvents.on('failed', ({ jobId, failedReason }) => {
   console.error(`❌ Video publish job ${jobId} failed: ${failedReason}`);
 });
 
-// Helper: Add video publish job at scheduled time
+// ==================== HELPERS ====================
+
 const scheduleVideoPublish = async (videoId, channelId, userId, scheduledAt) => {
   const delay = new Date(scheduledAt).getTime() - Date.now();
 
@@ -97,10 +100,9 @@ const scheduleVideoPublish = async (videoId, channelId, userId, scheduledAt) => 
   return job;
 };
 
-// Helper: Cancel a scheduled job
 const cancelScheduledJob = async (videoId) => {
   const jobId = `publish-${videoId}`;
-  const job = await videoPublishQueue.getJob(jobId);
+  const job   = await videoPublishQueue.getJob(jobId);
 
   if (job) {
     await job.remove();
@@ -110,27 +112,24 @@ const cancelScheduledJob = async (videoId) => {
   return false;
 };
 
-// Helper: Get job status
 const getJobStatus = async (videoId) => {
   const jobId = `publish-${videoId}`;
-  const job = await videoPublishQueue.getJob(jobId);
-
+  const job   = await videoPublishQueue.getJob(jobId);
   if (!job) return null;
 
   const state = await job.getState();
   return {
     jobId,
     state,
-    delay: job.opts.delay,
-    attempts: job.attemptsMade,
-    data: job.data,
-    processedOn: job.processedOn,
-    finishedOn: job.finishedOn,
+    delay:        job.opts.delay,
+    attempts:     job.attemptsMade,
+    data:         job.data,
+    processedOn:  job.processedOn,
+    finishedOn:   job.finishedOn,
     failedReason: job.failedReason,
   };
 };
 
-// Get queue stats
 const getQueueStats = async () => {
   const [waiting, active, completed, failed, delayed] = await Promise.all([
     videoPublishQueue.getWaitingCount(),
