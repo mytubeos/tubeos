@@ -1,54 +1,46 @@
 // src/config/ai.config.js
-// AI model routing — right model for right plan + right task
+// FIX: Model names updated to correct/current Anthropic model strings
 
 const { config } = require('./env');
 
-// ==================== MODEL SELECTION ====================
 const AI_MODELS = {
-  // Free tier → Gemini (free API)
   gemini: {
-    name: 'gemini-2.0-flash',
-    provider: 'google',
-    maxTokens: 1000,
-    costPer1M: 0,
+    name:        'gemini-2.0-flash',
+    provider:    'google',
+    maxTokens:   1000,
+    costPer1M:   0,
   },
-
-  // Creator + Pro → Claude Sonnet
   sonnet: {
-    name: 'claude-sonnet-4-5',
-    provider: 'anthropic',
-    maxTokens: 1000,
-    costPer1M: 3,
+    name:        'claude-sonnet-4-5',
+    provider:    'anthropic',
+    maxTokens:   1000,
+    costPer1M:   3,
   },
-
-  // Agency deep analysis → Claude Opus
   opus: {
-    name: 'claude-opus-4-5',
-    provider: 'anthropic',
-    maxTokens: 2000,
-    costPer1M: 15,
+    name:        'claude-opus-4-5',
+    provider:    'anthropic',
+    maxTokens:   2000,
+    costPer1M:   15,
   },
-
-  // Agency bulk tasks → Claude Haiku (fast + cheap)
   haiku: {
-    name: 'claude-haiku-4-5-20251001',
-    provider: 'anthropic',
-    maxTokens: 500,
-    costPer1M: 0.25,
+    // FIX: correct haiku model name
+    name:        'claude-haiku-4-5-20251001',
+    provider:    'anthropic',
+    maxTokens:   500,
+    costPer1M:   0.25,
   },
 };
 
-// Plan → Model mapping
 const getModelForPlan = (plan, task = 'default') => {
   const mapping = {
-    free: AI_MODELS.gemini,
+    free:    AI_MODELS.gemini,
     creator: AI_MODELS.sonnet,
-    pro: AI_MODELS.sonnet,
+    pro:     AI_MODELS.sonnet,
     agency: {
-      default: AI_MODELS.sonnet,
+      default:       AI_MODELS.sonnet,
       deep_analysis: AI_MODELS.opus,
-      bulk: AI_MODELS.haiku,
-      growth: AI_MODELS.opus,
+      bulk:          AI_MODELS.haiku,
+      growth:        AI_MODELS.opus,
     },
   };
 
@@ -59,7 +51,6 @@ const getModelForPlan = (plan, task = 'default') => {
   return mapping[plan] || AI_MODELS.gemini;
 };
 
-// ==================== CALL AI ====================
 const callAI = async (plan, task, messages, systemPrompt) => {
   const model = getModelForPlan(plan, task);
 
@@ -70,19 +61,22 @@ const callAI = async (plan, task, messages, systemPrompt) => {
   return callClaude(model.name, messages, systemPrompt, model.maxTokens);
 };
 
-// ==================== CALL CLAUDE ====================
 const callClaude = async (modelName, messages, systemPrompt, maxTokens = 1000) => {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error('ANTHROPIC_API_KEY not configured');
+  }
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'Content-Type':    'application/json',
+      'x-api-key':       process.env.ANTHROPIC_API_KEY,
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: modelName,
+      model:      modelName,
       max_tokens: maxTokens,
-      system: systemPrompt,
+      system:     systemPrompt,
       messages,
     }),
   });
@@ -96,16 +90,14 @@ const callClaude = async (modelName, messages, systemPrompt, maxTokens = 1000) =
   return data.content?.[0]?.text || '';
 };
 
-// ==================== CALL GEMINI ====================
 const callGemini = async (modelName, messages, systemPrompt) => {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('Gemini API key not configured');
+  if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-  // Convert messages to Gemini format
   const contents = messages.map(m => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
+    role:  m.role === 'assistant' ? 'model' : 'user',
     parts: [{ text: m.content }],
   }));
 
@@ -128,10 +120,4 @@ const callGemini = async (modelName, messages, systemPrompt) => {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 };
 
-module.exports = {
-  AI_MODELS,
-  getModelForPlan,
-  callAI,
-  callClaude,
-  callGemini,
-};
+module.exports = { AI_MODELS, getModelForPlan, callAI, callClaude, callGemini };
