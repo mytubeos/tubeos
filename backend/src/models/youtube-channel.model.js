@@ -18,8 +18,7 @@ const youtubeChannelSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      // FIX 1: index:true HATA DIYA — unique:true already index banata hai
-      // Pehle dono the, isliye "Duplicate schema index" warning aa raha tha
+      index: true,
     },
 
     channelName: {
@@ -29,7 +28,7 @@ const youtubeChannelSchema = new mongoose.Schema(
 
     channelHandle: {
       type: String,
-      default: null,
+      default: null, // e.g. @tubeos
     },
 
     description: {
@@ -54,10 +53,10 @@ const youtubeChannelSchema = new mongoose.Schema(
 
     publishedAt: {
       type: Date,
-      default: null,
+      default: null, // When channel was created on YouTube
     },
 
-    // --- Channel Stats ---
+    // --- Channel Stats (synced periodically) ---
     stats: {
       subscriberCount: { type: Number, default: 0 },
       videoCount: { type: Number, default: 0 },
@@ -66,20 +65,17 @@ const youtubeChannelSchema = new mongoose.Schema(
       lastSyncedAt: { type: Date, default: null },
     },
 
-    // --- OAuth Tokens ---
-    // FIX 2: select:false BILKUL HATA DIYA dono fields se
-    // Reason: select:false ke saath dot-notation ($set: {'oauth.accessToken': ...})
-    // Mongoose mein "Path collision" error deta hai — yahi tumhara main bug tha
-    // Security: sanitizeChannel() function already oauth object delete karta hai
-    // response se pehle, toh frontend pe kabhi nahi jayega
+    // --- OAuth Tokens (encrypted in production) ---
     oauth: {
       accessToken: {
         type: String,
         required: true,
+        select: false, // Never return in queries by default
       },
       refreshToken: {
         type: String,
         required: true,
+        select: false,
       },
       tokenType: {
         type: String,
@@ -98,10 +94,10 @@ const youtubeChannelSchema = new mongoose.Schema(
     // --- API Quota Tracking ---
     quota: {
       dailyUsed: { type: Number, default: 0 },
-      dailyLimit: { type: Number, default: 10000 },
+      dailyLimit: { type: Number, default: 10000 }, // YouTube default
       lastResetDate: { type: Date, default: Date.now },
-      uploadCount: { type: Number, default: 0 },
-      uploadDailyLimit: { type: Number, default: 6 },
+      uploadCount: { type: Number, default: 0 }, // uploads today
+      uploadDailyLimit: { type: Number, default: 6 }, // YouTube limit
     },
 
     // --- Status ---
@@ -112,7 +108,7 @@ const youtubeChannelSchema = new mongoose.Schema(
 
     isDefault: {
       type: Boolean,
-      default: false,
+      default: false, // Primary channel for the user
     },
 
     isPrimary: {
@@ -137,11 +133,11 @@ const youtubeChannelSchema = new mongoose.Schema(
       membershipEnabled: { type: Boolean, default: false },
     },
 
-    // --- Best Time Data ---
+    // --- Best Time Data (calculated by Time Intelligence System) ---
     bestTimeData: {
       lastCalculatedAt: { type: Date, default: null },
-      bestDays: [{ type: String }],
-      bestHours: [{ type: Number }],
+      bestDays: [{ type: String }], // ['friday', 'saturday']
+      bestHours: [{ type: Number }], // [18, 19, 20]
       heatmapData: { type: mongoose.Schema.Types.Mixed, default: null },
     },
   },
@@ -153,14 +149,12 @@ const youtubeChannelSchema = new mongoose.Schema(
 );
 
 // --- Indexes ---
-// FIX 3: userId:1 + channelId:1 compound index enough hai
-// Pehle userId pe alag bhi tha + yahaan bhi — duplicate tha
 youtubeChannelSchema.index({ userId: 1, channelId: 1 });
 youtubeChannelSchema.index({ userId: 1, isActive: 1 });
 
 // --- Virtual: Is token expired ---
 youtubeChannelSchema.virtual('isTokenExpired').get(function () {
-  return this.oauth?.expiresAt ? new Date() >= this.oauth.expiresAt : false;
+  return new Date() >= this.oauth.expiresAt;
 });
 
 // --- Virtual: Upload slots remaining today ---
