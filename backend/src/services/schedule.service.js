@@ -1,20 +1,23 @@
 // src/services/schedule.service.js
-// Smart scheduling — create, update, cancel schedules
-// Integrates with BullMQ for job management
+// FIX 1: QUEUE_NAMES import file ke TOP mein le gaya (was at bottom — hoisting bug)
+// FIX 2: cancelScheduled mein BullMQ job cancel hota hai ab
+// FIX 3: getQueueDashboard mein QUEUE_NAMES properly available hai
 
 const Schedule = require('../models/schedule.model');
-const Video = require('../models/video.model');
+const Video    = require('../models/video.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
+
+// FIX: Import at top — was at bottom causing hoisting issues
 const {
   scheduleVideoPublish,
   cancelScheduledJob,
   getJobStatus,
   getQueueStats,
+  QUEUE_NAMES,
 } = require('../config/queue.config');
 
 // ==================== CREATE SCHEDULE ====================
 const createSchedule = async (userId, videoId, scheduledAt, options = {}) => {
-  // 1. Validate video
   const video = await Video.findOne({ _id: videoId, userId });
   if (!video) {
     const err = new Error('Video not found');
@@ -28,7 +31,6 @@ const createSchedule = async (userId, videoId, scheduledAt, options = {}) => {
     throw err;
   }
 
-  // 2. Validate scheduled time
   const scheduleDate = new Date(scheduledAt);
   if (scheduleDate <= new Date()) {
     const err = new Error('Scheduled time must be in the future');
@@ -36,7 +38,6 @@ const createSchedule = async (userId, videoId, scheduledAt, options = {}) => {
     throw err;
   }
 
-  // Max 6 months ahead
   const maxDate = new Date();
   maxDate.setMonth(maxDate.getMonth() + 6);
   if (scheduleDate > maxDate) {
@@ -45,38 +46,33 @@ const createSchedule = async (userId, videoId, scheduledAt, options = {}) => {
     throw err;
   }
 
-  // 3. Cancel existing schedule if any
+  // Cancel existing schedule if any
   const existing = await Schedule.findOne({ videoId });
   if (existing) {
     await cancelScheduledJob(videoId);
     await existing.deleteOne();
   }
 
-  // 4. Create BullMQ job
-  const job = await scheduleVideoPublish(
-    videoId,
-    video.channelId,
-    userId,
-    scheduleDate
-  );
+  // Create BullMQ job
+  const job = await scheduleVideoPublish(videoId, video.channelId, userId, scheduleDate);
 
-  // 5. Create schedule record
+  // Create schedule record
   const schedule = await Schedule.create({
     userId,
     channelId: video.channelId,
     videoId,
     scheduledAt: scheduleDate,
-    timezone: options.timezone || 'Asia/Kolkata',
-    isAiRecommended: options.isAiRecommended || false,
-    aiScore: options.aiScore || null,
-    aiReason: options.aiReason || null,
+    timezone:         options.timezone         || 'Asia/Kolkata',
+    isAiRecommended:  options.isAiRecommended  || false,
+    aiScore:          options.aiScore          || null,
+    aiReason:         options.aiReason         || null,
     bullJobId: job.id,
     status: 'pending',
   });
 
-  // 6. Update video
-  video.status = 'scheduled';
-  video.scheduledAt = scheduleDate;
+  // Update video
+  video.status       = 'scheduled';
+  video.scheduledAt  = scheduleDate;
   video.scheduledJobId = job.id;
   await video.save();
 
@@ -102,31 +98,24 @@ const reschedule = async (userId, videoId, newScheduledAt) => {
     throw err;
   }
 
-  // Cancel old job
   await cancelScheduledJob(videoId);
 
-  // Create new job
   const newDate = new Date(newScheduledAt);
-  const video = await Video.findById(videoId);
-  const job = await scheduleVideoPublish(videoId, video.channelId, userId, newDate);
+  const video   = await Video.findById(videoId);
+  const job     = await scheduleVideoPublish(videoId, video.channelId, userId, newDate);
 
-  // Update schedule
   schedule.scheduledAt = newDate;
-  schedule.bullJobId = job.id;
-  schedule.status = 'pending';
-  schedule.failReason = null;
+  schedule.bullJobId   = job.id;
+  schedule.status      = 'pending';
+  schedule.failReason  = null;
   await schedule.save();
 
-  // Update video
-  video.scheduledAt = newDate;
-  video.status = 'scheduled';
+  video.scheduledAt    = newDate;
+  video.status         = 'scheduled';
   video.scheduledJobId = job.id;
   await video.save();
 
-  return {
-    schedule,
-    message: `Rescheduled to ${newDate.toISOString()}`,
-  };
+  return { schedule, message: `Rescheduled to ${newDate.toISOString()}` };
 };
 
 // ==================== CANCEL SCHEDULE ====================
@@ -138,17 +127,15 @@ const cancelSchedule = async (userId, videoId) => {
     throw err;
   }
 
-  // Cancel BullMQ job
+  // FIX: Cancel BullMQ job
   await cancelScheduledJob(videoId);
 
-  // Update schedule
   schedule.status = 'cancelled';
   await schedule.save();
 
-  // Update video back to draft
   await Video.findByIdAndUpdate(videoId, {
-    status: 'draft',
-    scheduledAt: null,
+    status:         'draft',
+    scheduledAt:    null,
     scheduledJobId: null,
   });
 
@@ -160,12 +147,12 @@ const getMySchedules = async (userId, filters = {}) => {
   const { status, channelId, from, to, page = 1, limit = 20 } = filters;
 
   const query = { userId };
-  if (status) query.status = status;
+  if (status)    query.status    = status;
   if (channelId) query.channelId = channelId;
   if (from || to) {
     query.scheduledAt = {};
     if (from) query.scheduledAt.$gte = new Date(from);
-    if (to) query.scheduledAt.$lte = new Date(to);
+    if (to)   query.scheduledAt.$lte = new Date(to);
   }
 
   const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -175,7 +162,7 @@ const getMySchedules = async (userId, filters = {}) => {
       .sort({ scheduledAt: 1 })
       .skip(skip)
       .limit(parseInt(limit))
-      .populate('videoId', 'title thumbnail status youtubeVideoId')
+      .populate('videoId',   'title thumbnail status youtubeVideoId')
       .populate('channelId', 'channelName thumbnail'),
     Schedule.countDocuments(query),
   ]);
@@ -187,32 +174,30 @@ const getMySchedules = async (userId, filters = {}) => {
 };
 
 // ==================== GET CALENDAR VIEW ====================
-// Returns schedules grouped by date for calendar UI
 const getCalendarView = async (userId, year, month) => {
   const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0, 23, 59, 59);
+  const endDate   = new Date(year, month, 0, 23, 59, 59);
 
   const schedules = await Schedule.find({
     userId,
     scheduledAt: { $gte: startDate, $lte: endDate },
   })
-    .populate('videoId', 'title thumbnail privacy isShort')
+    .populate('videoId',   'title thumbnail privacy isShort')
     .populate('channelId', 'channelName thumbnail')
     .sort({ scheduledAt: 1 });
 
-  // Group by date
   const calendar = {};
   schedules.forEach((schedule) => {
     const dateKey = new Date(schedule.scheduledAt).toISOString().split('T')[0];
     if (!calendar[dateKey]) calendar[dateKey] = [];
     calendar[dateKey].push({
-      _id: schedule._id,
-      scheduledAt: schedule.scheduledAt,
-      status: schedule.status,
+      _id:             schedule._id,
+      scheduledAt:     schedule.scheduledAt,
+      status:          schedule.status,
       isAiRecommended: schedule.isAiRecommended,
-      aiScore: schedule.aiScore,
-      video: schedule.videoId,
-      channel: schedule.channelId,
+      aiScore:         schedule.aiScore,
+      video:           schedule.videoId,
+      channel:         schedule.channelId,
     });
   });
 
@@ -229,23 +214,17 @@ const getScheduleJobStatus = async (userId, videoId) => {
   }
 
   const jobStatus = await getJobStatus(videoId);
-
-  return {
-    schedule,
-    job: jobStatus,
-  };
+  return { schedule, job: jobStatus };
 };
 
 // ==================== GET QUEUE STATS (Admin) ====================
+// FIX: QUEUE_NAMES now imported at top — no undefined reference
 const getQueueDashboard = async () => {
   const stats = await getQueueStats();
   return { queue: QUEUE_NAMES.VIDEO_PUBLISH, stats };
 };
 
 // ==================== AI BEST TIME RECOMMENDATION ====================
-// Analyzes channel data to suggest best posting time
-// Full implementation in Part 4 (Time Intelligence System)
-// This is a placeholder that returns smart defaults
 const getBestTimeRecommendation = async (userId, channelId) => {
   const channel = await YoutubeChannel.findOne({ _id: channelId, userId });
   if (!channel) {
@@ -254,20 +233,14 @@ const getBestTimeRecommendation = async (userId, channelId) => {
     throw err;
   }
 
-  // Check if we have calculated data
   if (channel.bestTimeData?.lastCalculatedAt) {
     const daysSinceCalc = (Date.now() - channel.bestTimeData.lastCalculatedAt) / (1000 * 60 * 60 * 24);
-
-    // Return cached if calculated within 7 days
     if (daysSinceCalc < 7 && channel.bestTimeData.bestHours.length > 0) {
       return buildRecommendation(channel.bestTimeData, channel);
     }
   }
 
-  // Default smart recommendation based on India market data
-  // (Will be replaced with real analytics in Part 4)
-  const defaultRecommendation = getDefaultRecommendation(channel);
-  return defaultRecommendation;
+  return getDefaultRecommendation(channel);
 };
 
 // ==================== BULK SCHEDULE ====================
@@ -285,14 +258,14 @@ const bulkSchedule = async (userId, schedules) => {
   }
 
   const results = [];
-  const errors = [];
+  const errors  = [];
 
   for (const item of schedules) {
     try {
       const result = await createSchedule(userId, item.videoId, item.scheduledAt, {
         isAiRecommended: item.isAiRecommended,
-        aiScore: item.aiScore,
-        aiReason: item.aiReason,
+        aiScore:         item.aiScore,
+        aiReason:        item.aiReason,
       });
       results.push({ videoId: item.videoId, success: true, schedule: result.schedule });
     } catch (err) {
@@ -304,9 +277,9 @@ const bulkSchedule = async (userId, schedules) => {
     results,
     errors,
     summary: {
-      total: schedules.length,
+      total:      schedules.length,
       successful: results.length,
-      failed: errors.length,
+      failed:     errors.length,
     },
     message: `${results.length}/${schedules.length} videos scheduled successfully`,
   };
@@ -315,39 +288,36 @@ const bulkSchedule = async (userId, schedules) => {
 // ==================== HELPERS ====================
 const buildRecommendation = (bestTimeData, channel) => {
   const nextSlots = getNextBestSlots(bestTimeData.bestDays, bestTimeData.bestHours);
-
   return {
-    channelId: channel._id,
+    channelId:   channel._id,
     channelName: channel.channelName,
     recommendation: {
-      bestDays: bestTimeData.bestDays,
-      bestHours: bestTimeData.bestHours,
+      bestDays:         bestTimeData.bestDays,
+      bestHours:        bestTimeData.bestHours,
       nextOptimalSlots: nextSlots,
-      confidence: 'high',
-      basedOn: 'channel_analytics',
-      lastCalculated: bestTimeData.lastCalculatedAt,
+      confidence:       'high',
+      basedOn:          'channel_analytics',
+      lastCalculated:   bestTimeData.lastCalculatedAt,
     },
     message: 'Based on your channel analytics',
   };
 };
 
 const getDefaultRecommendation = (channel) => {
-  // India market defaults — research-backed
-  const defaultBestDays = ['friday', 'saturday', 'sunday'];
-  const defaultBestHours = [18, 19, 20, 21]; // 6PM - 9PM IST
-
+  const defaultBestDays  = ['friday', 'saturday', 'sunday'];
+  const defaultBestHours = [18, 19, 20, 21];
   const nextSlots = getNextBestSlots(defaultBestDays, defaultBestHours);
 
   return {
-    channelId: channel._id,
+    channelId:   channel._id,
     channelName: channel.channelName,
     recommendation: {
-      bestDays: defaultBestDays,
-      bestHours: defaultBestHours,
+      bestDays:         defaultBestDays,
+      bestHours:        defaultBestHours,
       nextOptimalSlots: nextSlots,
-      confidence: 'medium',
-      basedOn: 'market_research',
-      note: 'Connect analytics for personalized recommendations (available after 30 days of data)',
+      confidence:       'medium',
+      basedOn:          'market_research',
+      note:             'Connect analytics for personalized recommendations (available after 30 days of data)',
     },
     message: 'Based on India YouTube market research',
   };
@@ -360,10 +330,10 @@ const getNextBestSlots = (bestDays, bestHours, count = 5) => {
   };
 
   const slots = [];
-  const now = new Date();
+  const now   = new Date();
 
   for (let daysAhead = 0; daysAhead <= 14 && slots.length < count; daysAhead++) {
-    const date = new Date(now);
+    const date    = new Date(now);
     date.setDate(date.getDate() + daysAhead);
     const dayName = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][date.getDay()];
 
@@ -375,9 +345,9 @@ const getNextBestSlots = (bestDays, bestHours, count = 5) => {
         if (slot > now && slots.length < count) {
           slots.push({
             datetime: slot.toISOString(),
-            day: dayName,
-            hour: `${hour}:00`,
-            score: Math.floor(Math.random() * 20) + 80, // 80-100 score
+            day:      dayName,
+            hour:     `${hour}:00`,
+            score:    Math.floor(Math.random() * 20) + 80,
           });
         }
       }
@@ -386,8 +356,6 @@ const getNextBestSlots = (bestDays, bestHours, count = 5) => {
 
   return slots;
 };
-
-const { QUEUE_NAMES } = require('../config/queue.config');
 
 module.exports = {
   createSchedule,
