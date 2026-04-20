@@ -15,6 +15,7 @@ const {
 
 // ==================== STEP 1: GET AUTH URL ====================
 const getOAuthUrl = async (userId, plan) => {
+  // Check channel limit based on plan
   const planLimits = { free: 1, creator: 1, pro: 3, agency: 25 };
   const limit = planLimits[plan] || 1;
 
@@ -31,8 +32,11 @@ const getOAuthUrl = async (userId, plan) => {
     throw err;
   }
 
+  // Generate state token (CSRF protection)
   const state = uuidv4();
-  await setCache(`oauth_state:${state}`, { userId }, 30 * 60);
+
+  // Store state in Redis for 10 minutes
+  await setCache(`oauth_state:${state}`, { userId }, 30 * 60); // 30 min (Render cold start fix)
 
   const authUrl = getAuthUrl(state);
   return { authUrl, state };
@@ -40,6 +44,7 @@ const getOAuthUrl = async (userId, plan) => {
 
 // ==================== STEP 2: HANDLE CALLBACK ====================
 const handleOAuthCallback = async (code, state) => {
+  // 1. Verify state (CSRF protection)
   const cached = await getCache(`oauth_state:${state}`);
   if (!cached) {
     const err = new Error('Invalid or expired OAuth state. Please try again.');
@@ -50,9 +55,18 @@ const handleOAuthCallback = async (code, state) => {
   const { userId } = cached;
   await deleteCache(`oauth_state:${state}`);
 
+  // 2. Exchange code for tokens
   const tokens = await exchangeCodeForTokens(code);
-  const { access_token, refresh_token, expires_in, token_type, scope } = tokens;
 
+  const {
+    access_token,
+    refresh_token,
+    expires_in,
+    token_type,
+    scope,
+  } = tokens;
+
+  // 3. Get channel info from YouTube
   const channelData = await getChannelInfo(access_token);
   if (!channelData) {
     const err = new Error('Could not fetch YouTube channel data. Please try again.');
@@ -60,8 +74,10 @@ const handleOAuthCallback = async (code, state) => {
     throw err;
   }
 
-  // FIX: existingChannel bhi fetch karo taaki refresh_token preserve ho sake
-  const existingChannel = await YoutubeChannel.findOne({ channelId: channelData.id });
+  // 4. Check if channel already connected by another account
+  const existingChannel = await YoutubeChannel.findOne({
+    channelId: channelData.id,
+  });
 
   if (existingChannel && existingChannel.userId.toString() !== userId) {
     const err = new Error('This YouTube channel is already connected to another TubeOS account.');
@@ -69,10 +85,9 @@ const handleOAuthCallback = async (code, state) => {
     throw err;
   }
 
+  // 5. Upsert channel (create or update if reconnecting)
   const expiresAt = new Date(Date.now() + expires_in * 1000);
 
-  // FIX: Dot notation se PATH COLLISION hoti thi jab select:false tha
-  // Ab select:false nahi hai model mein, toh yeh safely kaam karega
   const channel = await YoutubeChannel.findOneAndUpdate(
     { channelId: channelData.id },
     {
@@ -93,7 +108,6 @@ const handleOAuthCallback = async (code, state) => {
           lastSyncedAt: new Date(),
         },
         'oauth.accessToken': access_token,
-        // FIX: Naya refresh_token aaye toh use karo, warna purana rakho
         'oauth.refreshToken': refresh_token || existingChannel?.oauth?.refreshToken,
         'oauth.tokenType': token_type || 'Bearer',
         'oauth.expiresAt': expiresAt,
@@ -106,10 +120,12 @@ const handleOAuthCallback = async (code, state) => {
     { upsert: true, new: true }
   );
 
+  // 6. Add channel reference to user
   await User.findByIdAndUpdate(userId, {
     $addToSet: { youtubeChannels: channel._id },
   });
 
+  // 7. Set as default if first channel
   const channelCount = await YoutubeChannel.countDocuments({ userId, isActive: true });
   if (channelCount === 1) {
     channel.isDefault = true;
@@ -132,6 +148,7 @@ const getChannelInfo = async (accessToken) => {
         headers: { Authorization: `Bearer ${accessToken}` },
       }
     );
+
     return data.items?.[0] || null;
   } catch (err) {
     console.error('Failed to fetch channel info:', err.message);
@@ -141,26 +158,21 @@ const getChannelInfo = async (accessToken) => {
 
 // ==================== GET ALL CONNECTED CHANNELS ====================
 const getMyChannels = async (userId) => {
-  // FIX: .select('-oauth') HATA DIYA
-  // Pehle select:false + select('-oauth') dono saath the — Mongoose conflict karta tha
-  // Ab sanitizeChannel() hi oauth strip karta hai — cleaner approach
   const channels = await YoutubeChannel.find({
     userId,
     isActive: true,
-  }).sort({ isPrimary: -1, createdAt: 1 });
+  }).select('-oauth').sort({ isPrimary: -1, createdAt: 1 });
 
   return { channels: channels.map(sanitizeChannel) };
 };
 
 // ==================== SYNC CHANNEL STATS ====================
 const syncChannelStats = async (channelId, userId) => {
-  // FIX: +oauth.accessToken wali select syntax HATA DIYA
-  // select:false nahi hai ab, toh plain find() se hi oauth aayega
   const channel = await YoutubeChannel.findOne({
     _id: channelId,
     userId,
     isActive: true,
-  });
+  }).select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
 
   if (!channel) {
     const err = new Error('Channel not found');
@@ -168,8 +180,10 @@ const syncChannelStats = async (channelId, userId) => {
     throw err;
   }
 
+  // Refresh token if expired
   const accessToken = await getValidAccessToken(channel);
 
+  // Fetch fresh stats from YouTube
   const data = await youtubeRequest(
     `/channels?part=snippet,statistics&id=${channel.channelId}`,
     {
@@ -184,6 +198,7 @@ const syncChannelStats = async (channelId, userId) => {
     throw err;
   }
 
+  // Update stats
   channel.stats = {
     subscriberCount: parseInt(ytChannel.statistics?.subscriberCount) || 0,
     videoCount: parseInt(ytChannel.statistics?.videoCount) || 0,
@@ -209,14 +224,17 @@ const disconnectChannel = async (channelId, userId) => {
     throw err;
   }
 
+  // Soft delete
   channel.isActive = false;
   channel.connectionStatus = 'disconnected';
   await channel.save();
 
+  // Remove from user's channel list
   await User.findByIdAndUpdate(userId, {
     $pull: { youtubeChannels: channel._id },
   });
 
+  // If this was default/primary, set another as default
   const remainingChannels = await YoutubeChannel.find({ userId, isActive: true });
   if (channel.isPrimary && remainingChannels.length > 0) {
     remainingChannels[0].isPrimary = true;
@@ -229,8 +247,10 @@ const disconnectChannel = async (channelId, userId) => {
 
 // ==================== SET PRIMARY CHANNEL ====================
 const setPrimaryChannel = async (channelId, userId) => {
+  // Remove primary from all channels
   await YoutubeChannel.updateMany({ userId }, { isPrimary: false, isDefault: false });
 
+  // Set new primary
   const channel = await YoutubeChannel.findOneAndUpdate(
     { _id: channelId, userId, isActive: true },
     { isPrimary: true, isDefault: true },
@@ -273,12 +293,14 @@ const getQuotaStatus = async (channelId, userId) => {
 };
 
 // ==================== GET VALID ACCESS TOKEN ====================
+// Auto-refresh if expired
 const getValidAccessToken = async (channel) => {
   const now = new Date();
   const expiresAt = new Date(channel.oauth.expiresAt);
-  const bufferTime = 5 * 60 * 1000;
+  const bufferTime = 5 * 60 * 1000; // 5 min buffer
 
   if (now >= new Date(expiresAt.getTime() - bufferTime)) {
+    // Token expired or about to expire — refresh it
     try {
       const newTokens = await refreshAccessToken(channel.oauth.refreshToken);
 
@@ -304,11 +326,9 @@ const getValidAccessToken = async (channel) => {
 };
 
 // ==================== HELPERS ====================
-// sanitizeChannel: oauth aur internal fields strip karta hai response se pehle
-// Yahi ek jagah security ensure hoti hai — model level pe select:false ki zaroorat nahi
 const sanitizeChannel = (channel) => {
   const obj = channel.toObject ? channel.toObject({ virtuals: true }) : { ...channel };
-  delete obj.oauth;   // Tokens kabhi frontend pe nahi jayenge
+  delete obj.oauth;
   delete obj.__v;
   return obj;
 };
