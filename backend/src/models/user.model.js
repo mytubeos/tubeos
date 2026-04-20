@@ -206,8 +206,8 @@ const userSchema = new mongoose.Schema(
 );
 
 // --- Indexes ---
-userSchema.index({ email: 1 });
-userSchema.index({ 'referral.myCode': 1 });
+// email: unique:true already creates index — schema.index duplicate hata diya
+// referral.myCode: unique:true already creates index — schema.index duplicate hata diya
 userSchema.index({ plan: 1 });
 userSchema.index({ createdAt: -1 });
 
