@@ -1,5 +1,5 @@
 // src/controllers/video.controller.js
-// Video upload + management controller
+// FIX: req.user._id → req.user.id (consistent with auth middleware .lean())
 
 const videoService = require('../services/video.service');
 const {
@@ -12,12 +12,10 @@ const {
 const createDraft = async (req, res) => {
   try {
     const { channelId, ...videoData } = req.body;
+    if (!channelId) return errorResponse(res, 400, 'Channel ID is required');
 
-    if (!channelId) {
-      return errorResponse(res, 400, 'Channel ID is required');
-    }
-
-    const result = await videoService.createDraft(req.user._id, channelId, videoData);
+    // FIX: req.user.id (from JWT middleware lean())
+    const result = await videoService.createDraft(req.user.id, channelId, videoData);
     return successResponse(res, 201, result.message, result.video);
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);
@@ -25,26 +23,19 @@ const createDraft = async (req, res) => {
 };
 
 // POST /api/v1/videos/:videoId/upload
-// Expects: multipart/form-data with 'video' file
 const uploadVideo = async (req, res) => {
   try {
     const { videoId } = req.params;
 
-    // Check if file was provided
     if (!req.file && !req.body.fileBuffer) {
       return errorResponse(res, 400, 'Video file is required');
     }
 
     const fileBuffer = req.file ? req.file.buffer : Buffer.from(req.body.fileBuffer, 'base64');
-    const mimeType = req.file ? req.file.mimetype : req.body.mimeType || 'video/mp4';
+    const mimeType   = req.file ? req.file.mimetype : req.body.mimeType || 'video/mp4';
 
-    const result = await videoService.uploadVideo(
-      req.user._id,
-      videoId,
-      fileBuffer,
-      mimeType
-    );
-
+    // FIX: req.user.id
+    const result = await videoService.uploadVideo(req.user.id, videoId, fileBuffer, mimeType);
     return successResponse(res, 200, result.message, {
       video: result.video,
       youtubeVideoId: result.youtubeVideoId,
@@ -57,11 +48,8 @@ const uploadVideo = async (req, res) => {
 // PATCH /api/v1/videos/:videoId
 const updateVideo = async (req, res) => {
   try {
-    const result = await videoService.updateVideo(
-      req.user._id,
-      req.params.videoId,
-      req.body
-    );
+    // FIX: req.user.id
+    const result = await videoService.updateVideo(req.user.id, req.params.videoId, req.body);
     return successResponse(res, 200, result.message, result.video);
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);
@@ -72,11 +60,8 @@ const updateVideo = async (req, res) => {
 const deleteVideo = async (req, res) => {
   try {
     const deleteFromYouTube = req.query.youtube === 'true';
-    const result = await videoService.deleteVideo(
-      req.user._id,
-      req.params.videoId,
-      deleteFromYouTube
-    );
+    // FIX: req.user.id
+    const result = await videoService.deleteVideo(req.user.id, req.params.videoId, deleteFromYouTube);
     return successResponse(res, 200, result.message);
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);
@@ -86,14 +71,9 @@ const deleteVideo = async (req, res) => {
 // GET /api/v1/videos
 const getMyVideos = async (req, res) => {
   try {
-    const result = await videoService.getMyVideos(req.user._id, req.query);
-    return paginatedResponse(
-      res,
-      200,
-      'Videos fetched',
-      result.videos,
-      result.pagination
-    );
+    // FIX: req.user.id
+    const result = await videoService.getMyVideos(req.user.id, req.query);
+    return paginatedResponse(res, 200, 'Videos fetched', result.videos, result.pagination);
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);
   }
@@ -102,7 +82,8 @@ const getMyVideos = async (req, res) => {
 // GET /api/v1/videos/:videoId
 const getVideo = async (req, res) => {
   try {
-    const result = await videoService.getVideo(req.user._id, req.params.videoId);
+    // FIX: req.user.id
+    const result = await videoService.getVideo(req.user.id, req.params.videoId);
     return successResponse(res, 200, 'Video fetched', result.video);
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);
@@ -112,7 +93,8 @@ const getVideo = async (req, res) => {
 // GET /api/v1/videos/upcoming
 const getUpcoming = async (req, res) => {
   try {
-    const result = await videoService.getUpcomingVideos(req.user._id);
+    // FIX: req.user.id
+    const result = await videoService.getUpcomingVideos(req.user.id);
     return successResponse(res, 200, 'Upcoming videos', result.videos);
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);
@@ -122,10 +104,8 @@ const getUpcoming = async (req, res) => {
 // POST /api/v1/videos/:videoId/cancel
 const cancelScheduled = async (req, res) => {
   try {
-    const result = await videoService.cancelScheduled(
-      req.user._id,
-      req.params.videoId
-    );
+    // FIX: req.user.id
+    const result = await videoService.cancelScheduled(req.user.id, req.params.videoId);
     return successResponse(res, 200, result.message, result.video);
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);
