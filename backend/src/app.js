@@ -26,6 +26,7 @@ app.use(cors({
     config.cors.clientUrl,
     'http://localhost:3000',
     'http://localhost:5173', // Vite dev server
+    'https://tubeos-azure.vercel.app', 
   ],
   credentials: true, // Allow cookies
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
