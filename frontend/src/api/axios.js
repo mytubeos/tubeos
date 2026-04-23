@@ -1,5 +1,6 @@
 // src/api/axios.js
-// Configured axios instance with auth + refresh token logic
+// FIX: withCredentials false in production (cross-origin cookies don't work on free tiers)
+// FIX: Token stored only in localStorage — no cookie dependency
 
 import axios from 'axios'
 import toast from 'react-hot-toast'
@@ -7,7 +8,10 @@ import { API_URL } from '../utils/constants'
 
 const api = axios.create({
   baseURL: API_URL,
-  withCredentials: true, // Send cookies (refresh token)
+  // FIX: withCredentials sirf same-origin pe kaam karta hai
+  // Vercel (frontend) + Render (backend) = alag domains = cookies blocked
+  // Isliye hum sirf localStorage token use karenge
+  withCredentials: false,
   timeout: 30000,
 })
 
@@ -40,7 +44,6 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
-    // Try a single refresh for most 401s (expired, missing, invalid token)
     if (error.response?.status === 401 && !originalRequest._retry) {
       const isAuthRoute = originalRequest?.url?.includes('/auth/login') ||
         originalRequest?.url?.includes('/auth/register') ||
@@ -60,9 +63,13 @@ api.interceptors.response.use(
         isRefreshing = true
 
         try {
+          // FIX: refreshToken body mein bhejo — cookie nahi kaam karega cross-origin
+          const refreshToken = localStorage.getItem('refreshToken')
+          if (!refreshToken) throw new Error('No refresh token')
+
           const res = await axios.post(
             `${API_URL}/auth/refresh`,
-            {},
+            { refreshToken },
             { withCredentials: false }
           )
           const { accessToken } = res.data.data
@@ -74,6 +81,7 @@ api.interceptors.response.use(
         } catch (refreshError) {
           processQueue(refreshError, null)
           localStorage.removeItem('accessToken')
+          localStorage.removeItem('refreshToken')
           window.location.href = '/login'
           return Promise.reject(refreshError)
         } finally {
@@ -82,10 +90,10 @@ api.interceptors.response.use(
       }
 
       localStorage.removeItem('accessToken')
+      localStorage.removeItem('refreshToken')
       window.location.href = '/login'
     }
 
-    // Show error toast for non-401
     if (error.response?.status >= 500) {
       toast.error('Server error. Please try again.')
     }
