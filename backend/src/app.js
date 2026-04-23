@@ -1,5 +1,6 @@
 // src/app.js
-// Express app setup — middlewares, routes, error handlers
+// FIX: CORS — env variable se URL lo, hardcode mat karo
+// FIX: credentials false since cross-origin cookies don't work on free hosting
 
 const express = require('express');
 const cors = require('cors');
@@ -14,21 +15,39 @@ const { apiLimiter } = require('./middlewares/rateLimiter.middleware');
 const app = express();
 
 // ==================== SECURITY MIDDLEWARES ====================
-
-// Set security HTTP headers
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
-// CORS — allow frontend to talk to backend
+// FIX: CORS — sab allowed origins env se lo
+const allowedOrigins = [
+  config.cors.clientUrl,          // .env se CLIENT_URL
+  'http://localhost:3000',
+  'http://localhost:5173',
+];
+
+// Extra Vercel URLs .env se add karo agar set hain
+if (process.env.VERCEL_URL) {
+  allowedOrigins.push(`https://${process.env.VERCEL_URL}`);
+}
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
 app.use(cors({
-  origin: [
-    config.cors.clientUrl,
-    'http://localhost:3000',
-    'http://localhost:5173', // Vite dev server
-    'https://tubeos-azure.vercel.app', 
-  ],
-  credentials: true, // Allow cookies
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    // FIX: Vercel preview URLs allow karo (*.vercel.app)
+    if (origin.endsWith('.vercel.app') || origin.endsWith('.onrender.com')) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS: ${origin} not allowed`));
+  },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
@@ -37,24 +56,14 @@ app.use(cors({
 app.set('trust proxy', 1);
 
 // ==================== BODY PARSING ====================
-
-// Parse JSON bodies
 app.use(express.json({ limit: '10mb' }));
-
-// Parse URL-encoded bodies
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Parse cookies
 app.use(cookieParser());
 
 // ==================== DATA SANITIZATION ====================
-
-// Prevent NoSQL injection attacks
 app.use(mongoSanitize());
 
 // ==================== RATE LIMITING ====================
-
-// Apply general rate limit to all /api routes
 app.use('/api', apiLimiter);
 
 // ==================== REQUEST LOGGING (Dev only) ====================
@@ -65,20 +74,15 @@ if (config.isDev) {
       const duration = Date.now() - start;
       const status = res.statusCode;
       const color = status >= 500 ? '\x1b[31m' : status >= 400 ? '\x1b[33m' : '\x1b[32m';
-      console.log(
-        `${color}${req.method}\x1b[0m ${req.originalUrl} ${color}${status}\x1b[0m - ${duration}ms`
-      );
+      console.log(`${color}${req.method}\x1b[0m ${req.originalUrl} ${color}${status}\x1b[0m - ${duration}ms`);
     });
     next();
   });
 }
 
 // ==================== ROUTES ====================
-
-// Mount all API routes under /api/v1
 app.use('/api/v1', routes);
 
-// Root route
 app.get('/', (req, res) => {
   res.json({
     success: true,
@@ -89,12 +93,7 @@ app.get('/', (req, res) => {
 });
 
 // ==================== ERROR HANDLERS ====================
-
-// 404 handler — must be after all routes
 app.use(notFound);
-
-// Global error handler — must be last
 app.use(globalErrorHandler);
 
 module.exports = app;
-
