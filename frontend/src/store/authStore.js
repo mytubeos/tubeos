@@ -1,4 +1,8 @@
 // src/store/authStore.js
+// FIX: Login ke baad refreshToken body se lo aur localStorage mein save karo
+// Vercel (frontend) + Render (backend) = cross-origin = cookies blocked
+// Solution: refreshToken localStorage mein store karo
+
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { authApi } from '../api/auth.api'
@@ -16,8 +20,15 @@ export const useAuthStore = create(
         set({ isLoading: true })
         try {
           const res = await authApi.login({ email, password })
-          const { user, accessToken } = res.data.data
+          const { user, accessToken, refreshToken } = res.data.data
+
+          // Save tokens in localStorage
           localStorage.setItem('accessToken', accessToken)
+          // FIX: refreshToken bhi save karo body se
+          if (refreshToken) {
+            localStorage.setItem('refreshToken', refreshToken)
+          }
+
           set({ user, accessToken, isAuthenticated: true, isLoading: false })
           return { success: true }
         } catch (err) {
@@ -44,10 +55,11 @@ export const useAuthStore = create(
       logout: async () => {
         try { await authApi.logout() } catch {}
         localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
         set({ user: null, accessToken: null, isAuthenticated: false })
       },
 
-      // Refresh user data
+      // Refresh user data from server
       refreshUser: async () => {
         try {
           const res = await authApi.getMe()
@@ -57,7 +69,7 @@ export const useAuthStore = create(
         }
       },
 
-      // Update user locally
+      // Update user locally (no server call)
       updateUser: (updates) => {
         set(state => ({ user: { ...state.user, ...updates } }))
       },
