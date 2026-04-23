@@ -1,5 +1,6 @@
 // src/controllers/auth.controller.js
-// Thin controllers — just handle req/res, call service
+// FIX: refresh — cookie OR body dono se token lo (cross-origin ke liye)
+// FIX: login — refreshToken response body mein bhi bhejo
 
 const authService = require('../services/auth.service');
 const { successResponse, errorResponse } = require('../utils/response.utils');
@@ -21,25 +22,23 @@ const register = async (req, res) => {
 };
 
 // GET/POST /api/v1/auth/verify-email
-// GET query: { token } for legacy email link
-// POST body: { otp, userId } for OTP flow
 const verifyEmail = async (req, res) => {
   try {
     const token = req.query.token || req.body?.otp;
     const userId = req.body?.userId;
 
-    if (!token) {
-      return errorResponse(res, 400, 'Verification token or OTP is required');
-    }
+    if (!token) return errorResponse(res, 400, 'Verification token or OTP is required');
 
     const result = await authService.verifyEmail(token, userId);
 
-    // Set refresh token in cookie
+    // Set cookie (works for same-origin)
     res.cookie('refreshToken', result.tokens.refreshToken, getRefreshTokenCookieOptions());
 
     return successResponse(res, 200, result.message, {
       user: result.user,
       accessToken: result.tokens.accessToken,
+      // FIX: refreshToken body mein bhi bhejo cross-origin ke liye
+      refreshToken: result.tokens.refreshToken,
     });
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);
@@ -54,12 +53,14 @@ const login = async (req, res) => {
 
     const result = await authService.login({ email, password, ip });
 
-    // Set refresh token in HttpOnly cookie
+    // Set cookie (same-origin ke liye)
     res.cookie('refreshToken', result.refreshToken, getRefreshTokenCookieOptions());
 
     return successResponse(res, 200, result.message, {
       user: result.user,
       accessToken: result.accessToken,
+      // FIX: refreshToken body mein bhi bhejo — cross-origin (Vercel+Render) ke liye
+      refreshToken: result.refreshToken,
     });
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);
@@ -69,16 +70,18 @@ const login = async (req, res) => {
 // POST /api/v1/auth/refresh
 const refresh = async (req, res) => {
   try {
-    // Get refresh token from cookie or body
+    // FIX: Cookie se lo YA body se lo — dono support karo
     const token = req.cookies?.refreshToken || req.body?.refreshToken;
 
     const result = await authService.refreshToken(token);
 
-    // Set new refresh token in cookie
+    // Set new cookie
     res.cookie('refreshToken', result.refreshToken, getRefreshTokenCookieOptions());
 
     return successResponse(res, 200, 'Token refreshed', {
       accessToken: result.accessToken,
+      // FIX: Body mein bhi bhejo
+      refreshToken: result.refreshToken,
     });
   } catch (err) {
     return errorResponse(res, err.statusCode || 401, err.message);
@@ -90,10 +93,7 @@ const logout = async (req, res) => {
   try {
     const token = req.cookies?.refreshToken || req.body?.refreshToken;
     await authService.logout(req.user.id, token);
-
-    // Clear cookie
     res.clearCookie('refreshToken', { path: '/api/v1/auth' });
-
     return successResponse(res, 200, 'Logged out successfully');
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);
@@ -127,10 +127,8 @@ const resetPassword = async (req, res) => {
   try {
     const { token } = req.query;
     const { password } = req.body;
-
     if (!token) return errorResponse(res, 400, 'Reset token is required');
     if (!password) return errorResponse(res, 400, 'New password is required');
-
     const result = await authService.resetPassword(token, password);
     return successResponse(res, 200, result.message);
   } catch (err) {
@@ -182,18 +180,8 @@ const resendOTP = async (req, res) => {
   }
 };
 
-
 module.exports = {
-  register,
-  verifyEmail,
-  resendOTP,
-  login,
-  refresh,
-  logout,
-  logoutAll,
-  forgotPassword,
-  resetPassword,
-  getMe,
-  updateMe,
-  changePassword,
+  register, verifyEmail, resendOTP, login, refresh,
+  logout, logoutAll, forgotPassword, resetPassword,
+  getMe, updateMe, changePassword,
 };
