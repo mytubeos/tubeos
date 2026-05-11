@@ -15,7 +15,7 @@ const getGrowthPrediction = async (userId, channelId) => {
   const cached = await getCache(cacheKey);
   if (cached) return cached;
 
-  const channel = await YoutubeChannel.findOne({ _id: channelId, userId });
+  const channel = await YoutubeChannel.findOne({ _id: { $eq: channelId }, userId: { $eq: userId } });
   if (!channel) {
     const err = new Error('Channel not found');
     err.statusCode = 404;
@@ -106,7 +106,7 @@ const getGrowthPrediction = async (userId, channelId) => {
 
   // Save to DB
   await GrowthPrediction.findOneAndUpdate(
-    { channelId },
+    { channelId: { $eq: channelId } },
     { $set: { userId, channelId, ...result } },
     { upsert: true }
   );
@@ -136,7 +136,7 @@ const addCompetitor = async (userId, channelId, youtubeChannelId) => {
   }
 
   // Check not duplicate
-  const existing = await Competitor.findOne({ userId, youtubeChannelId });
+  const existing = await Competitor.findOne({ userId: { $eq: userId }, youtubeChannelId: { $eq: youtubeChannelId } });
   if (existing) {
     const err = new Error('Already tracking this competitor');
     err.statusCode = 409;
@@ -144,7 +144,7 @@ const addCompetitor = async (userId, channelId, youtubeChannelId) => {
   }
 
   // Fetch competitor channel info from YouTube
-  const trackingChannel = await YoutubeChannel.findOne({ _id: channelId, userId })
+  const trackingChannel = await YoutubeChannel.findOne({ _id: { $eq: channelId }, userId: { $eq: userId } })
     .select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
 
   const accessToken = await getValidAccessToken(trackingChannel);
@@ -206,8 +206,8 @@ const syncCompetitor = async (userId, competitorId) => {
   }
 
   const channel = await YoutubeChannel.findOne({
-    _id: competitor.trackingChannelId,
-    userId,
+    _id: { $eq: competitor.trackingChannelId },
+    userId: { $eq: userId },
   }).select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
 
   const accessToken = await getValidAccessToken(channel);
@@ -247,7 +247,7 @@ const syncCompetitor = async (userId, competitorId) => {
 
 // ==================== REMOVE COMPETITOR ====================
 const removeCompetitor = async (userId, competitorId) => {
-  const competitor = await Competitor.findOne({ _id: competitorId, userId });
+  const competitor = await Competitor.findOne({ _id: { $eq: competitorId }, userId: { $eq: userId } });
   if (!competitor) {
     const err = new Error('Competitor not found');
     err.statusCode = 404;
