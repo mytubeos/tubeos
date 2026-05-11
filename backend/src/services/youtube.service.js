@@ -169,8 +169,8 @@ const getMyChannels = async (userId) => {
 // ==================== SYNC CHANNEL STATS ====================
 const syncChannelStats = async (channelId, userId) => {
   const channel = await YoutubeChannel.findOne({
-    _id: channelId,
-    userId,
+    _id: { $eq: channelId },
+    userId: { $eq: userId },
     isActive: true,
   }).select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
 
@@ -216,7 +216,7 @@ const syncChannelStats = async (channelId, userId) => {
 
 // ==================== DISCONNECT CHANNEL ====================
 const disconnectChannel = async (channelId, userId) => {
-  const channel = await YoutubeChannel.findOne({ _id: channelId, userId });
+  const channel = await YoutubeChannel.findOne({ _id: { $eq: channelId }, userId: { $eq: userId } });
 
   if (!channel) {
     const err = new Error('Channel not found');
@@ -230,9 +230,10 @@ const disconnectChannel = async (channelId, userId) => {
   await channel.save();
 
   // Remove from user's channel list
-  await User.findByIdAndUpdate(userId, {
-    $pull: { youtubeChannels: channel._id },
-  });
+  await User.findOneAndUpdate(
+    { _id: { $eq: userId } },
+    { $pull: { youtubeChannels: channel._id } }
+  );
 
   // If this was default/primary, set another as default
   const remainingChannels = await YoutubeChannel.find({ userId, isActive: true });
@@ -252,7 +253,7 @@ const setPrimaryChannel = async (channelId, userId) => {
 
   // Set new primary
   const channel = await YoutubeChannel.findOneAndUpdate(
-    { _id: channelId, userId, isActive: true },
+    { _id: { $eq: channelId }, userId: { $eq: userId }, isActive: true },
     { isPrimary: true, isDefault: true },
     { new: true }
   );
@@ -268,7 +269,7 @@ const setPrimaryChannel = async (channelId, userId) => {
 
 // ==================== GET QUOTA STATUS ====================
 const getQuotaStatus = async (channelId, userId) => {
-  const channel = await YoutubeChannel.findOne({ _id: channelId, userId, isActive: true });
+  const channel = await YoutubeChannel.findOne({ _id: { $eq: channelId }, userId: { $eq: userId }, isActive: true });
 
   if (!channel) {
     const err = new Error('Channel not found');
