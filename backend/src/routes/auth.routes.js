@@ -1,202 +1,51 @@
-// src/routes/auth.routes.js
-// All authentication routes with input validation
 
+// src/routes/auth.routes.js
+// FIXED: Complete auth routes with OTP verification, forgot password, reset password
 const express = require('express');
-const router = express.Router();
 const authController = require('../controllers/auth.controller');
 const { protect } = require('../middlewares/auth.middleware');
-const {
-  authLimiter,
-  passwordResetLimiter,
-} = require('../middlewares/rateLimiter.middleware');
+const { authLimiter } = require('../middlewares/rateLimiter.middleware');
 
-// ==================== VALIDATION HELPERS ====================
-const validate = (rules) => {
-  return (req, res, next) => {
-    const errors = [];
+const router = express.Router();
 
-    rules.forEach((rule) => {
-      const value = req.body[rule.field];
+// ==================== PUBLIC ROUTES ====================
 
-      // Required check
-      if (rule.required && (value === undefined || value === null || value === '')) {
-        errors.push({ field: rule.field, message: `${rule.field} is required` });
-        return;
-      }
+// POST /api/v1/auth/register — Register with email/password, sends OTP
+router.post('/register', authLimiter, authController.register);
 
-      // Skip further checks if not provided and not required
-      if (value === undefined || value === null || value === '') return;
+// POST /api/v1/auth/verify-email — Verify email with OTP
+router.post('/verify-email', authLimiter, authController.verifyEmail);
 
-      // Min length
-      if (rule.minLength && String(value).length < rule.minLength) {
-        errors.push({
-          field: rule.field,
-          message: `${rule.field} must be at least ${rule.minLength} characters`,
-        });
-      }
+// POST /api/v1/auth/resend-otp — Resend OTP if expired
+router.post('/resend-otp', authLimiter, authController.resendOTP);
 
-      // Max length
-      if (rule.maxLength && String(value).length > rule.maxLength) {
-        errors.push({
-          field: rule.field,
-          message: `${rule.field} cannot exceed ${rule.maxLength} characters`,
-        });
-      }
+// POST /api/v1/auth/login — Login with email/password
+router.post('/login', authLimiter, authController.login);
 
-      // Email format
-      if (rule.isEmail) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(value)) {
-          errors.push({ field: rule.field, message: 'Please provide a valid email' });
-        }
-      }
+// POST /api/v1/auth/forgot-password — Request password reset link
+router.post('/forgot-password', authLimiter, authController.forgotPassword);
 
-      // Password strength
-      if (rule.isPassword) {
-        const hasUpperCase = /[A-Z]/.test(value);
-        const hasLowerCase = /[a-z]/.test(value);
-        const hasNumbers = /\d/.test(value);
-        if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
-          errors.push({
-            field: rule.field,
-            message: 'Password must contain uppercase, lowercase, and a number',
-          });
-        }
-      }
-    });
+// POST /api/v1/auth/reset-password — Reset password with token
+router.post('/reset-password', authLimiter, authController.resetPassword);
 
-    if (errors.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors,
-      });
-    }
-
-    next();
-  };
-};
-
-// ==================== ROUTES ====================
-
-/**
- * @route   POST /api/v1/auth/register
- * @desc    Register new user
- * @access  Public
- */
-router.post(
-  '/register',
-  authLimiter,
-  validate([
-    { field: 'name', required: true, minLength: 2, maxLength: 50 },
-    { field: 'email', required: true, isEmail: true },
-    { field: 'password', required: true, minLength: 8, isPassword: true },
-  ]),
-  authController.register
-);
-
-/**
- * @route   GET /api/v1/auth/verify-email
- * @desc    Verify email with token
- * @access  Public
- */
-router.get('/verify-email', authController.verifyEmail);
-router.post('/verify-email', authController.verifyEmail);
-router.post('/resend-otp', authLimiter, validate([{ field: 'email', required: true, isEmail: true }]), authController.resendOTP);
-
-/**
- * @route   POST /api/v1/auth/login
- * @desc    Login user
- * @access  Public
- */
-router.post(
-  '/login',
-  authLimiter,
-  validate([
-    { field: 'email', required: true, isEmail: true },
-    { field: 'password', required: true },
-  ]),
-  authController.login
-);
-
-/**
- * @route   POST /api/v1/auth/refresh
- * @desc    Refresh access token using refresh token
- * @access  Public (needs valid refresh token in cookie or body)
- */
+// POST /api/v1/auth/refresh — Refresh access token
 router.post('/refresh', authController.refresh);
 
-/**
- * @route   POST /api/v1/auth/logout
- * @desc    Logout current session
- * @access  Private
- */
-router.post('/logout', protect, authController.logout);
+// ==================== PROTECTED ROUTES ====================
 
-/**
- * @route   POST /api/v1/auth/logout-all
- * @desc    Logout from all devices
- * @access  Private
- */
-router.post('/logout-all', protect, authController.logoutAll);
-
-/**
- * @route   POST /api/v1/auth/forgot-password
- * @desc    Send password reset email
- * @access  Public
- */
-router.post(
-  '/forgot-password',
-  passwordResetLimiter,
-  validate([{ field: 'email', required: true, isEmail: true }]),
-  authController.forgotPassword
-);
-
-/**
- * @route   POST /api/v1/auth/reset-password
- * @desc    Reset password with token
- * @access  Public
- */
-router.post(
-  '/reset-password',
-  validate([{ field: 'password', required: true, minLength: 8, isPassword: true }]),
-  authController.resetPassword
-);
-
-/**
- * @route   GET /api/v1/auth/me
- * @desc    Get current user profile
- * @access  Private
- */
+// GET /api/v1/auth/me — Get current user profile
 router.get('/me', protect, authController.getMe);
 
-/**
- * @route   PATCH /api/v1/auth/me
- * @desc    Update current user profile
- * @access  Private
- */
-router.patch(
-  '/me',
-  protect,
-  validate([
-    { field: 'name', minLength: 2, maxLength: 50 },
-  ]),
-  authController.updateMe
-);
+// PATCH /api/v1/auth/me — Update user profile
+router.patch('/me', protect, authController.updateMe);
 
-/**
- * @route   PATCH /api/v1/auth/change-password
- * @desc    Change password (requires current password)
- * @access  Private
- */
-router.patch(
-  '/change-password',
-  protect,
-  validate([
-    { field: 'currentPassword', required: true },
-    { field: 'newPassword', required: true, minLength: 8, isPassword: true },
-  ]),
-  authController.changePassword
-);
+// PATCH /api/v1/auth/change-password — Change password (logged-in user)
+router.patch('/change-password', protect, authLimiter, authController.changePassword);
+
+// POST /api/v1/auth/logout — Logout current device
+router.post('/logout', protect, authController.logout);
+
+// POST /api/v1/auth/logout-all — Logout from all devices
+router.post('/logout-all', protect, authController.logoutAll);
 
 module.exports = router;
