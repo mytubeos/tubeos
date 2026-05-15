@@ -1,171 +1,328 @@
 // src/pages/auth/Signup.jsx
-import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { User, Mail, Lock, Eye, EyeOff, Gift } from 'lucide-react'
-import { useAuth } from '../../hooks/useAuth'
-import { Input } from '../../components/ui/Input'
-import { Button } from '../../components/ui/Button'
-import toast from 'react-hot-toast'
+// Signup page - register with email/password, OTP verification required
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import useAuth from '../../hooks/useAuth';
+import Button from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
+import Toast from '../../components/ui/Toast';
 
-export const Signup = () => {
-  const { register, isLoading } = useAuth()
-  const [searchParams] = useSearchParams()
-  const refCode = searchParams.get('ref') || ''
+export default function Signup() {
+  const navigate = useNavigate();
+  const { register, verifyEmail, resendOTP, loading, error, setError } = useAuth();
 
-  const [form, setForm] = useState({
-    name: '', email: '', password: '', referralCode: refCode,
-  })
-  const [showPass, setShowPass] = useState(false)
-  const [errors, setErrors] = useState({})
-  const [success, setSuccess] = useState(false)
+  // Signup form state
+  const [step, setStep] = useState('signup'); // 'signup' or 'otp'
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    referralCode: '',
+  });
+  const [otpData, setOtpData] = useState({
+    userId: '',
+    otp: '',
+  });
+  const [localError, setLocalError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
-  const set = (key) => (e) => setForm(p => ({ ...p, [key]: e.target.value }))
+  // Handle input change
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setLocalError('');
+  };
 
-  const validate = () => {
-    const errs = {}
-    if (!form.name.trim() || form.name.length < 2) errs.name = 'Name must be at least 2 characters'
-    if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Valid email required'
-    if (!form.password || form.password.length < 8) errs.password = 'Password must be at least 8 characters'
-    if (!/[A-Z]/.test(form.password) || !/[0-9]/.test(form.password)) {
-      errs.password = 'Password needs uppercase letter and number'
+  // Validate signup form
+  const validateSignupForm = () => {
+    if (!formData.name.trim()) {
+      setLocalError('Name is required');
+      return false;
     }
-    setErrors(errs)
-    return Object.keys(errs).length === 0
-  }
+    if (formData.name.length < 2) {
+      setLocalError('Name must be at least 2 characters');
+      return false;
+    }
+    if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      setLocalError('Invalid email format');
+      return false;
+    }
+    if (formData.password.length < 8) {
+      setLocalError('Password must be at least 8 characters');
+      return false;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setLocalError('Passwords do not match');
+      return false;
+    }
+    return true;
+  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!validate()) return
+  // Handle signup submission
+  const handleSignupSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateSignupForm()) return;
 
-    const result = await register(form)
+    const result = await register(
+      formData.name,
+      formData.email,
+      formData.password,
+      formData.referralCode || null
+    );
+
     if (result.success) {
-      setSuccess(true)
-    } else {
-      toast.error(result.message || 'Registration failed')
-      if (result.message?.includes('Email')) {
-        setErrors({ email: 'Email already registered' })
-      }
+      setOtpData({ userId: result.userId, otp: '' });
+      setStep('otp');
+      setSuccessMsg('OTP sent to your email. Please enter it below.');
     }
-  }
+  };
 
-  if (success) {
+  // Handle OTP change
+  const handleOtpChange = (e) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setOtpData((prev) => ({ ...prev, otp: value }));
+    setLocalError('');
+  };
+
+  // Handle OTP submission
+  const handleOtpSubmit = async (e) => {
+    e.preventDefault();
+
+    if (otpData.otp.length !== 6) {
+      setLocalError('OTP must be 6 digits');
+      return;
+    }
+
+    const result = await verifyEmail(otpData.userId, otpData.otp);
+
+    if (result.success) {
+      setSuccessMsg('Email verified! Redirecting to dashboard...');
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
+    }
+  };
+
+  // Handle resend OTP
+  const handleResendOtp = async () => {
+    const result = await resendOTP(formData.email);
+    if (result.success) {
+      setSuccessMsg('New OTP sent to your email!');
+      setLocalError('');
+    }
+  };
+
+  // ==================== SIGNUP FORM ====================
+  if (step === 'signup') {
     return (
-      <div className="text-center py-8">
-        <div className="w-16 h-16 bg-emerald/15 rounded-2xl flex items-center justify-center mx-auto mb-5">
-          <Mail size={28} className="text-emerald" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-white mb-2">TubeOS</h1>
+            <p className="text-slate-400">Create your account</p>
+          </div>
+
+          {/* Form Card */}
+          <form
+            onSubmit={handleSignupSubmit}
+            className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 shadow-2xl"
+          >
+            {/* Name Input */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-200 mb-2">
+                Full Name
+              </label>
+              <Input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="John Doe"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Email Input */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-200 mb-2">
+                Email Address
+              </label>
+              <Input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="john@example.com"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Password Input */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-200 mb-2">
+                Password (min 8 characters)
+              </label>
+              <Input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="••••••••"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Confirm Password Input */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-200 mb-2">
+                Confirm Password
+              </label>
+              <Input
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="••••••••"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Referral Code Input (Optional) */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-200 mb-2">
+                Referral Code (Optional)
+              </label>
+              <Input
+                type="text"
+                name="referralCode"
+                value={formData.referralCode}
+                onChange={handleChange}
+                placeholder="Enter referral code"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Error Message */}
+            {(localError || error) && (
+              <Toast
+                type="error"
+                message={localError || error}
+                className="mb-4"
+              />
+            )}
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full mb-4"
+            >
+              {loading ? 'Creating Account...' : 'Sign Up'}
+            </Button>
+
+            {/* Already have account */}
+            <p className="text-center text-slate-400">
+              Already have an account?{' '}
+              <Link to="/auth/login" className="text-purple-400 hover:text-purple-300">
+                Sign in
+              </Link>
+            </p>
+          </form>
+
+          {/* Info Box */}
+          <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+            <p className="text-sm text-blue-200">
+              💡 An OTP will be sent to your email for verification. Check your spam folder if you don't see it.
+            </p>
+          </div>
         </div>
-        <h2 className="font-display font-bold text-white text-2xl mb-3">Check your inbox!</h2>
-        <p className="text-gray-400 text-sm mb-6">
-          We sent a verification link to <span className="text-white font-medium">{form.email}</span>
-        </p>
-        <p className="text-gray-500 text-xs">
-          Didn't get it? Check spam or{' '}
-          <button onClick={() => setSuccess(false)} className="text-brand hover:underline">
-            try again
-          </button>
-        </p>
       </div>
-    )
+    );
   }
 
+  // ==================== OTP VERIFICATION FORM ====================
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="font-display font-bold text-white text-3xl mb-2">Create account</h1>
-        <p className="text-gray-500 text-sm">
-          Join TubeOS and grow your YouTube channel with AI
-        </p>
-      </div>
-
-      {/* Founders counter */}
-      <div className="mb-6 p-3 glass rounded-xl border border-brand/20">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-gray-400">Founders spots (Creator plan)</span>
-          <span className="text-xs font-bold text-brand">88 left</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-white mb-2">Verify Email</h1>
+          <p className="text-slate-400">Enter the 6-digit OTP sent to {formData.email}</p>
         </div>
-        <div className="h-1.5 bg-base-500 rounded-full overflow-hidden">
-          <div className="h-full bg-brand-gradient rounded-full" style={{ width: '82%' }} />
-        </div>
-        <p className="text-2xs text-gray-600 mt-1.5">412/500 spots taken — ₹199/mo locked forever</p>
-      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="Full Name"
-          name="name"
-          placeholder="Rahul Sharma"
-          value={form.name}
-          onChange={set('name')}
-          icon={User}
-          error={errors.name}
-          required
-        />
-
-        <Input
-          label="Email"
-          name="email"
-          type="email"
-          placeholder="you@example.com"
-          value={form.email}
-          onChange={set('email')}
-          icon={Mail}
-          error={errors.email}
-          required
-        />
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-gray-300">
-            Password <span className="text-rose">*</span>
-          </label>
-          <div className="relative">
-            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500">
-              <Lock size={16} />
-            </div>
+        {/* Form Card */}
+        <form
+          onSubmit={handleOtpSubmit}
+          className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 shadow-2xl"
+        >
+          {/* OTP Input */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-slate-200 mb-4 text-center">
+              Verification Code
+            </label>
             <input
-              type={showPass ? 'text' : 'password'}
-              placeholder="Min 8 chars, uppercase + number"
-              value={form.password}
-              onChange={set('password')}
-              className={`input-field pl-10 pr-10 ${errors.password ? 'border-rose/50' : ''}`}
+              type="text"
+              inputMode="numeric"
+              value={otpData.otp}
+              onChange={handleOtpChange}
+              placeholder="000000"
+              maxLength="6"
+              disabled={loading}
+              className="w-full px-4 py-3 text-center text-3xl tracking-widest font-mono bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition disabled:opacity-50"
             />
-            <button
-              type="button"
-              onClick={() => setShowPass(!showPass)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
-            >
-              {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
+            <p className="text-xs text-slate-400 mt-2 text-center">
+              Enter the 6 digits from your email
+            </p>
           </div>
-          {errors.password && <p className="text-rose text-xs">{errors.password}</p>}
+
+          {/* Success Message */}
+          {successMsg && (
+            <Toast type="success" message={successMsg} className="mb-4" />
+          )}
+
+          {/* Error Message */}
+          {(localError || error) && (
+            <Toast
+              type="error"
+              message={localError || error}
+              className="mb-4"
+            />
+          )}
+
+          {/* Submit Button */}
+          <Button
+            type="submit"
+            disabled={loading || otpData.otp.length !== 6}
+            className="w-full mb-4"
+          >
+            {loading ? 'Verifying...' : 'Verify Email'}
+          </Button>
+
+          {/* Resend OTP */}
+          <div className="text-center">
+            <p className="text-slate-400 text-sm">
+              Didn't receive the code?{' '}
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={loading}
+                className="text-purple-400 hover:text-purple-300 disabled:opacity-50 font-medium"
+              >
+                Resend OTP
+              </button>
+            </p>
+          </div>
+        </form>
+
+        {/* Info Box */}
+        <div className="mt-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+          <p className="text-sm text-green-200">
+            ✅ OTP expires in 10 minutes. Check your spam folder if not found.
+          </p>
         </div>
-
-        <Input
-          label="Referral Code (Optional)"
-          name="referralCode"
-          placeholder="e.g. RAHUL4291"
-          value={form.referralCode}
-          onChange={set('referralCode')}
-          icon={Gift}
-          hint={form.referralCode ? '10% discount applied for 3 months! 🎉' : ''}
-        />
-
-        <Button type="submit" fullWidth loading={isLoading} size="lg">
-          Create Account
-        </Button>
-      </form>
-
-      <p className="text-gray-600 text-xs text-center mt-4">
-        By signing up you agree to our Terms of Service and Privacy Policy.
-      </p>
-
-      <div className="mt-6 text-center">
-        <p className="text-gray-500 text-sm">
-          Already have an account?{' '}
-          <Link to="/login" className="text-brand hover:text-brand-light font-medium transition-colors">
-            Sign in
-          </Link>
-        </p>
       </div>
     </div>
-  )
+  );
 }
