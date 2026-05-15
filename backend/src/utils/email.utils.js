@@ -1,159 +1,271 @@
 // src/utils/email.utils.js
-// Email sending via Brevo API (no nodemailer needed!)
-// Just set BREVO_API_KEY in .env and done!
-
+// FIXED: Brevo API integration for OTP, welcome email, password reset
+const axios = require('axios');
 const { config } = require('../config/env');
 
-// ==================== BREVO API SENDER ====================
-const sendEmail = async ({ to, subject, html, name }) => {
-  const apiKey = process.env.BREVO_API_KEY;
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const EMAIL_FROM = process.env.EMAIL_FROM_ADDRESS || 'noreply@tubeos.in';
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
-  if (!apiKey) {
-    console.warn('⚠️  BREVO_API_KEY not set — skipping email send');
+// Check if Brevo is configured
+const isBrevoConfigured = () => !!BREVO_API_KEY;
+
+// ==================== SEND OTP EMAIL ====================
+const sendOTPEmail = async (recipientEmail, recipientName, otp) => {
+  if (!isBrevoConfigured()) {
+    console.log('[sendOTPEmail] Brevo not configured, skipping email');
     return;
   }
 
-  const senderEmail = process.env.EMAIL_FROM_ADDRESS || 'noreply@tubeos.app';
-  const senderName = 'TubeOS';
-
-  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: {
-      'accept': 'application/json',
-      'api-key': apiKey,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      sender: { name: senderName, email: senderEmail },
-      to: [{ email: to, name: name || to }],
-      subject,
-      htmlContent: html,
-    }),
-  });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.message || `Brevo API error: ${response.status}`);
+  if (!recipientEmail || !otp) {
+    throw new Error('Email and OTP are required');
   }
 
-  const result = await response.json();
-  console.log(`✅ Email sent to ${to} | MessageId: ${result.messageId}`);
-  return result;
+  try {
+    const emailContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0;">TubeOS</h1>
+          <p style="color: rgba(255, 255, 255, 0.9); margin: 0;">AI-Powered YouTube Creator Management</p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 40px 20px; text-align: center;">
+          <h2 style="color: #333; margin-top: 0;">Verify Your Email</h2>
+          <p style="color: #666; font-size: 16px;">Hi ${recipientName},</p>
+          <p style="color: #666; font-size: 14px;">Your OTP for email verification is:</p>
+          
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #667eea;">
+            <p style="font-size: 36px; font-weight: bold; color: #667eea; margin: 0; letter-spacing: 4px;">${otp}</p>
+          </div>
+          
+          <p style="color: #999; font-size: 12px;">This OTP will expire in 10 minutes.</p>
+          <p style="color: #999; font-size: 12px;">If you didn't request this, please ignore this email.</p>
+        </div>
+        
+        <div style="background: #f0f0f0; padding: 20px; text-align: center; border-radius: 0 0 8px 8px;">
+          <p style="color: #999; font-size: 12px; margin: 0;">© 2024 TubeOS. All rights reserved.</p>
+        </div>
+      </div>
+    `;
+
+    const response = await axios.post(
+      BREVO_API_URL,
+      {
+        sender: {
+          email: EMAIL_FROM,
+          name: 'TubeOS Team',
+        },
+        to: [
+          {
+            email: recipientEmail,
+            name: recipientName,
+          },
+        ],
+        subject: `Your TubeOS Verification Code: ${otp}`,
+        htmlContent: emailContent,
+        replyTo: {
+          email: EMAIL_FROM,
+        },
+      },
+      {
+        headers: {
+          'api-key': BREVO_API_KEY,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    console.log('[sendOTPEmail] OTP email sent successfully to', recipientEmail);
+    return response.data;
+  } catch (error) {
+    console.error('[sendOTPEmail] Error sending OTP email:', {
+      email: recipientEmail,
+      status: error.response?.status,
+      message: error.response?.data?.message || error.message,
+    });
+    throw new Error(`Failed to send OTP email: ${error.message}`);
+  }
 };
 
-// ==================== SEND VERIFICATION EMAIL ====================
-const sendVerificationEmail = async (user, token) => {
-  const verifyUrl = `${config.cors.clientUrl}/verify-email?token=${token}`;
-  await sendEmail({
-    to: user.email,
-    name: user.name,
-    subject: '✅ Verify your TubeOS account',
-    html: `
-      <!DOCTYPE html><html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f8f9ff;">
-        <div style="background:#1A1A2E;padding:30px;border-radius:12px;text-align:center;">
-          <h1 style="color:#4F46E5;margin:0;font-size:32px;">TubeOS</h1>
-          <p style="color:#888;font-size:14px;margin:5px 0;">Creator Command Center</p>
-        </div>
-        <div style="background:white;padding:40px;border-radius:12px;margin-top:20px;border:1px solid #e5e7eb;">
-          <h2 style="color:#1A1A2E;margin-top:0;">Welcome, ${user.name}! 🎉</h2>
-          <p style="color:#555;line-height:1.6;">You are one step away from accessing your AI-powered YouTube Command Center. Click the button below to verify your email.</p>
-          <div style="text-align:center;margin:35px 0;">
-            <a href="${verifyUrl}" style="background:#4F46E5;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px;display:inline-block;">Verify My Email ✅</a>
-          </div>
-          <p style="color:#888;font-size:13px;">This link expires in 24 hours. If you did not create an account, ignore this email.</p>
-          <p style="color:#aaa;font-size:12px;word-break:break-all;">Or copy: ${verifyUrl}</p>
-        </div>
-        <div style="text-align:center;padding:20px;color:#aaa;font-size:12px;"><p>TubeOS — Elevate Your Creator Journey</p></div>
-      </body></html>
-    `,
-  });
-};
+// ==================== SEND PASSWORD RESET EMAIL ====================
+const sendPasswordResetEmail = async (recipientEmail, recipientName, resetToken) => {
+  if (!isBrevoConfigured()) {
+    console.log('[sendPasswordResetEmail] Brevo not configured, skipping email');
+    return;
+  }
 
-// ==================== SEND PASSWORD RESET ====================
-const sendPasswordResetEmail = async (user, token) => {
-  const resetUrl = `${config.cors.clientUrl}/reset-password?token=${token}`;
-  await sendEmail({
-    to: user.email,
-    name: user.name,
-    subject: '🔒 Reset your TubeOS password',
-    html: `
-      <!DOCTYPE html><html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f8f9ff;">
-        <div style="background:#1A1A2E;padding:30px;border-radius:12px;text-align:center;">
-          <h1 style="color:#4F46E5;margin:0;font-size:32px;">TubeOS</h1>
+  if (!recipientEmail || !resetToken) {
+    throw new Error('Email and reset token are required');
+  }
+
+  const resetUrl = `${config.cors.clientUrl}/auth/reset-password?token=${resetToken}`;
+
+  try {
+    const emailContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0;">TubeOS</h1>
+          <p style="color: rgba(255, 255, 255, 0.9); margin: 0;">Password Reset Request</p>
         </div>
-        <div style="background:white;padding:40px;border-radius:12px;margin-top:20px;border:1px solid #e5e7eb;">
-          <h2 style="color:#1A1A2E;margin-top:0;">Password Reset Request 🔒</h2>
-          <p style="color:#555;line-height:1.6;">Hi ${user.name}, we received a request to reset your TubeOS password.</p>
-          <div style="text-align:center;margin:35px 0;">
-            <a href="${resetUrl}" style="background:#DC2626;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px;display:inline-block;">Reset My Password</a>
+        
+        <div style="background: #f8f9fa; padding: 40px 20px;">
+          <h2 style="color: #333;">Reset Your Password</h2>
+          <p style="color: #666; font-size: 14px;">Hi ${recipientName},</p>
+          <p style="color: #666; font-size: 14px;">We received a request to reset your TubeOS password. Click the button below to proceed:</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" 
+               style="background: #667eea; color: white; padding: 12px 30px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block;">
+              Reset Password
+            </a>
           </div>
-          <div style="background:#FFF7ED;border:1px solid #FED7AA;padding:15px;border-radius:8px;">
-            <p style="color:#92400E;margin:0;font-size:14px;">⚠️ This link expires in <strong>10 minutes</strong>. If you did not request this, ignore this email.</p>
+          
+          <p style="color: #666; font-size: 12px;">Or copy and paste this link in your browser:</p>
+          <p style="color: #667eea; font-size: 11px; word-break: break-all;">${resetUrl}</p>
+          
+          <div style="border-top: 1px solid #ddd; margin-top: 20px; padding-top: 20px;">
+            <p style="color: #999; font-size: 12px; margin: 5px 0;">⚠️ This link will expire in 15 minutes.</p>
+            <p style="color: #999; font-size: 12px; margin: 5px 0;">If you didn't request this, please ignore this email.</p>
+            <p style="color: #999; font-size: 12px; margin: 5px 0;">Your password will remain unchanged.</p>
           </div>
         </div>
-      </body></html>
-    `,
-  });
+        
+        <div style="background: #f0f0f0; padding: 20px; text-align: center; border-radius: 0 0 8px 8px;">
+          <p style="color: #999; font-size: 12px; margin: 0;">© 2024 TubeOS. All rights reserved.</p>
+        </div>
+      </div>
+    `;
+
+    const response = await axios.post(
+      BREVO_API_URL,
+      {
+        sender: {
+          email: EMAIL_FROM,
+          name: 'TubeOS Security',
+        },
+        to: [
+          {
+            email: recipientEmail,
+            name: recipientName,
+          },
+        ],
+        subject: 'Reset Your TubeOS Password',
+        htmlContent: emailContent,
+        replyTo: {
+          email: EMAIL_FROM,
+        },
+      },
+      {
+        headers: {
+          'api-key': BREVO_API_KEY,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    console.log('[sendPasswordResetEmail] Password reset email sent successfully to', recipientEmail);
+    return response.data;
+  } catch (error) {
+    console.error('[sendPasswordResetEmail] Error sending password reset email:', {
+      email: recipientEmail,
+      status: error.response?.status,
+      message: error.response?.data?.message || error.message,
+    });
+    throw new Error(`Failed to send password reset email: ${error.message}`);
+  }
 };
 
 // ==================== SEND WELCOME EMAIL ====================
-const sendWelcomeEmail = async (user) => {
-  await sendEmail({
-    to: user.email,
-    name: user.name,
-    subject: '🚀 Welcome to TubeOS — Your YouTube AI is ready!',
-    html: `
-      <!DOCTYPE html><html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f8f9ff;">
-        <div style="background:#1A1A2E;padding:30px;border-radius:12px;text-align:center;">
-          <h1 style="color:#4F46E5;margin:0;font-size:32px;">TubeOS</h1>
-          <p style="color:#888;font-size:14px;margin:5px 0;">Creator Command Center</p>
+const sendWelcomeEmail = async (recipientEmail, recipientName) => {
+  if (!isBrevoConfigured()) {
+    console.log('[sendWelcomeEmail] Brevo not configured, skipping email');
+    return;
+  }
+
+  if (!recipientEmail) {
+    throw new Error('Email is required');
+  }
+
+  try {
+    const emailContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+          <h1 style="color: white; margin: 0;">🎉 Welcome to TubeOS!</h1>
+          <p style="color: rgba(255, 255, 255, 0.9); margin: 0;">Your AI-Powered YouTube Creator Companion</p>
         </div>
-        <div style="background:white;padding:40px;border-radius:12px;margin-top:20px;">
-          <h2 style="color:#1A1A2E;">You are in, ${user.name}! 🎉</h2>
-          <p style="color:#555;">Your TubeOS account is verified and ready.</p>
-          <div style="background:#EEF2FF;padding:20px;border-radius:8px;margin:20px 0;">
-            <p style="margin:8px 0;color:#333;">📊 <strong>Analytics</strong> — Track your channel growth</p>
-            <p style="margin:8px 0;color:#333;">⏰ <strong>Smart Scheduling</strong> — AI picks the best time</p>
-            <p style="margin:8px 0;color:#333;">💬 <strong>AI Replies</strong> — Auto-reply to comments</p>
-            <p style="margin:8px 0;color:#333;">🧠 <strong>AI Content</strong> — Titles, tags, descriptions</p>
+        
+        <div style="background: #f8f9fa; padding: 40px 20px;">
+          <h2 style="color: #333;">Welcome, ${recipientName}!</h2>
+          <p style="color: #666; font-size: 14px;">Your email has been verified and you're all set to start.</p>
+          
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
+            <h3 style="color: #333; margin-top: 0;">What's Next?</h3>
+            <ul style="color: #666; font-size: 14px;">
+              <li>🔌 Connect your YouTube channel</li>
+              <li>📊 View analytics and insights</li>
+              <li>📅 Schedule videos with optimal timing</li>
+              <li>🤖 Get AI-powered content recommendations</li>
+              <li>💬 Manage comments and engagement</li>
+            </ul>
           </div>
-          <div style="text-align:center;margin:30px 0;">
-            <a href="${config.cors.clientUrl}/dashboard" style="background:#4F46E5;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px;">Open My Dashboard 🚀</a>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${config.cors.clientUrl}/channels" 
+               style="background: #667eea; color: white; padding: 12px 30px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block;">
+              Go to Dashboard
+            </a>
           </div>
         </div>
-      </body></html>
-    `,
-  });
+        
+        <div style="background: #f0f0f0; padding: 20px; text-align: center; border-radius: 0 0 8px 8px;">
+          <p style="color: #999; font-size: 12px; margin: 0;">Questions? Contact us at ${EMAIL_FROM}</p>
+          <p style="color: #999; font-size: 12px; margin: 5px 0;">© 2024 TubeOS. All rights reserved.</p>
+        </div>
+      </div>
+    `;
+
+    const response = await axios.post(
+      BREVO_API_URL,
+      {
+        sender: {
+          email: EMAIL_FROM,
+          name: 'TubeOS Team',
+        },
+        to: [
+          {
+            email: recipientEmail,
+            name: recipientName,
+          },
+        ],
+        subject: `Welcome to TubeOS, ${recipientName}! 🎉`,
+        htmlContent: emailContent,
+        replyTo: {
+          email: EMAIL_FROM,
+        },
+      },
+      {
+        headers: {
+          'api-key': BREVO_API_KEY,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    console.log('[sendWelcomeEmail] Welcome email sent successfully to', recipientEmail);
+    return response.data;
+  } catch (error) {
+    console.error('[sendWelcomeEmail] Error sending welcome email:', {
+      email: recipientEmail,
+      status: error.response?.status,
+      message: error.response?.data?.message || error.message,
+    });
+    // Don't throw for welcome email - not critical
+  }
 };
 
-
-// ==================== SEND OTP EMAIL ====================
-const sendOTPEmail = async (user, otp) => {
-  await sendEmail({
-    to: user.email,
-    name: user.name,
-    subject: `${otp} is your TubeOS verification code`,
-    html: `
-      <!DOCTYPE html><html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f8f9ff;">
-        <div style="background:#1A1A2E;padding:30px;border-radius:12px;text-align:center;">
-          <h1 style="color:#4F46E5;margin:0;font-size:32px;">TubeOS</h1>
-          <p style="color:#888;font-size:14px;margin:5px 0;">Creator Command Center</p>
-        </div>
-        <div style="background:white;padding:40px;border-radius:12px;margin-top:20px;border:1px solid #e5e7eb;">
-          <h2 style="color:#1A1A2E;margin-top:0;">Your Verification Code</h2>
-          <p style="color:#555;">Hi ${user.name}, use this OTP to verify your TubeOS account:</p>
-          <div style="text-align:center;margin:30px 0;">
-            <div style="background:#EEF2FF;border:2px dashed #4F46E5;border-radius:12px;padding:20px;display:inline-block;">
-              <span style="font-size:42px;font-weight:bold;color:#4F46E5;letter-spacing:12px;">${otp}</span>
-            </div>
-          </div>
-          <p style="color:#888;font-size:13px;text-align:center;">This OTP expires in <strong>10 minutes</strong>.</p>
-          <p style="color:#aaa;font-size:12px;text-align:center;">If you did not request this, please ignore this email.</p>
-        </div>
-        <div style="text-align:center;padding:20px;color:#aaa;font-size:12px;"><p>TubeOS — Elevate Your Creator Journey</p></div>
-      </body></html>
-    `,
-  });
+module.exports = {
+  sendOTPEmail,
+  sendPasswordResetEmail,
+  sendWelcomeEmail,
+  isBrevoConfigured,
 };
-
-module.exports = { sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail, sendOTPEmail };
