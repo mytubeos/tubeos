@@ -1,109 +1,260 @@
 // src/pages/auth/ResetPassword.jsx
-import { useState } from 'react'
-import { useSearchParams, useNavigate, Link } from 'react-router-dom'
-import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react'
-import { authApi } from '../../api/auth.api'
-import { Button } from '../../components/ui/Button'
-import toast from 'react-hot-toast'
+// Reset password page - change password with reset token from email link
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import useAuth from '../../hooks/useAuth';
+import Button from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
+import Toast from '../../components/ui/Toast';
 
-export const ResetPassword = () => {
-  const [searchParams] = useSearchParams()
-  const token = searchParams.get('token')
-  const navigate = useNavigate()
+export default function ResetPassword() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { resetPassword, loading } = useAuth();
 
-  const [password, setPassword] = useState('')
-  const [confirm, setConfirm] = useState('')
-  const [showPass, setShowPass] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [errors, setErrors] = useState({})
+  const token = searchParams.get('token');
 
-  const validate = () => {
-    const errs = {}
-    if (password.length < 8) errs.password = 'At least 8 characters'
-    if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
-      errs.password = 'Needs uppercase + number'
+  const [formData, setFormData] = useState({
+    password: '',
+    confirmPassword: '',
+  });
+  const [localError, setLocalError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [tokenError, setTokenError] = useState(false);
+
+  // Check if token exists
+  useEffect(() => {
+    if (!token) {
+      setTokenError(true);
     }
-    if (password !== confirm) errs.confirm = 'Passwords do not match'
-    setErrors(errs)
-    return Object.keys(errs).length === 0
-  }
+  }, [token]);
 
+  // Handle input change
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setLocalError('');
+  };
+
+  // Validate form
+  const validateForm = () => {
+    if (formData.password.length < 8) {
+      setLocalError('Password must be at least 8 characters');
+      return false;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setLocalError('Passwords do not match');
+      return false;
+    }
+    return true;
+  };
+
+  // Handle form submission
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!validate()) return
-    if (!token) { toast.error('Invalid reset link'); return }
+    e.preventDefault();
+    if (!validateForm() || !token) return;
 
-    setLoading(true)
-    try {
-      await authApi.resetPassword(token, password)
-      setSuccess(true)
-      setTimeout(() => navigate('/login'), 2500)
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Reset failed. Try again.')
-    } finally {
-      setLoading(false)
+    const result = await resetPassword(token, formData.password);
+
+    if (result.success) {
+      setSuccessMsg(result.message);
+      setFormData({ password: '', confirmPassword: '' });
+
+      // Redirect to login after 2 seconds
+      setTimeout(() => {
+        navigate('/auth/login');
+      }, 2000);
+    } else {
+      setLocalError(result.error || 'Failed to reset password');
     }
-  }
+  };
 
-  if (success) {
+  // ==================== INVALID TOKEN STATE ====================
+  if (tokenError || !token) {
     return (
-      <div className="text-center py-12">
-        <div className="w-14 h-14 bg-emerald/15 rounded-2xl flex items-center justify-center mx-auto mb-5">
-          <CheckCircle size={24} className="text-emerald" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Error Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 mb-4">
+              <svg
+                className="w-8 h-8 text-red-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4v2m0 0v2m0-6v-2m0 0V7a2 2 0 012-2h6a2 2 0 012 2v10a2 2 0 01-2 2h-6a2 2 0 01-2-2z"
+                />
+              </svg>
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-2">Invalid Reset Link</h1>
+            <p className="text-slate-400">
+              The password reset link is missing or has expired
+            </p>
+          </div>
+
+          {/* Info Card */}
+          <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 shadow-2xl">
+            <p className="text-slate-300 mb-6">
+              Reset links expire after 15 minutes for security. If your link has expired, you can request a new one.
+            </p>
+
+            <Link
+              to="/auth/forgot-password"
+              className="block w-full text-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition mb-4"
+            >
+              Request New Reset Link
+            </Link>
+
+            <Link
+              to="/auth/login"
+              className="block w-full text-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition"
+            >
+              Back to Login
+            </Link>
+          </div>
         </div>
-        <h2 className="font-display font-bold text-white text-2xl mb-2">Password reset!</h2>
-        <p className="text-gray-400 text-sm">Redirecting to login...</p>
       </div>
-    )
+    );
   }
 
-  return (
-    <div>
-      <div className="mb-8">
-        <h1 className="font-display font-bold text-white text-3xl mb-2">New password</h1>
-        <p className="text-gray-500 text-sm">Choose a strong password for your account.</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {[
-          { label: 'New Password', value: password, onChange: setPassword, key: 'password', error: errors.password },
-          { label: 'Confirm Password', value: confirm, onChange: setConfirm, key: 'confirm', error: errors.confirm },
-        ].map(({ label, value, onChange, key, error }) => (
-          <div key={key} className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-300">{label}</label>
-            <div className="relative">
-              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500">
-                <Lock size={16} />
-              </div>
-              <input
-                type={showPass ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={value}
-                onChange={(e) => { onChange(e.target.value); setErrors(p => ({ ...p, [key]: '' })) }}
-                className={`input-field pl-10 pr-10 ${error ? 'border-rose/50' : ''}`}
-              />
-              {key === 'password' && (
-                <button type="button" onClick={() => setShowPass(!showPass)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
-                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              )}
+  // ==================== SUCCESS STATE ====================
+  if (successMsg) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Success Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 border border-green-500/30 mb-4">
+              <svg
+                className="w-8 h-8 text-green-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
             </div>
-            {error && <p className="text-rose text-xs">{error}</p>}
+            <h1 className="text-3xl font-bold text-white mb-2">Password Reset</h1>
+            <p className="text-slate-400">Your password has been successfully reset</p>
           </div>
-        ))}
 
-        <Button type="submit" fullWidth loading={loading} size="lg">
-          Reset Password
-        </Button>
-      </form>
+          {/* Info Card */}
+          <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 shadow-2xl">
+            <Toast
+              type="success"
+              message={successMsg}
+              className="mb-6"
+            />
 
-      <div className="mt-6 text-center">
-        <Link to="/login" className="text-gray-500 text-sm hover:text-gray-300 transition-colors">
-          Back to login
-        </Link>
+            <p className="text-slate-300 mb-6">
+              You can now login with your new password. Redirecting to login page...
+            </p>
+
+            <Link
+              to="/auth/login"
+              className="block w-full text-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition"
+            >
+              Go to Login
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ==================== FORM STATE ====================
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Create New Password</h1>
+          <p className="text-slate-400">
+            Enter a strong password for your account
+          </p>
+        </div>
+
+        {/* Form Card */}
+        <form
+          onSubmit={handleSubmit}
+          className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 shadow-2xl"
+        >
+          {/* Password Input */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-slate-200 mb-2">
+              New Password (min 8 characters)
+            </label>
+            <Input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="••••••••"
+              disabled={loading}
+            />
+          </div>
+
+          {/* Confirm Password Input */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-slate-200 mb-2">
+              Confirm Password
+            </label>
+            <Input
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              placeholder="••••••••"
+              disabled={loading}
+            />
+          </div>
+
+          {/* Error Message */}
+          {localError && (
+            <Toast
+              type="error"
+              message={localError}
+              className="mb-4"
+            />
+          )}
+
+          {/* Submit Button */}
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full mb-4"
+          >
+            {loading ? 'Resetting Password...' : 'Reset Password'}
+          </Button>
+
+          {/* Back to Login */}
+          <p className="text-center text-slate-400">
+            <Link to="/auth/login" className="text-purple-400 hover:text-purple-300">
+              Back to login
+            </Link>
+          </p>
+        </form>
+
+        {/* Password Tips */}
+        <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+          <p className="text-xs font-medium text-blue-200 mb-2">💡 Strong Password Tips:</p>
+          <ul className="text-xs text-blue-200/80 space-y-1">
+            <li>✓ At least 8 characters long</li>
+            <li>✓ Mix of uppercase and lowercase letters</li>
+            <li>✓ Include numbers and special characters</li>
+          </ul>
+        </div>
       </div>
     </div>
-  )
+  );
 }
