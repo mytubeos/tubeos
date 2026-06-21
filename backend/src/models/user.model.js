@@ -2,6 +2,7 @@
 // FIXED: User model with proper password hashing, validation, and security
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema(
   {

@@ -38,7 +38,7 @@ router.get('/queue/stats', protect, scheduleController.getQueueStats);
 router.get(
   '/best-time/:channelId',
   protect,
-  requirePlan('creator', 'pro', 'agency'),
+  requirePlan('creator'),
   scheduleController.getBestTime
 );
 
@@ -65,7 +65,7 @@ router.post('/', protect, scheduleController.createSchedule);
 router.post(
   '/bulk',
   protect,
-  requirePlan('pro', 'agency'),
+  requirePlan('pro'),
   scheduleController.bulkSchedule
 );
 

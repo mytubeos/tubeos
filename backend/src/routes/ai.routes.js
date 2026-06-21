@@ -57,7 +57,7 @@ router.post('/comments/:commentId/post-reply', protect, aiController.postReply);
 router.post(
   '/comments/bulk-generate',
   protect,
-  requirePlan('creator', 'pro', 'agency'),
+  requirePlan('creator'),
   aiController.bulkGenerateReplies
 );
 
@@ -121,7 +121,7 @@ router.post('/shorts/script', protect, aiController.generateShortsScript);
 router.post(
   '/shorts/repurpose/:videoId',
   protect,
-  requirePlan('pro', 'agency'),
+  requirePlan('pro'),
   aiController.repurposeToShorts
 );
 
@@ -136,7 +136,7 @@ router.post(
 router.post(
   '/thumbnail/score',
   protect,
-  requirePlan('creator', 'pro', 'agency'),
+  requirePlan('creator'),
   aiController.scoreThumbnail
 );
 
@@ -148,7 +148,7 @@ router.post(
 router.get(
   '/monetization/:channelId',
   protect,
-  requirePlan('pro', 'agency'),
+  requirePlan('pro'),
   aiController.getMonetizationTips
 );
 

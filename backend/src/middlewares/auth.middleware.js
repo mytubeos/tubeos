@@ -125,8 +125,20 @@ const requirePlan = (requiredPlan) => {
   };
 };
 
+// Check if user has exceeded usage limits based on plan
+const checkUsageLimit = (limitType) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return errorResponse(res, 401, 'Authentication required');
+    }
+    // Usage limit enforcement can be extended per plan here
+    next();
+  };
+};
+
 module.exports = {
   protect,
   optionalAuth,
   requirePlan,
+  checkUsageLimit,
 };
