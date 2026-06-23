@@ -14,7 +14,8 @@ const buildRedisConnection = (redisUrl) => {
       username: parsed.username || 'default',
       password: parsed.password || undefined,
       tls:      redisUrl.startsWith('rediss://') ? {} : undefined,
-      maxRetriesPerRequest: null, // Required for BullMQ
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
     };
   } catch (err) {
     console.error('Invalid REDIS_URL for BullMQ:', err.message);

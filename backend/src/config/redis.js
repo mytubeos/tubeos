@@ -10,6 +10,7 @@ const connectRedis = () => {
   try {
     redisClient = new Redis(config.redis.url, {
       maxRetriesPerRequest: 3,
+      enableReadyCheck: false,
       retryStrategy(times) {
         const delay = Math.min(times * 500, 2000);
         return delay;
