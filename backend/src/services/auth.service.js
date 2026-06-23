@@ -84,9 +84,12 @@ const register = async ({ name, email, password, referralCode }) => {
   // Send OTP email via Brevo
   try {
     await sendOTPEmail(user.email, user.name, otp);
+    console.log(`[register] OTP email sent to ${user.email}`);
   } catch (emailError) {
     console.error('[register] Failed to send OTP email:', emailError.message);
-    // Don't throw - let user retry with resendOTP
+    console.error('[register] Brevo error details:', emailError.response?.data);
+    // Log OTP for testing when email fails (remove before full production)
+    console.log(`[register] OTP for ${user.email}: ${otp}`);
   }
 
   // Update referrer's referral count
@@ -196,11 +199,12 @@ const resendOTP = async (email) => {
   // Send email
   try {
     await sendOTPEmail(user.email, user.name, otp);
+    console.log(`[resendOTP] OTP email sent to ${user.email}`);
   } catch (emailError) {
     console.error('[resendOTP] Failed to send OTP:', emailError.message);
-    const error = new Error('Failed to send OTP. Please try again.');
-    error.statusCode = 500;
-    throw error;
+    console.error('[resendOTP] Brevo error details:', emailError.response?.data);
+    // Log OTP for testing when email fails (remove before full production)
+    console.log(`[resendOTP] OTP for ${user.email}: ${otp}`);
   }
 
   return {

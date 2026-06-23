@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import authApi from '../../api/auth.api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Toast } from '../../components/ui/Toast';
@@ -21,6 +22,7 @@ export const Signup = () => {
   const [otpData, setOtpData] = useState({ userId: '', otp: '' });
   const [localError, setLocalError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [resending, setResending] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -65,6 +67,20 @@ export const Signup = () => {
       setSuccessMsg('OTP sent to your email. Please enter it below.');
     } else {
       setLocalError(result.message || 'Registration failed');
+    }
+  };
+
+  const handleResendOTP = async () => {
+    setResending(true);
+    setLocalError('');
+    setSuccessMsg('');
+    try {
+      await authApi.resendOTP(formData.email);
+      setSuccessMsg('New OTP sent! Check your email or spam folder.');
+    } catch (err) {
+      setLocalError(err.response?.data?.message || 'Failed to resend OTP');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -184,14 +200,25 @@ export const Signup = () => {
             {loading ? 'Verifying...' : 'Verify Email'}
           </Button>
 
-          <div className="text-center">
+          <div className="text-center space-y-2">
             <p className="text-slate-400 text-sm">
               Didn't receive the code?{' '}
               <button
                 type="button"
+                onClick={handleResendOTP}
+                disabled={loading || resending}
+                className="text-purple-400 hover:text-purple-300 disabled:opacity-50 font-medium"
+              >
+                {resending ? 'Sending...' : 'Resend OTP'}
+              </button>
+            </p>
+            <p className="text-slate-500 text-xs">
+              Wrong email?{' '}
+              <button
+                type="button"
                 onClick={() => setStep('signup')}
                 disabled={loading}
-                className="text-purple-400 hover:text-purple-300 disabled:opacity-50 font-medium"
+                className="text-slate-400 hover:text-slate-300 disabled:opacity-50"
               >
                 Go back
               </button>
