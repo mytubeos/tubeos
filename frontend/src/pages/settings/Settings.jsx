@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { User, Lock, Bell, CreditCard, Shield, ChevronRight, Check } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
-import { authApi } from '../../api/auth.api'
+import authApi from '../../api/auth.api'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'

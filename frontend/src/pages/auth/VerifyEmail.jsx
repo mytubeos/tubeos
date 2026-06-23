@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { CheckCircle, XCircle } from 'lucide-react'
-import { authApi } from '../../api/auth.api'
+import authApi from '../../api/auth.api'
 import { useAuthStore } from '../../store/authStore'
 import { Spinner } from '../../components/ui/Spinner'
 import { Button } from '../../components/ui/Button'

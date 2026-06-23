@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { useChannelStore } from '../../store/channelStore'
-import { useAuth } from '../../hooks/useAuth'
+import useAuth from '../../hooks/useAuth'
 import { PlanBadge } from '../ui/Badge'
 import { getInitials, formatNumber } from '../../utils/formatters'
 
