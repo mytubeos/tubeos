@@ -50,25 +50,32 @@ const DEFAULT_JOB_OPTIONS = {
 const videoPublishQueue = new Queue(QUEUE_NAMES.VIDEO_PUBLISH, {
   connection:         redisConnection,
   defaultJobOptions:  DEFAULT_JOB_OPTIONS,
+  skipVersionCheck:   true,
 });
 
 const analyticsQueue = new Queue(QUEUE_NAMES.ANALYTICS_SYNC, {
   connection:        redisConnection,
   defaultJobOptions: { ...DEFAULT_JOB_OPTIONS, attempts: 5 },
+  skipVersionCheck:  true,
 });
 
 const emailQueue = new Queue(QUEUE_NAMES.EMAIL, {
   connection:        redisConnection,
   defaultJobOptions: { ...DEFAULT_JOB_OPTIONS, attempts: 3 },
+  skipVersionCheck:  true,
 });
 
 const reportQueue = new Queue(QUEUE_NAMES.REPORT, {
   connection:        redisConnection,
   defaultJobOptions: DEFAULT_JOB_OPTIONS,
+  skipVersionCheck:  true,
 });
 
 // Queue Events
-const videoPublishEvents = new QueueEvents(QUEUE_NAMES.VIDEO_PUBLISH, { connection: redisConnection });
+const videoPublishEvents = new QueueEvents(QUEUE_NAMES.VIDEO_PUBLISH, {
+  connection:       redisConnection,
+  skipVersionCheck: true,
+});
 
 videoPublishEvents.on('completed', ({ jobId }) => {
   console.log(`✅ Video publish job ${jobId} completed`);

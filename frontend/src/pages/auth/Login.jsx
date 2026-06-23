@@ -86,7 +86,7 @@ export const Login = () => {
                 Password
               </label>
               <Link
-                to="/auth/forgot-password"
+                to="/forgot-password"
                 className="text-xs text-purple-400 hover:text-purple-300"
               >
                 Forgot password?
@@ -123,7 +123,7 @@ export const Login = () => {
           {/* No account yet */}
           <p className="text-center text-slate-400">
             Don't have an account?{' '}
-            <Link to="/auth/signup" className="text-purple-400 hover:text-purple-300">
+            <Link to="/signup" className="text-purple-400 hover:text-purple-300">
               Create one
             </Link>
           </p>

@@ -104,14 +104,14 @@ export const ResetPassword = () => {
             </p>
 
             <Link
-              to="/auth/forgot-password"
+              to="/forgot-password"
               className="block w-full text-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition mb-4"
             >
               Request New Reset Link
             </Link>
 
             <Link
-              to="/auth/login"
+              to="/login"
               className="block w-full text-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition"
             >
               Back to Login
@@ -161,7 +161,7 @@ export const ResetPassword = () => {
             </p>
 
             <Link
-              to="/auth/login"
+              to="/login"
               className="block w-full text-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition"
             >
               Go to Login
@@ -239,7 +239,7 @@ export const ResetPassword = () => {
 
           {/* Back to Login */}
           <p className="text-center text-slate-400">
-            <Link to="/auth/login" className="text-purple-400 hover:text-purple-300">
+            <Link to="/login" className="text-purple-400 hover:text-purple-300">
               Back to login
             </Link>
           </p>

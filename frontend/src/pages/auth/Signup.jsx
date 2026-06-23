@@ -225,7 +225,7 @@ export const Signup = () => {
             {/* Already have account */}
             <p className="text-center text-slate-400">
               Already have an account?{' '}
-              <Link to="/auth/login" className="text-purple-400 hover:text-purple-300">
+              <Link to="/login" className="text-purple-400 hover:text-purple-300">
                 Sign in
               </Link>
             </p>

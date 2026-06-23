@@ -78,10 +78,11 @@ const videoPublishWorker = new Worker(
   },
   {
     connection: redisConnection,
-    concurrency: 5, // Process 5 jobs simultaneously
+    concurrency: 5,
+    skipVersionCheck: true,
     limiter: {
       max: 10,
-      duration: 1000, // Max 10 jobs per second
+      duration: 1000,
     },
   }
 );

@@ -116,7 +116,7 @@ export const ForgotPassword = () => {
 
             {/* Back to Login */}
             <Link
-              to="/auth/login"
+              to="/login"
               className="block w-full text-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition"
             >
               Back to Login
@@ -200,7 +200,7 @@ export const ForgotPassword = () => {
           {/* Back to Login */}
           <p className="text-center text-slate-400">
             Remembered your password?{' '}
-            <Link to="/auth/login" className="text-purple-400 hover:text-purple-300">
+            <Link to="/login" className="text-purple-400 hover:text-purple-300">
               Sign in
             </Link>
           </p>
