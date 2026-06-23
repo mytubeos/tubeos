@@ -78,8 +78,20 @@ const register = async ({ name, email, password, referralCode }) => {
   // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // Store OTP in Redis for 10 minutes
-  await setCache(`email_otp:${user._id.toString()}`, otp, 10 * 60);
+  // Store OTP in Redis for 10 minutes with direct client for reliability
+  const otpKey = `email_otp:${user._id.toString()}`;
+  try {
+    const { getRedisClient } = require('../config/redis');
+    const redisClient = getRedisClient();
+    await redisClient.set(otpKey, otp, 'EX', 600);
+    const stored = await redisClient.get(otpKey);
+    console.log(`[register] OTP stored in Redis: ${stored ? 'YES' : 'FAILED'} | key=${otpKey}`);
+  } catch (redisErr) {
+    console.error('[register] Redis SET failed:', redisErr.message);
+    const err = new Error('Server error: Could not save OTP. Please try again.');
+    err.statusCode = 500;
+    throw err;
+  }
 
   // Send OTP email via Brevo
   try {
@@ -123,8 +135,9 @@ const verifyEmail = async (otp, userId) => {
 
   // Get OTP from Redis
   const storedOtp = await getCache(`email_otp:${userId}`);
+  console.log(`[verifyEmail] Redis lookup userId=${userId} storedOtp=${storedOtp} inputOtp=${otp}`);
   if (!storedOtp) {
-    const error = new Error('OTP expired. Please request a new one.');
+    const error = new Error('OTP expired or not found. Click "Resend OTP" to get a new one.');
     error.statusCode = 400;
     throw error;
   }
@@ -229,10 +242,11 @@ const login = async ({ email, password, ip }) => {
     throw error;
   }
 
-  // Check if email is verified
+  // Check if email is verified — send userId so frontend can show OTP form
   if (!user.isEmailVerified) {
     const error = new Error('Please verify your email first');
     error.statusCode = 403;
+    error.userId = user._id.toString();
     throw error;
   }
 

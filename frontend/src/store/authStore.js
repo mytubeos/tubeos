@@ -23,7 +23,17 @@ export const useAuthStore = create(
           return { success: true }
         } catch (err) {
           set({ isLoading: false })
-          return { success: false, message: err.response?.data?.message || 'Login failed' }
+          const data = err.response?.data
+          // 403 = email not verified — pass userId so Login.jsx can show OTP screen
+          if (err.response?.status === 403 && data?.data?.requiresVerification) {
+            return {
+              success: false,
+              message: data.message,
+              requiresVerification: true,
+              userId: data.data.userId,
+            }
+          }
+          return { success: false, message: data?.message || 'Login failed' }
         }
       },
 

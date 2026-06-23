@@ -2,16 +2,24 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import authApi from '../../api/auth.api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Toast } from '../../components/ui/Toast';
 
 export const Login = () => {
   const navigate = useNavigate();
-  const { login, isLoading: loading } = useAuthStore();
+  const { login, verifyEmail, isLoading: loading } = useAuthStore();
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [localError, setLocalError] = useState('');
+
+  // OTP flow when user is registered but not verified
+  const [showOtp, setShowOtp] = useState(false);
+  const [unverifiedUserId, setUnverifiedUserId] = useState('');
+  const [otp, setOtp] = useState('');
+  const [resending, setResending] = useState(false);
+  const [otpMsg, setOtpMsg] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -39,11 +47,115 @@ export const Login = () => {
 
     if (result.success) {
       navigate('/dashboard');
+    } else if (result.requiresVerification && result.userId) {
+      // User registered but not verified — show OTP screen
+      setUnverifiedUserId(result.userId);
+      setShowOtp(true);
+      setLocalError('');
+      setOtpMsg('Enter the OTP sent to your email. Check Render logs if email not received.');
     } else {
       setLocalError(result.message || 'Login failed');
     }
   };
 
+  const handleOtpChange = (e) => {
+    setOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
+    setLocalError('');
+  };
+
+  const handleOtpSubmit = async (e) => {
+    e.preventDefault();
+    if (otp.length !== 6) {
+      setLocalError('OTP must be 6 digits');
+      return;
+    }
+    const result = await verifyEmail(unverifiedUserId, otp);
+    if (result.success) {
+      navigate('/dashboard');
+    } else {
+      setLocalError(result.message || 'OTP verification failed');
+    }
+  };
+
+  const handleResendOTP = async () => {
+    setResending(true);
+    setLocalError('');
+    try {
+      await authApi.resendOTP(formData.email);
+      setOtpMsg('New OTP sent! Check Render logs or your email/spam folder.');
+    } catch (err) {
+      setLocalError(err.response?.data?.message || 'Failed to resend OTP');
+    } finally {
+      setResending(false);
+    }
+  };
+
+  // ==================== OTP SCREEN (unverified user) ====================
+  if (showOtp) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-white mb-2">Verify Email</h1>
+            <p className="text-slate-400">Enter the 6-digit OTP for {formData.email}</p>
+          </div>
+
+          <form
+            onSubmit={handleOtpSubmit}
+            className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 shadow-2xl"
+          >
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-200 mb-4 text-center">
+                Verification Code
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={otp}
+                onChange={handleOtpChange}
+                placeholder="000000"
+                maxLength="6"
+                disabled={loading}
+                className="w-full px-4 py-3 text-center text-3xl tracking-widest font-mono bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition disabled:opacity-50"
+              />
+            </div>
+
+            {otpMsg && <Toast type="info" message={otpMsg} className="mb-4" />}
+            {localError && <Toast type="error" message={localError} className="mb-4" />}
+
+            <Button type="submit" disabled={loading || otp.length !== 6} className="w-full mb-4">
+              {loading ? 'Verifying...' : 'Verify & Sign In'}
+            </Button>
+
+            <div className="text-center space-y-2">
+              <p className="text-slate-400 text-sm">
+                Didn't get the code?{' '}
+                <button
+                  type="button"
+                  onClick={handleResendOTP}
+                  disabled={resending || loading}
+                  className="text-purple-400 hover:text-purple-300 disabled:opacity-50 font-medium"
+                >
+                  {resending ? 'Sending...' : 'Resend OTP'}
+                </button>
+              </p>
+              <p className="text-slate-500 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setShowOtp(false)}
+                  className="text-slate-400 hover:text-slate-300"
+                >
+                  ← Back to login
+                </button>
+              </p>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // ==================== LOGIN FORM ====================
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -57,44 +169,21 @@ export const Login = () => {
           className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 shadow-2xl"
         >
           <div className="mb-4">
-            <label className="block text-sm font-medium text-slate-200 mb-2">
-              Email Address
-            </label>
-            <Input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="john@example.com"
-              disabled={loading}
-            />
+            <label className="block text-sm font-medium text-slate-200 mb-2">Email Address</label>
+            <Input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="john@example.com" disabled={loading} />
           </div>
 
           <div className="mb-6">
             <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-medium text-slate-200">
-                Password
-              </label>
-              <Link
-                to="/forgot-password"
-                className="text-xs text-purple-400 hover:text-purple-300"
-              >
+              <label className="block text-sm font-medium text-slate-200">Password</label>
+              <Link to="/forgot-password" className="text-xs text-purple-400 hover:text-purple-300">
                 Forgot password?
               </Link>
             </div>
-            <Input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="••••••••"
-              disabled={loading}
-            />
+            <Input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••••" disabled={loading} />
           </div>
 
-          {localError && (
-            <Toast type="error" message={localError} className="mb-4" />
-          )}
+          {localError && <Toast type="error" message={localError} className="mb-4" />}
 
           <Button type="submit" disabled={loading} className="w-full mb-4">
             {loading ? 'Signing in...' : 'Sign In'}
@@ -102,22 +191,9 @@ export const Login = () => {
 
           <p className="text-center text-slate-400">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-purple-400 hover:text-purple-300">
-              Create one
-            </Link>
+            <Link to="/signup" className="text-purple-400 hover:text-purple-300">Create one</Link>
           </p>
         </form>
-
-        <div className="mt-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-          <p className="text-xs text-amber-200 font-medium mb-2">
-            Demo Credentials:
-          </p>
-          <p className="text-xs text-amber-200/80 font-mono">
-            Email: demo@example.com
-            <br />
-            Password: Demo123456
-          </p>
-        </div>
       </div>
     </div>
   );

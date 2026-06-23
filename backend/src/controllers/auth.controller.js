@@ -111,7 +111,16 @@ const login = async (req, res) => {
       refreshToken: result.refreshToken, // Also in body for cross-origin
     });
   } catch (err) {
-    return errorResponse(res, err.statusCode || 401, err.message);
+    const status = err.statusCode || 401;
+    // When user is unverified (403), return userId so frontend can show OTP screen
+    if (status === 403 && err.userId) {
+      return res.status(403).json({
+        success: false,
+        message: err.message,
+        data: { userId: err.userId, requiresVerification: true },
+      });
+    }
+    return errorResponse(res, status, err.message);
   }
 };
 
