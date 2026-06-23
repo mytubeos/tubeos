@@ -4,17 +4,14 @@
 const startWorkers = () => {
   console.log('\n🔧 Starting BullMQ Workers...');
 
-  // Part 3 — Scheduling
-  require('./videoPublish.job');
+  try {
+    require('./videoPublish.job');
+    console.log('✅ Video publish worker started');
+  } catch (err) {
+    console.warn('⚠️  Video publish worker skipped:', err.message);
+  }
 
-  // Part 4 — Analytics (uncomment when built)
-  // require('./analyticsSync.job');
-
-  // Part 5 — AI (uncomment when built)
-  // require('./aiComment.job');
-  // require('./weeklyReport.job');
-
-  console.log('✅ All workers started\n');
+  console.log('✅ Workers init complete\n');
 };
 
 module.exports = { startWorkers };

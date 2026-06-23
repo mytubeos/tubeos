@@ -28,9 +28,13 @@ const startServer = async () => {
       console.warn('⚠️  Redis connectRedis not found, skipping...');
     }
 
-    // 4. Start BullMQ Workers
-    const { startWorkers } = require('./src/jobs/index');
-    startWorkers();
+    // 4. Start BullMQ Workers (skip if Upstash free plan blocks evalsha)
+    try {
+      const { startWorkers } = require('./src/jobs/index');
+      startWorkers();
+    } catch (err) {
+      console.warn('⚠️  BullMQ workers skipped (Upstash free plan limitation):', err.message);
+    }
 
     // 5. Start Express server
     const PORT = config.port;
