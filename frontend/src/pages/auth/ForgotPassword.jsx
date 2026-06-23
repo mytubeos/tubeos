@@ -39,7 +39,7 @@ export const ForgotPassword = () => {
 
       // Redirect to login after 3 seconds
       setTimeout(() => {
-        navigate('/auth/login');
+        navigate('/login');
       }, 3000);
     }
   };

@@ -144,7 +144,12 @@ videoPublishWorker.on('failed', async (job, err) => {
 });
 
 videoPublishWorker.on('error', (err) => {
-  console.error('Worker error:', err);
+  if (err.message?.includes('NOPERM') || err.command?.name === 'evalsha') {
+    videoPublishWorker.close(true).catch(() => {});
+    console.warn('⚠️  BullMQ worker closed: Upstash free plan does not support evalsha');
+    return;
+  }
+  console.error('Worker error:', err.message);
 });
 
 console.log('🔧 Video Publish Worker started');
