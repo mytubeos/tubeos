@@ -98,7 +98,7 @@ const sendPasswordResetEmail = async (recipientEmail, recipientName, resetToken)
     throw new Error('Email and reset token are required');
   }
 
-  const resetUrl = `${config.cors.clientUrl}/auth/reset-password?token=${resetToken}`;
+  const resetUrl = `${config.cors.clientUrl}/reset-password?token=${resetToken}`;
 
   try {
     const emailContent = `

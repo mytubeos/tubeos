@@ -8,7 +8,6 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { useChannelStore } from '../../store/channelStore'
-import useAuth from '../../hooks/useAuth'
 import { PlanBadge } from '../ui/Badge'
 import { getInitials, formatNumber } from '../../utils/formatters'
 
@@ -47,9 +46,8 @@ const NAV_GROUPS = [
 ]
 
 export const Sidebar = ({ collapsed = false }) => {
-  const { user } = useAuthStore()
+  const { user, logout } = useAuthStore()
   const { activeChannel } = useChannelStore()
-  const { handleLogout } = useAuth()
 
   return (
     <aside className={`h-screen bg-base-800 border-r border-white/8 flex flex-col
@@ -147,7 +145,7 @@ export const Sidebar = ({ collapsed = false }) => {
         )}
 
         <button
-          onClick={handleLogout}
+          onClick={logout}
           className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm
                      text-gray-500 hover:text-rose hover:bg-rose/10 transition-all duration-150"
         >

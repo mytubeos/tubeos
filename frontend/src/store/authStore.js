@@ -1,8 +1,4 @@
 // src/store/authStore.js
-// FIX: Login ke baad refreshToken body se lo aur localStorage mein save karo
-// Vercel (frontend) + Render (backend) = cross-origin = cookies blocked
-// Solution: refreshToken localStorage mein store karo
-
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import authApi from '../api/auth.api'
@@ -15,20 +11,14 @@ export const useAuthStore = create(
       isLoading: false,
       isAuthenticated: false,
 
-      // Login
+      // Login — FIX: was passing object, now passes separate args
       login: async (email, password) => {
         set({ isLoading: true })
         try {
-          const res = await authApi.login({ email, password })
+          const res = await authApi.login(email, password)
           const { user, accessToken, refreshToken } = res.data.data
-
-          // Save tokens in localStorage
           localStorage.setItem('accessToken', accessToken)
-          // FIX: refreshToken bhi save karo body se
-          if (refreshToken) {
-            localStorage.setItem('refreshToken', refreshToken)
-          }
-
+          if (refreshToken) localStorage.setItem('refreshToken', refreshToken)
           set({ user, accessToken, isAuthenticated: true, isLoading: false })
           return { success: true }
         } catch (err) {
@@ -38,16 +28,32 @@ export const useAuthStore = create(
       },
 
       // Register
-      register: async (data) => {
+      register: async (name, email, password, referralCode = null) => {
         set({ isLoading: true })
         try {
-          const res = await authApi.register(data)
+          const res = await authApi.register(name, email, password, referralCode)
           const { userId, requiresVerification } = res.data.data
           set({ isLoading: false })
           return { success: true, userId, requiresVerification }
         } catch (err) {
           set({ isLoading: false })
           return { success: false, message: err.response?.data?.message || 'Registration failed' }
+        }
+      },
+
+      // Verify Email OTP — NEW: sets isAuthenticated after OTP verified
+      verifyEmail: async (userId, otp) => {
+        set({ isLoading: true })
+        try {
+          const res = await authApi.verifyEmail(userId, otp)
+          const { user, accessToken, refreshToken } = res.data.data
+          localStorage.setItem('accessToken', accessToken)
+          if (refreshToken) localStorage.setItem('refreshToken', refreshToken)
+          set({ user, accessToken, isAuthenticated: true, isLoading: false })
+          return { success: true }
+        } catch (err) {
+          set({ isLoading: false })
+          return { success: false, message: err.response?.data?.message || 'OTP verification failed' }
         }
       },
 
@@ -69,7 +75,7 @@ export const useAuthStore = create(
         }
       },
 
-      // Update user locally (no server call)
+      // Update user locally
       updateUser: (updates) => {
         set(state => ({ user: { ...state.user, ...updates } }))
       },
