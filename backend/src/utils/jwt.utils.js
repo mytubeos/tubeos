@@ -47,16 +47,25 @@ const verifyRefreshToken = (token) => {
 };
 
 // Generate both tokens for a user
-const generateTokenPair = (user) => {
-  const payload = {
-    id: user._id,
-    email: user.email,
-    plan: user.plan,
-    role: user.role || 'user',
-  };
+// Accepts either (user object) or (id, email, plan) for backwards compat
+const generateTokenPair = (userOrId, email, plan) => {
+  let id, userEmail, userPlan, role;
 
-  const accessToken = generateAccessToken(payload);
-  const refreshToken = generateRefreshToken({ id: user._id });
+  if (typeof userOrId === 'object' && userOrId !== null) {
+    id        = userOrId._id?.toString() || userOrId.id?.toString();
+    userEmail = userOrId.email;
+    userPlan  = userOrId.plan;
+    role      = userOrId.role || 'user';
+  } else {
+    id        = userOrId;
+    userEmail = email;
+    userPlan  = plan;
+    role      = 'user';
+  }
+
+  const payload = { id, email: userEmail, plan: userPlan, role };
+  const accessToken  = generateAccessToken(payload);
+  const refreshToken = generateRefreshToken({ id });
 
   return { accessToken, refreshToken };
 };
