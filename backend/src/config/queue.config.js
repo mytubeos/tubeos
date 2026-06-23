@@ -1,31 +1,6 @@
-// src/config/queue.config.js
-// FIX: Redis URL parse for rediss:// (SSL) — safe port extraction
+// BullMQ DISABLED — Upstash free plan does not support evalsha (Lua scripts)
+// All queue operations are stubbed to no-ops so the rest of the app works fine.
 
-const { Queue, Worker, QueueEvents } = require('bullmq');
-const { config } = require('./env');
-
-// FIX: Safe Redis URL parsing for both redis:// and rediss:// (SSL)
-const buildRedisConnection = (redisUrl) => {
-  try {
-    const parsed = new URL(redisUrl);
-    return {
-      host:     parsed.hostname,
-      port:     parseInt(parsed.port) || (redisUrl.startsWith('rediss://') ? 6380 : 6379),
-      username: parsed.username || 'default',
-      password: parsed.password || undefined,
-      tls:      redisUrl.startsWith('rediss://') ? {} : undefined,
-      maxRetriesPerRequest: null,
-      enableReadyCheck: false,
-    };
-  } catch (err) {
-    console.error('Invalid REDIS_URL for BullMQ:', err.message);
-    throw new Error('Cannot parse REDIS_URL for BullMQ connection');
-  }
-};
-
-const redisConnection = buildRedisConnection(config.redis.url);
-
-// Queue Names
 const QUEUE_NAMES = {
   VIDEO_PUBLISH:  'video-publish',
   VIDEO_PROCESS:  'video-process',
@@ -35,123 +10,49 @@ const QUEUE_NAMES = {
   REPORT:         'weekly-report',
 };
 
-// Default job options
 const DEFAULT_JOB_OPTIONS = {
   attempts: 3,
-  backoff: {
-    type:  'exponential',
-    delay: 5000,
-  },
+  backoff: { type: 'exponential', delay: 5000 },
   removeOnComplete: { count: 100 },
   removeOnFail:     { count: 200 },
 };
 
-// Queues
-const videoPublishQueue = new Queue(QUEUE_NAMES.VIDEO_PUBLISH, {
-  connection:         redisConnection,
-  defaultJobOptions:  DEFAULT_JOB_OPTIONS,
-  skipVersionCheck:   true,
+// Stub queue — no Redis connections, no commands
+const makeStubQueue = (name) => ({
+  name,
+  add:               async () => ({ id: 'stub', name }),
+  getJob:            async () => null,
+  getWaitingCount:   async () => 0,
+  getActiveCount:    async () => 0,
+  getCompletedCount: async () => 0,
+  getFailedCount:    async () => 0,
+  getDelayedCount:   async () => 0,
+  close:             async () => {},
+  on:                () => {},
 });
 
-const analyticsQueue = new Queue(QUEUE_NAMES.ANALYTICS_SYNC, {
-  connection:        redisConnection,
-  defaultJobOptions: { ...DEFAULT_JOB_OPTIONS, attempts: 5 },
-  skipVersionCheck:  true,
-});
-
-const emailQueue = new Queue(QUEUE_NAMES.EMAIL, {
-  connection:        redisConnection,
-  defaultJobOptions: { ...DEFAULT_JOB_OPTIONS, attempts: 3 },
-  skipVersionCheck:  true,
-});
-
-const reportQueue = new Queue(QUEUE_NAMES.REPORT, {
-  connection:        redisConnection,
-  defaultJobOptions: DEFAULT_JOB_OPTIONS,
-  skipVersionCheck:  true,
-});
-
-// Queue Events
-const videoPublishEvents = new QueueEvents(QUEUE_NAMES.VIDEO_PUBLISH, {
-  connection:       redisConnection,
-  skipVersionCheck: true,
-});
-
-videoPublishEvents.on('completed', ({ jobId }) => {
-  console.log(`✅ Video publish job ${jobId} completed`);
-});
-
-videoPublishEvents.on('failed', ({ jobId, failedReason }) => {
-  console.error(`❌ Video publish job ${jobId} failed: ${failedReason}`);
-});
-
-// ==================== HELPERS ====================
+const videoPublishQueue = makeStubQueue(QUEUE_NAMES.VIDEO_PUBLISH);
+const analyticsQueue    = makeStubQueue(QUEUE_NAMES.ANALYTICS_SYNC);
+const emailQueue        = makeStubQueue(QUEUE_NAMES.EMAIL);
+const reportQueue       = makeStubQueue(QUEUE_NAMES.REPORT);
 
 const scheduleVideoPublish = async (videoId, channelId, userId, scheduledAt) => {
-  const delay = new Date(scheduledAt).getTime() - Date.now();
-
-  if (delay < 0) {
-    throw new Error('Scheduled time must be in the future');
-  }
-
-  const job = await videoPublishQueue.add(
-    'publish-video',
-    { videoId, channelId, userId },
-    {
-      ...DEFAULT_JOB_OPTIONS,
-      delay,
-      jobId: `publish-${videoId}`, // Unique jobId prevents duplicates
-    }
-  );
-
-  console.log(`📅 Video ${videoId} scheduled for ${scheduledAt} (delay: ${Math.round(delay/1000/60)} min)`);
-  return job;
+  console.warn(`[queue] scheduleVideoPublish stubbed — video ${videoId} will not be auto-published`);
+  return { id: `stub-${videoId}` };
 };
 
 const cancelScheduledJob = async (videoId) => {
-  const jobId = `publish-${videoId}`;
-  const job   = await videoPublishQueue.getJob(jobId);
-
-  if (job) {
-    await job.remove();
-    console.log(`🗑️  Cancelled scheduled job for video ${videoId}`);
-    return true;
-  }
+  console.warn(`[queue] cancelScheduledJob stubbed — ${videoId}`);
   return false;
 };
 
-const getJobStatus = async (videoId) => {
-  const jobId = `publish-${videoId}`;
-  const job   = await videoPublishQueue.getJob(jobId);
-  if (!job) return null;
+const getJobStatus = async (videoId) => null;
 
-  const state = await job.getState();
-  return {
-    jobId,
-    state,
-    delay:        job.opts.delay,
-    attempts:     job.attemptsMade,
-    data:         job.data,
-    processedOn:  job.processedOn,
-    finishedOn:   job.finishedOn,
-    failedReason: job.failedReason,
-  };
-};
-
-const getQueueStats = async () => {
-  const [waiting, active, completed, failed, delayed] = await Promise.all([
-    videoPublishQueue.getWaitingCount(),
-    videoPublishQueue.getActiveCount(),
-    videoPublishQueue.getCompletedCount(),
-    videoPublishQueue.getFailedCount(),
-    videoPublishQueue.getDelayedCount(),
-  ]);
-
-  return { waiting, active, completed, failed, delayed };
-};
+const getQueueStats = async () => ({
+  waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0,
+});
 
 module.exports = {
-  redisConnection,
   QUEUE_NAMES,
   DEFAULT_JOB_OPTIONS,
   videoPublishQueue,
