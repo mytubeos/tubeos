@@ -3,6 +3,21 @@
 import toast from 'react-hot-toast'
 import { CheckCircle, XCircle, AlertCircle, Info } from 'lucide-react'
 
+export const Toast = ({ type = 'info', message, className = '' }) => {
+  if (!message) return null
+  const styles = {
+    error: 'bg-red-500/10 border border-red-500/30 text-red-300',
+    success: 'bg-green-500/10 border border-green-500/30 text-green-300',
+    info: 'bg-blue-500/10 border border-blue-500/30 text-blue-300',
+    warning: 'bg-amber-500/10 border border-amber-500/30 text-amber-300',
+  }
+  return (
+    <div className={`px-4 py-3 rounded-lg text-sm ${styles[type] || styles.info} ${className}`}>
+      {message}
+    </div>
+  )
+}
+
 export const showToast = {
   success: (msg) => toast.success(msg),
   error: (msg) => toast.error(msg),

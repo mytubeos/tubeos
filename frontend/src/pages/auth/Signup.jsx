@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
-import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
-import Toast from '../../components/ui/Toast';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Toast } from '../../components/ui/Toast';
 
-export default function Signup() {
+export const Signup = () => {
   const navigate = useNavigate();
   const { register, verifyEmail, resendOTP, loading, error, setError } = useAuth();
 

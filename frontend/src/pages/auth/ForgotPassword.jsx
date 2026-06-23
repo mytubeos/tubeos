@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
-import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
-import Toast from '../../components/ui/Toast';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Toast } from '../../components/ui/Toast';
 
-export default function ForgotPassword() {
+export const ForgotPassword = () => {
   const navigate = useNavigate();
   const { forgotPassword, loading } = useAuth();
 
