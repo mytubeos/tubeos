@@ -159,7 +159,7 @@ const getMyChannels = async (userId) => {
   const channels = await YoutubeChannel.find({
     userId,
     isActive: true,
-  }).select('-oauth').sort({ isPrimary: -1, createdAt: 1 });
+  }).sort({ isPrimary: -1, createdAt: 1 });
 
   return { channels: channels.map(sanitizeChannel) };
 };
