@@ -48,12 +48,17 @@ export const youtubeApi = {
       window.addEventListener('message', onMessage)
 
       // Fallback: agar popup manually close ho gaya aur koi message nahi aya
+      // try-catch: COOP headers (Google OAuth page) block popup.closed access
       const checkClosed = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(checkClosed)
-          clearTimeout(timeout)
-          window.removeEventListener('message', onMessage)
-          resolve({ success: false, error: 'popup_closed' })
+        try {
+          if (popup.closed) {
+            clearInterval(checkClosed)
+            clearTimeout(timeout)
+            window.removeEventListener('message', onMessage)
+            resolve({ success: false, error: 'popup_closed' })
+          }
+        } catch {
+          // COOP blocked — popup still open on Google's domain, ignore
         }
       }, 500)
     })

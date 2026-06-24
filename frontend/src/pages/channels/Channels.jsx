@@ -22,6 +22,7 @@ export const Channels = () => {
   const {
     channels,
     isLoading,
+    fetchChannels,
     connectYouTube,
     handleOAuthReturn,
     syncChannel,
@@ -29,10 +30,10 @@ export const Channels = () => {
     setPrimary,
   } = useChannel()
 
-  // FIX 1: Page load pe URL params check karo
-  // Google OAuth callback ke baad yahan redirect hota hai
-  // ?youtube_connected=true ya ?youtube_error=... handle karo
   useEffect(() => {
+    // Page load pe channels fetch karo
+    fetchChannels()
+    // OAuth callback params handle karo
     if (searchParams.get('youtube_connected') || searchParams.get('youtube_error')) {
       handleOAuthReturn(searchParams)
     }
