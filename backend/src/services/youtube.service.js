@@ -326,7 +326,7 @@ const getValidAccessToken = async (channel) => {
 
 // ==================== HELPERS ====================
 const sanitizeChannel = (channel) => {
-  const obj = channel.toObject ? channel.toObject({ virtuals: true }) : { ...channel };
+  const obj = channel.toObject ? channel.toObject({ virtuals: false }) : { ...channel };
   delete obj.oauth;
   delete obj.__v;
   return obj;

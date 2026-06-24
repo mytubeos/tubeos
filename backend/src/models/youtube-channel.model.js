@@ -154,6 +154,7 @@ youtubeChannelSchema.index({ userId: 1, isActive: 1 });
 
 // --- Virtual: Is token expired ---
 youtubeChannelSchema.virtual('isTokenExpired').get(function () {
+  if (!this.oauth?.expiresAt) return null;
   return new Date() >= this.oauth.expiresAt;
 });
 
