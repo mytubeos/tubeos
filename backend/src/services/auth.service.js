@@ -328,7 +328,6 @@ const forgotPassword = async (email) => {
   }
 
   // Always log the reset link to console as fallback
-  const { config } = require('./env') || {};
   const clientUrl = process.env.CLIENT_URL || 'https://tubeos-eight.vercel.app';
   console.log(`[forgotPassword] RESET LINK for ${user.email}: ${clientUrl}/reset-password?token=${resetToken}`);
 
