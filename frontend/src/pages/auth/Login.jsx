@@ -1,18 +1,28 @@
 // src/pages/auth/Login.jsx
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import authApi from '../../api/auth.api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Toast } from '../../components/ui/Toast';
+import { Eye, EyeOff } from 'lucide-react';
 
 export const Login = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, verifyEmail, isLoading: loading } = useAuthStore();
+
+  useEffect(() => {
+    if (searchParams.get('verified') === '1') {
+      setSuccessMsg('Email verified! Now sign in with your password.');
+    }
+  }, []);
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [localError, setLocalError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
 
   // OTP flow when user is registered but not verified
   const [showOtp, setShowOtp] = useState(false);
@@ -71,7 +81,11 @@ export const Login = () => {
     }
     const result = await verifyEmail(unverifiedUserId, otp);
     if (result.success) {
-      navigate('/dashboard');
+      setShowOtp(false);
+      setOtp('');
+      setLocalError('');
+      setOtpMsg('');
+      setSuccessMsg('Email verified! Now sign in with your password.');
     } else {
       setLocalError(result.message || 'OTP verification failed');
     }
@@ -180,9 +194,15 @@ export const Login = () => {
                 Forgot password?
               </Link>
             </div>
-            <Input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••••" disabled={loading} />
+            <div className="relative">
+              <Input type={showPwd ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} placeholder="••••••••" disabled={loading} />
+              <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+                {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
+          {successMsg && <Toast type="success" message={successMsg} className="mb-4" />}
           {localError && <Toast type="error" message={localError} className="mb-4" />}
 
           <Button type="submit" disabled={loading} className="w-full mb-4">

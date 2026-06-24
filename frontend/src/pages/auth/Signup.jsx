@@ -6,6 +6,7 @@ import authApi from '../../api/auth.api';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Toast } from '../../components/ui/Toast';
+import { Eye, EyeOff } from 'lucide-react';
 
 export const Signup = () => {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ export const Signup = () => {
   const [localError, setLocalError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [resending, setResending] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -100,8 +102,8 @@ export const Signup = () => {
     const result = await verifyEmail(otpData.userId, otpData.otp);
 
     if (result.success) {
-      setSuccessMsg('Email verified! Redirecting to dashboard...');
-      setTimeout(() => navigate('/dashboard'), 1500);
+      setSuccessMsg('Email verified! Now sign in with your password.');
+      setTimeout(() => navigate('/login?verified=1'), 1500);
     } else {
       setLocalError(result.message || 'OTP verification failed');
     }
@@ -131,11 +133,18 @@ export const Signup = () => {
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-slate-200 mb-2">Password (min 8 characters)</label>
-              <Input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••••" disabled={loading} />
+              <div className="relative">
+                <Input type={showPwd ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} placeholder="••••••••" disabled={loading} />
+                <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+                  {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-slate-200 mb-2">Confirm Password</label>
-              <Input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="••••••••" disabled={loading} />
+              <div className="relative">
+                <Input type={showPwd ? 'text' : 'password'} name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="••••••••" disabled={loading} />
+              </div>
             </div>
             <div className="mb-6">
               <label className="block text-sm font-medium text-slate-200 mb-2">Referral Code (Optional)</label>
