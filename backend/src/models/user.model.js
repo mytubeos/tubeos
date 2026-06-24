@@ -126,7 +126,7 @@ const userSchema = new mongoose.Schema(
       },
       tier: {
         type: String,
-        enum: ['bronze', 'silver', 'gold', 'platinum', 'diamond'],
+        enum: ['starter', 'bronze', 'silver', 'gold', 'platinum', 'diamond'],
         default: 'bronze',
       },
       totalEarnings: {

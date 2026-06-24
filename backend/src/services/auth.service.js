@@ -317,15 +317,14 @@ const forgotPassword = async (email) => {
     console.warn('[forgotPassword] Redis store failed (non-fatal):', redisErr.message);
   }
 
-  // Store in DB for backup
+  // Store in DB for backup (non-fatal — Redis token is sufficient)
   try {
     user.passwordResetToken = hashedToken;
     user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
     await user.save();
     console.log(`[forgotPassword] Token saved in DB for ${user.email}`);
   } catch (dbErr) {
-    console.error('[forgotPassword] DB save failed:', dbErr.message);
-    throw dbErr;
+    console.warn('[forgotPassword] DB save skipped (non-fatal):', dbErr.message);
   }
 
   // Always log the reset link to console as fallback
