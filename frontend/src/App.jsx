@@ -46,7 +46,10 @@ const ProtectedRoute = ({ children }) => {
 
 export default function App() {
   const { isAuthenticated, refreshUser } = useAuthStore()
-  useEffect(() => { if (isAuthenticated) refreshUser() }, [])
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken')
+    if (isAuthenticated && token) refreshUser()
+  }, [])
 
   return (
     <Routes>
