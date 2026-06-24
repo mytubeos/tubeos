@@ -236,6 +236,7 @@ const login = async ({ email, password, ip }) => {
 
   // Find user
   const user = await User.findOne({ email }).select('+password');
+  console.log(`[login] email=${email} found=${!!user} verified=${user?.isEmailVerified} active=${user?.isActive}`);
   if (!user) {
     const error = new Error('Invalid email or password');
     error.statusCode = 401;
@@ -252,6 +253,7 @@ const login = async ({ email, password, ip }) => {
 
   // Compare passwords
   const isPasswordCorrect = await user.comparePassword(password);
+  console.log(`[login] email=${email} passwordMatch=${isPasswordCorrect}`);
   if (!isPasswordCorrect) {
     const error = new Error('Invalid email or password');
     error.statusCode = 401;
@@ -295,6 +297,7 @@ const forgotPassword = async (email) => {
   }
 
   const user = await User.findOne({ email });
+  console.log(`[forgotPassword] email=${email} found=${!!user}`);
   if (!user) {
     // Don't reveal if email exists or not (security)
     return {
@@ -317,8 +320,10 @@ const forgotPassword = async (email) => {
   // Send reset email
   try {
     await sendPasswordResetEmail(user.email, user.name, resetToken);
+    console.log(`[forgotPassword] Reset email sent to ${user.email}`);
   } catch (emailError) {
     console.error('[forgotPassword] Failed to send reset email:', emailError.message);
+    console.error('[forgotPassword] Brevo error:', emailError.response?.data);
     const error = new Error('Failed to send reset email. Please try again.');
     error.statusCode = 500;
     throw error;
