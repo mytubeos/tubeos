@@ -309,13 +309,29 @@ const forgotPassword = async (email) => {
   const resetToken = crypto.randomBytes(32).toString('hex');
   const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
-  // Store in Redis for 15 minutes
-  await setCache(`pwd_reset:${hashedToken}`, user._id.toString(), 15 * 60);
+  // Store in Redis (non-fatal)
+  try {
+    await setCache(`pwd_reset:${hashedToken}`, user._id.toString(), 15 * 60);
+    console.log(`[forgotPassword] Token stored in Redis for ${user.email}`);
+  } catch (redisErr) {
+    console.warn('[forgotPassword] Redis store failed (non-fatal):', redisErr.message);
+  }
 
-  // Also store in DB for backup
-  user.passwordResetToken = hashedToken;
-  user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
-  await user.save();
+  // Store in DB for backup
+  try {
+    user.passwordResetToken = hashedToken;
+    user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
+    await user.save();
+    console.log(`[forgotPassword] Token saved in DB for ${user.email}`);
+  } catch (dbErr) {
+    console.error('[forgotPassword] DB save failed:', dbErr.message);
+    throw dbErr;
+  }
+
+  // Always log the reset link to console as fallback
+  const { config } = require('./env') || {};
+  const clientUrl = process.env.CLIENT_URL || 'https://tubeos-eight.vercel.app';
+  console.log(`[forgotPassword] RESET LINK for ${user.email}: ${clientUrl}/reset-password?token=${resetToken}`);
 
   // Send reset email
   try {
@@ -323,10 +339,8 @@ const forgotPassword = async (email) => {
     console.log(`[forgotPassword] Reset email sent to ${user.email}`);
   } catch (emailError) {
     console.error('[forgotPassword] Failed to send reset email:', emailError.message);
-    console.error('[forgotPassword] Brevo error:', emailError.response?.data);
-    const error = new Error('Failed to send reset email. Please try again.');
-    error.statusCode = 500;
-    throw error;
+    console.error('[forgotPassword] Brevo error:', JSON.stringify(emailError.response?.data));
+    // Don't throw — token is saved in DB, user can use the logged link above
   }
 
   return {
