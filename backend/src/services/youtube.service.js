@@ -143,15 +143,13 @@ const handleOAuthCallback = async (code, state) => {
 const getChannelInfo = async (accessToken) => {
   try {
     const data = await youtubeRequest(
-      '/channels?part=snippet,statistics,brandingSettings&mine=true',
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
+      '/channels?part=snippet,statistics&mine=true',
+      { headers: { Authorization: `Bearer ${accessToken}` } }
     );
-
+    console.log('[getChannelInfo] items count:', data.items?.length);
     return data.items?.[0] || null;
   } catch (err) {
-    console.error('Failed to fetch channel info:', err.message);
+    console.error('[getChannelInfo] Failed:', err.message, '| status:', err.statusCode, '| ytError:', JSON.stringify(err.youtubeError));
     return null;
   }
 };
