@@ -15,16 +15,17 @@ export const useChannelStore = create(
         set({ isLoading: true })
         try {
           const res = await youtubeApi.getChannels()
-          const channels = res.data.data || []
+          const channels = res.data?.data || []
+          console.log('[fetchChannels] status:', res.status, '| count:', channels.length)
           const active = get().activeChannel
-          // Keep active channel if still valid
           const stillValid = channels.find(c => c._id === active?._id)
           set({
             channels,
             activeChannel: stillValid || channels.find(c => c.isPrimary) || channels[0] || null,
             isLoading: false,
           })
-        } catch {
+        } catch (err) {
+          console.error('[fetchChannels] ERROR:', err.response?.status, err.response?.data || err.message)
           set({ isLoading: false })
         }
       },
