@@ -17,6 +17,7 @@ import { ResetPassword } from './pages/auth/ResetPassword'
 // Public Pages
 import { Landing } from './pages/Landing'
 import { Pricing } from './pages/Pricing'
+import { YouTubeCallback } from './pages/YouTubeCallback'
 
 // Part 2
 import { Dashboard } from './pages/dashboard/Dashboard'
@@ -60,6 +61,7 @@ export default function App() {
       </Route>
 
       <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/youtube-callback" element={<YouTubeCallback />} />
 
       <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
         <Route path="/dashboard" element={<Dashboard />} />

@@ -10,15 +10,15 @@ import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Youtube, RefreshCw, Star, Trash2, Plus, Wifi, WifiOff } from 'lucide-react'
 import { useChannel } from '../../hooks/useChannel'
-import useAuth from '../../hooks/useAuth'
+import { useAuthStore } from '../../store/authStore'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Badge } from '../../components/ui/Badge'
 import { Spinner } from '../../components/ui/Spinner'
 
 export const Channels = () => {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const { user } = useAuth()
+  const [searchParams] = useSearchParams()
+  const { user } = useAuthStore()
   const {
     channels,
     isLoading,

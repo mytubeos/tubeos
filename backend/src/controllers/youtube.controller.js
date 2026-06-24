@@ -30,25 +30,24 @@ const handleCallback = async (req, res) => {
 
     if (error) {
       return res.redirect(
-        `${config.cors.clientUrl}/channels?youtube_error=access_denied`
+        `${config.cors.clientUrl}/youtube-callback?youtube_error=access_denied`
       );
     }
 
     if (!code || !state) {
       return res.redirect(
-        `${config.cors.clientUrl}/channels?youtube_error=missing_params`
+        `${config.cors.clientUrl}/youtube-callback?youtube_error=missing_params`
       );
     }
 
     const result = await youtubeService.handleOAuthCallback(code, state);
 
     return res.redirect(
-      `${config.cors.clientUrl}/channels?youtube_connected=true&channel=${encodeURIComponent(result.channel.channelName)}`
+      `${config.cors.clientUrl}/youtube-callback?youtube_connected=true&channel=${encodeURIComponent(result.channel.channelName)}`
     );
   } catch (err) {
     console.error('[youtube.controller] Callback error:', err.message, '| code:', err.code);
 
-    // FIX: error code ke hisaab se frontend ko sahi message do
     const errorCode = err.code === 'NO_REFRESH_TOKEN'
       ? 'no_refresh_token'
       : err.code === 'RECONNECT_REQUIRED'
@@ -58,7 +57,7 @@ const handleCallback = async (req, res) => {
       : 'connect_failed';
 
     return res.redirect(
-      `${config.cors.clientUrl}/channels?youtube_error=${errorCode}`
+      `${config.cors.clientUrl}/youtube-callback?youtube_error=${errorCode}`
     );
   }
 };

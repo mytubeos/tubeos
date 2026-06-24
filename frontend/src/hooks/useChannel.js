@@ -54,17 +54,30 @@ export const useChannel = () => {
 
       if (!authUrl) throw new Error('Could not generate auth URL')
 
-      // Step 2: Popup mein OAuth kholo
-      await youtubeApi.connectChannel(authUrl)
+      // Step 2: Popup mein OAuth kholo, postMessage ka wait karo
+      const result = await youtubeApi.connectChannel(authUrl)
 
-      // Step 3: Popup band hone ke baad channels refresh karo
-      // (actual result URL params se milega — handleOAuthReturn dekho)
-      await fetchChannels()
+      // Step 3: Result handle karo
+      if (result.success) {
+        toast.success(result.channel ? `"${result.channel}" connected!` : 'YouTube connected!')
+        await fetchChannels()
+      } else if (result.error && result.error !== 'popup_closed') {
+        const errorMessages = {
+          access_denied:      'You cancelled the YouTube connection.',
+          missing_params:     'Something went wrong. Please try again.',
+          no_refresh_token:   'Full access required. Remove this app from myaccount.google.com/permissions and try again.',
+          reconnect_required: 'YouTube access was revoked. Please reconnect.',
+          already_connected:  'This channel is already connected to another account.',
+          connect_failed:     'Connection failed. Please try again.',
+        }
+        toast.error(errorMessages[result.error] || 'YouTube connection failed.')
+      }
+      // popup_closed = user ne manually close kiya, koi message nahi
 
     } catch (err) {
       if (err.message?.includes('Popup blocked')) {
         toast.error('Popup blocked! Please allow popups for this site and try again.')
-      } else if (err.statusCode === 403) {
+      } else if (err.response?.status === 403) {
         toast.error(err.response?.data?.message || 'Plan limit reached. Please upgrade.')
       } else {
         toast.error(err.message || 'Failed to connect YouTube')
