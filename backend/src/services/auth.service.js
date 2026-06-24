@@ -6,7 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
 const User = require('../models/user.model');
 const { generateTokenPair, verifyRefreshToken } = require('../utils/jwt.utils');
-const { setCache, getCache, deleteCache } = require('../config/redis');
+const { setCache, getCache, deleteCache, getRedisClient } = require('../config/redis');
 const {
   sendOTPEmail,
   sendPasswordResetEmail,
@@ -317,11 +317,12 @@ const forgotPassword = async (email) => {
     console.warn('[forgotPassword] Redis store failed (non-fatal):', redisErr.message);
   }
 
-  // Store in DB for backup (non-fatal — Redis token is sufficient)
+  // Store in DB for backup using findByIdAndUpdate (bypasses schema validation issues)
   try {
-    user.passwordResetToken = hashedToken;
-    user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
-    await user.save();
+    await User.findByIdAndUpdate(user._id, {
+      passwordResetToken: hashedToken,
+      passwordResetExpires: new Date(Date.now() + 15 * 60 * 1000),
+    });
     console.log(`[forgotPassword] Token saved in DB for ${user.email}`);
   } catch (dbErr) {
     console.warn('[forgotPassword] DB save skipped (non-fatal):', dbErr.message);
@@ -360,11 +361,19 @@ const resetPassword = async (resetToken, newPassword) => {
     throw error;
   }
 
-  // Hash token to match with DB
+  // Hash token to match with stored value
   const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
-  // Check Redis first (faster)
-  let userId = await getCache(`pwd_reset:${hashedToken}`);
+  // Check Redis directly
+  let userId = null;
+  try {
+    const redisClient = getRedisClient();
+    const raw = await redisClient.get(`pwd_reset:${hashedToken}`);
+    console.log(`[resetPassword] Redis lookup key=pwd_reset:${hashedToken.slice(0,8)}... found=${!!raw}`);
+    if (raw) userId = raw.replace(/^"|"$/g, ''); // strip JSON quotes if present
+  } catch (redisErr) {
+    console.error('[resetPassword] Redis get error:', redisErr.message);
+  }
 
   if (!userId) {
     // Check DB as backup
@@ -372,6 +381,7 @@ const resetPassword = async (resetToken, newPassword) => {
       passwordResetToken: hashedToken,
       passwordResetExpires: { $gt: Date.now() },
     });
+    console.log(`[resetPassword] DB lookup found=${!!user}`);
 
     if (!user) {
       const error = new Error('Reset token is invalid or expired');
