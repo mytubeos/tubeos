@@ -56,6 +56,21 @@ app.use(cors({
 app.set('trust proxy', 1);
 
 // ==================== BODY PARSING ====================
+// Capture raw body for Razorpay webhook signature verification
+app.use((req, res, next) => {
+  if (req.originalUrl === '/api/v1/payment/webhook') {
+    let data = '';
+    req.setEncoding('utf8');
+    req.on('data', (chunk) => { data += chunk; });
+    req.on('end', () => {
+      req.rawBody = data;
+      req.body = JSON.parse(data || '{}');
+      next();
+    });
+  } else {
+    next();
+  }
+});
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());

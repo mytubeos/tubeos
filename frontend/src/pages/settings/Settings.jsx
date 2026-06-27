@@ -1,6 +1,7 @@
 // src/pages/settings/Settings.jsx
 import { useState } from 'react'
-import { User, Lock, Bell, CreditCard, Shield, ChevronRight, Check } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { User, Lock, Bell, CreditCard, Check, Loader2 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import authApi from '../../api/auth.api'
 import { Card, CardHeader } from '../../components/ui/Card'
@@ -9,6 +10,7 @@ import { Button } from '../../components/ui/Button'
 import { PlanBadge } from '../../components/ui/Badge'
 import { PLANS } from '../../utils/constants'
 import { formatNumber } from '../../utils/formatters'
+import { useRazorpay } from '../../hooks/useRazorpay'
 import toast from 'react-hot-toast'
 
 const TABS = [
@@ -46,7 +48,11 @@ const UsageBar = ({ label, used, limit }) => {
 
 export const Settings = () => {
   const { user, updateUser } = useAuthStore()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('profile')
+  const { startCheckout, loadingPlan } = useRazorpay({
+    onSuccess: () => navigate('/dashboard'),
+  })
 
   // Profile state
   const [name, setName] = useState(user?.name || '')
@@ -215,7 +221,7 @@ export const Settings = () => {
                 </p>
               </div>
               {plan !== 'agency' && (
-                <Button size="sm" onClick={() => toast('Payment integration coming soon!')}>
+                <Button size="sm" onClick={() => navigate('/pricing')}>
                   Upgrade
                 </Button>
               )}
@@ -283,9 +289,13 @@ export const Settings = () => {
                         fullWidth
                         className="mt-4"
                         variant={key === 'pro' ? 'brand' : 'ghost'}
-                        onClick={() => toast('Payment integration coming soon!')}
+                        disabled={loadingPlan === key}
+                        onClick={() => startCheckout(key)}
                       >
-                        Upgrade
+                        {loadingPlan === key
+                          ? <Loader2 size={14} className="animate-spin mx-auto" />
+                          : 'Upgrade'
+                        }
                       </Button>
                     </div>
                   ))}

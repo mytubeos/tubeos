@@ -6,6 +6,11 @@ import { useAuthStore } from './store/authStore'
 // Layouts
 import { AuthLayout } from './components/layout/AuthLayout'
 import { DashboardLayout } from './components/layout/DashboardLayout'
+import { AdminLayout } from './pages/admin/AdminLayout'
+
+// Admin Pages
+import { AdminDashboard } from './pages/admin/AdminDashboard'
+import { AdminCoupons } from './pages/admin/AdminCoupons'
 
 // Auth Pages
 import { Login } from './pages/auth/Login'
@@ -42,6 +47,12 @@ import { Referral } from './pages/referral/Referral'
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAuthStore()
   return isAuthenticated ? children : <Navigate to="/login" replace />
+}
+
+const AdminRoute = ({ children }) => {
+  const { isAuthenticated } = useAuthStore()
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  return children
 }
 
 export default function App() {
@@ -81,6 +92,12 @@ export default function App() {
         <Route path="/channels" element={<Channels />} />
         <Route path="/referral" element={<Referral />} />
         <Route path="/settings" element={<Settings />} />
+      </Route>
+
+      {/* Admin Panel */}
+      <Route element={<AdminRoute><AdminLayout /></AdminRoute>}>
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/coupons" element={<AdminCoupons />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

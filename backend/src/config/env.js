@@ -61,6 +61,12 @@ const config = {
     max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
   },
 
+  razorpay: {
+    keyId: process.env.RAZORPAY_KEY_ID,
+    keySecret: process.env.RAZORPAY_KEY_SECRET,
+    webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET,
+  },
+
   youtube: {
     clientId: process.env.YOUTUBE_CLIENT_ID,
     clientSecret: process.env.YOUTUBE_CLIENT_SECRET,

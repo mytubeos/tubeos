@@ -69,6 +69,11 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isAdmin: {
+      type: Boolean,
+      default: false,
+      select: false,
+    },
     isBanned: {
       type: Boolean,
       default: false,

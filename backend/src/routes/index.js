@@ -11,6 +11,8 @@ const videoRoutes     = require('./video.routes');
 const scheduleRoutes  = require('./schedule.routes');
 const analyticsRoutes = require('./analytics.routes');
 const aiRoutes        = require('./ai.routes');
+const paymentRoutes   = require('./payment.routes');
+const adminRoutes     = require('./admin.routes');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -35,5 +37,7 @@ router.use('/videos',    videoRoutes);
 router.use('/schedule',  scheduleRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/ai',        aiRoutes);
+router.use('/payment',   paymentRoutes);
+router.use('/admin',     adminRoutes);
 
 module.exports = router;
