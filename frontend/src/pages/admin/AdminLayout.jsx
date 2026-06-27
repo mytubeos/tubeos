@@ -1,10 +1,11 @@
 // src/pages/admin/AdminLayout.jsx
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { Zap, Tag, LayoutDashboard, LogOut, ShieldCheck } from 'lucide-react'
+import { Zap, Tag, LayoutDashboard, LogOut, ShieldCheck, Users } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 
 const NAV = [
   { to: '/admin',          label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/admin/users',    label: 'Users',     icon: Users },
   { to: '/admin/coupons',  label: 'Coupons',   icon: Tag },
 ]
 

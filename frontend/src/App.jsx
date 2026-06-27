@@ -11,6 +11,7 @@ import { AdminLayout } from './pages/admin/AdminLayout'
 // Admin Pages
 import { AdminDashboard } from './pages/admin/AdminDashboard'
 import { AdminCoupons } from './pages/admin/AdminCoupons'
+import { AdminUsers } from './pages/admin/AdminUsers'
 
 // Auth Pages
 import { Login } from './pages/auth/Login'
@@ -97,6 +98,7 @@ export default function App() {
       {/* Admin Panel */}
       <Route element={<AdminRoute><AdminLayout /></AdminRoute>}>
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/coupons" element={<AdminCoupons />} />
       </Route>
 
