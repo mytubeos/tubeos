@@ -52,7 +52,7 @@ const createOrder = async (userId, plan, couponCode = null) => {
   const order = await razorpay.orders.create({
     amount: finalAmountPaise,
     currency: 'INR',
-    receipt: `tubeos_${userId}_${plan}_${Date.now()}`,
+    receipt: `rzp_${Date.now()}`,
     notes: {
       userId: userId.toString(),
       plan,
