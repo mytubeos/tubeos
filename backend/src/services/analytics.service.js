@@ -36,7 +36,7 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
     'views', 'estimatedMinutesWatched', 'averageViewDuration',
     'averageViewPercentage', 'subscribersGained', 'subscribersLost',
     'likes', 'comments', 'shares', 'impressions', 'impressionsCtr',
-    'estimatedRevenue',
+    // estimatedRevenue removed — requires yt-analytics-monetary.readonly scope
   ].join(','));
   analyticsUrl.searchParams.set('dimensions', 'day');
   analyticsUrl.searchParams.set('sort', 'day');
@@ -47,7 +47,9 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.error?.message || 'Failed to fetch analytics');
+    const err = new Error(error.error?.message || 'Failed to fetch analytics');
+    err.statusCode = response.status;
+    throw err;
   }
 
   const data = await response.json();
@@ -78,7 +80,6 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
             'metrics.shares': record.shares || 0,
             'metrics.impressions': record.impressions || 0,
             'metrics.impressionsCtr': record.impressionsCtr || 0,
-            'metrics.estimatedRevenue': record.estimatedRevenue || 0,
           },
         },
         upsert: true,
