@@ -134,7 +134,7 @@ export const Dashboard = () => {
       </div>
 
       {/* KPI Cards */}
-      <KPIGrid overview={overview} loading={isLoading} />
+      <KPIGrid overview={overview} loading={isLoading} channelStats={activeChannel?.stats} />
 
       {/* Main chart + sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

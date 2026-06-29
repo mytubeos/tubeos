@@ -70,8 +70,15 @@ export const KPICard = ({ type, value, change, subtitle, loading = false }) => {
   )
 }
 
-export const KPIGrid = ({ overview, loading = false }) => {
+export const KPIGrid = ({ overview, loading = false, channelStats = null }) => {
   const metrics = overview?.metrics || {}
+  const hasAnalytics = !!overview
+
+  // Subscriber display: period-based "gained" from Analytics API, else total from channel stats
+  const subValue    = hasAnalytics ? metrics.subscribers?.net : channelStats?.subscriberCount
+  const subSubtitle = hasAnalytics
+    ? `+${formatNumber(metrics.subscribers?.gained ?? 0)} gained`
+    : 'Total subscribers'
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -83,9 +90,9 @@ export const KPIGrid = ({ overview, loading = false }) => {
       />
       <KPICard
         type="subscribers"
-        value={metrics.subscribers?.net}
+        value={subValue}
         change={metrics.subscribers?.change}
-        subtitle={`+${formatNumber(metrics.subscribers?.gained)} gained`}
+        subtitle={subSubtitle}
         loading={loading}
       />
       <KPICard
