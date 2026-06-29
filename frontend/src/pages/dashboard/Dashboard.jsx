@@ -1,7 +1,7 @@
 // src/pages/dashboard/Dashboard.jsx
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RefreshCw, Plus, Youtube, Zap, Clock, AlertTriangle } from 'lucide-react'
+import { RefreshCw, Plus, Youtube, Zap, Clock } from 'lucide-react'
 import { useAnalytics } from '../../hooks/useAnalytics'
 import { useChannelStore } from '../../store/channelStore'
 import { useAuthStore } from '../../store/authStore'
@@ -24,7 +24,6 @@ export const Dashboard = () => {
   const { activeChannel } = useChannelStore()
   const [period, setPeriod] = useState('30d')
   const [syncing, setSyncing] = useState(false)
-  const [syncError, setSyncError] = useState(null) // null | 'reconnect' | 'error'
   const [upcoming, setUpcoming] = useState([])
   const [bestTime, setBestTime] = useState(null)
   const autoSyncDone = useRef(false)
@@ -46,43 +45,30 @@ export const Dashboard = () => {
       .catch(() => {})
   }, [activeChannel?._id])
 
-  // Auto-sync on dashboard load if data is stale (>30 min old or never synced)
+  // Auto-sync on load if data is stale (>30 min or never synced)
   useEffect(() => {
     if (!activeChannel?._id || autoSyncDone.current) return
     autoSyncDone.current = true
     const lastSync = activeChannel?.stats?.lastSyncedAt
     const isStale = !lastSync || (Date.now() - new Date(lastSync).getTime() > 30 * 60 * 1000)
-    if (isStale) {
-      setSyncing(true)
-      analyticsApi.sync(activeChannel._id, 30)
-        .then(() => refetch().then(() => setSyncError(null)))
-        .catch(err => {
-          const status = err.response?.status
-          if (status === 403 || status === 401) setSyncError('reconnect')
-        })
-        .finally(() => setSyncing(false))
-    }
+    if (isStale) doSync(true)
   }, [activeChannel?._id])
 
-  const handleSync = async () => {
+  const doSync = async (silent = false) => {
     if (!activeChannel?._id) return
     setSyncing(true)
     try {
       await analyticsApi.sync(activeChannel._id, 30)
       await refetch()
-      setSyncError(null)
-      toast.success('Synced!')
-    } catch (err) {
-      const status = err.response?.status
-      if (status === 403 || status === 401) {
-        setSyncError('reconnect')
-      } else {
-        toast.error('Sync failed. Try again.')
-      }
+      if (!silent) toast.success('Synced!')
+    } catch {
+      if (!silent) toast.error('Sync failed. Try again.')
     } finally {
       setSyncing(false)
     }
   }
+
+  const handleSync = () => doSync(false)
 
   // No channel connected state
   if (!activeChannel) {
@@ -146,19 +132,6 @@ export const Dashboard = () => {
           </Button>
         </div>
       </div>
-
-      {/* Reconnect banner — shown when YouTube OAuth scope is missing */}
-      {syncError === 'reconnect' && (
-        <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
-          <AlertTriangle size={16} className="text-amber-400 shrink-0" />
-          <p className="text-sm text-amber-300 flex-1">
-            YouTube reconnection needed to sync analytics. Please disconnect and reconnect your channel.
-          </p>
-          <Button variant="ghost" size="xs" onClick={() => navigate('/channels')}>
-            Reconnect →
-          </Button>
-        </div>
-      )}
 
       {/* KPI Cards */}
       <KPIGrid overview={overview} loading={isLoading} />
