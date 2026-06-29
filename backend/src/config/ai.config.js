@@ -38,10 +38,11 @@ const AI_MODELS = {
 const getModelForPlan = (plan, task = 'default') => {
   const bulkModel = process.env.GROQ_API_KEY ? AI_MODELS.groq : AI_MODELS.haiku;
 
-  // TEST_MODE=true → sab Gemini (free), production pe false karo
+  // TEST_MODE=true → sab free model (Groq if available, else Gemini)
   const testMode = process.env.AI_TEST_MODE === 'true';
-  const paid = testMode ? AI_MODELS.gemini : AI_MODELS.sonnet;
-  const premium = testMode ? AI_MODELS.gemini : AI_MODELS.opus;
+  const freeModel = process.env.GROQ_API_KEY ? AI_MODELS.groq : AI_MODELS.gemini;
+  const paid = testMode ? freeModel : AI_MODELS.sonnet;
+  const premium = testMode ? freeModel : AI_MODELS.opus;
 
   const mapping = {
     free:    AI_MODELS.gemini,
@@ -50,7 +51,7 @@ const getModelForPlan = (plan, task = 'default') => {
     agency: {
       default:       paid,
       deep_analysis: premium,
-      bulk:          testMode ? AI_MODELS.gemini : bulkModel,
+      bulk:          testMode ? freeModel : bulkModel,
       growth:        premium,
     },
   };
