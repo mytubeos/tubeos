@@ -135,6 +135,12 @@ const handleOAuthCallback = async (code, state) => {
 
   await invalidateChannelCache(userId);
 
+  // 8. Fire-and-forget: import existing channel videos into Video collection
+  setImmediate(() => {
+    require('./analytics.service').syncChannelVideos(channel, access_token, userId)
+      .catch(err => console.error('[youtube] Initial video sync failed:', err.message));
+  });
+
   return {
     channel: sanitizeChannel(channel),
     message: `YouTube channel "${channel.channelName}" connected successfully!`,

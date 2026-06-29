@@ -9,6 +9,102 @@ const { getValidAccessToken } = require('./youtube.service');
 const { youtubeRequest } = require('../config/youtube.config');
 const { setCache, getCache } = require('../config/redis');
 
+// ==================== SYNC CHANNEL VIDEOS ====================
+// Imports all existing YouTube channel videos into the Video collection.
+// Called on channel connect and every time user clicks Sync.
+const syncChannelVideos = async (channel, accessToken, userId) => {
+  try {
+    // 1. Get uploads playlist ID
+    const channelData = await youtubeRequest(
+      `/channels?part=contentDetails&mine=true`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    const uploadsPlaylistId = channelData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+    if (!uploadsPlaylistId) return 0;
+
+    // 2. Fetch video IDs from uploads playlist (max 200 videos, 50 per page)
+    const allVideoIds = [];
+    let pageToken = null;
+
+    do {
+      const url = `/playlistItems?part=contentDetails&playlistId=${uploadsPlaylistId}&maxResults=50${pageToken ? `&pageToken=${pageToken}` : ''}`;
+      const data = await youtubeRequest(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+      (data.items || []).forEach(item => {
+        if (item.contentDetails?.videoId) allVideoIds.push(item.contentDetails.videoId);
+      });
+      pageToken = data.nextPageToken || null;
+    } while (pageToken && allVideoIds.length < 200);
+
+    if (allVideoIds.length === 0) return 0;
+
+    // 3. Fetch video details + stats in batches of 50
+    let totalSynced = 0;
+
+    for (let i = 0; i < allVideoIds.length; i += 50) {
+      const batch = allVideoIds.slice(i, i + 50);
+      const videosData = await youtubeRequest(
+        `/videos?part=snippet,statistics,contentDetails,status&id=${batch.join(',')}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+
+      const bulkOps = (videosData.items || []).map(video => {
+        const thumbs = video.snippet?.thumbnails;
+        const thumbUrl = thumbs?.maxres?.url || thumbs?.high?.url || thumbs?.medium?.url || thumbs?.default?.url || null;
+        const duration = parseDuration(video.contentDetails?.duration || '');
+        const isShort = duration > 0 && duration <= 60;
+
+        return {
+          updateOne: {
+            filter: { youtubeVideoId: video.id },
+            update: {
+              $set: {
+                userId,
+                channelId: channel._id,
+                youtubeVideoId: video.id,
+                youtubeUrl: `https://www.youtube.com/watch?v=${video.id}`,
+                title: video.snippet?.title || 'Untitled',
+                description: (video.snippet?.description || '').slice(0, 5000),
+                tags: (video.snippet?.tags || []).slice(0, 30),
+                category: video.snippet?.categoryId || '22',
+                privacy: video.status?.privacyStatus || 'public',
+                status: 'published',
+                publishedAt: video.snippet?.publishedAt ? new Date(video.snippet.publishedAt) : null,
+                'thumbnail.url': thumbUrl,
+                'thumbnail.isCustom': false,
+                isShort,
+                'uploadInfo.duration': duration || null,
+                'performance.views': parseInt(video.statistics?.viewCount) || 0,
+                'performance.likes': parseInt(video.statistics?.likeCount) || 0,
+                'performance.comments': parseInt(video.statistics?.commentCount) || 0,
+                'performance.lastSyncedAt': new Date(),
+              },
+            },
+            upsert: true,
+          },
+        };
+      });
+
+      if (bulkOps.length > 0) {
+        await Video.bulkWrite(bulkOps);
+        totalSynced += bulkOps.length;
+      }
+    }
+
+    console.log(`[analytics] syncChannelVideos: imported ${totalSynced} videos for channel ${channel._id}`);
+    return totalSynced;
+  } catch (err) {
+    console.error('[analytics] syncChannelVideos failed:', err.message);
+    return 0;
+  }
+};
+
+// Parse ISO 8601 duration to seconds: "PT1M30S" -> 90
+const parseDuration = (iso) => {
+  const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+  return (parseInt(match[1] || 0) * 3600) + (parseInt(match[2] || 0) * 60) + parseInt(match[3] || 0);
+};
+
 // ==================== SYNC CHANNEL ANALYTICS ====================
 // Fetches last N days of analytics from YouTube API
 const syncChannelAnalytics = async (channelId, userId, days = 30) => {
@@ -52,6 +148,7 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
       // Analytics API needs yt-analytics scope — fall back to YouTube Data API (youtube.readonly)
       console.log('[analytics] Analytics API 403 — falling back to video stats');
       const synced = await syncFromVideoStats(channel, accessToken, startDate, endDate, userId);
+      await syncChannelVideos(channel, accessToken, userId);
       return { synced, message: `Synced ${synced} days of data (basic mode — views, likes, comments)` };
     }
     const err = new Error(error.error?.message || 'Failed to fetch analytics');
@@ -100,6 +197,9 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
 
   // Also fetch traffic sources
   await syncTrafficSources(channel, accessToken, startDate, endDate, userId);
+
+  // Import/update all channel videos with latest stats
+  await syncChannelVideos(channel, accessToken, userId);
 
   return { synced: bulkOps.length, message: `Synced ${bulkOps.length} days of analytics` };
 };
@@ -611,6 +711,7 @@ const getNestedValue = (obj, path) => {
 
 module.exports = {
   syncChannelAnalytics,
+  syncChannelVideos,
   getOverview,
   getDailyGraph,
   getDayWisePerformance,
