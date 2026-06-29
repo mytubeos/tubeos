@@ -266,6 +266,14 @@ const getTrends = async (userId, channelId, category = null) => {
   const cached = await getCache(cacheKey);
   if (cached) return cached;
 
+  // Auto-refresh if data is older than 12 hours
+  const newest = await Trend.findOne().sort({ detectedAt: -1 }).lean();
+  const stale = !newest || (Date.now() - new Date(newest.detectedAt).getTime()) > 12 * 60 * 60 * 1000;
+  if (stale) {
+    try { await refreshTrendsFromYouTube('IN'); }
+    catch (err) { console.warn('[trends] refresh failed:', err.message); }
+  }
+
   const query = {
     status: { $in: ['rising', 'peaking'] },
     expiresAt: { $gt: new Date() },
@@ -276,7 +284,7 @@ const getTrends = async (userId, channelId, category = null) => {
     .sort({ opportunityScore: -1 })
     .limit(20);
 
-  // If no trends in DB, return curated defaults
+  // If still no trends, return curated defaults
   if (trends.length === 0) {
     const defaultTrends = getDefaultTrends();
     await setCache(cacheKey, defaultTrends, 60 * 60);
@@ -286,6 +294,85 @@ const getTrends = async (userId, channelId, category = null) => {
   const result = { trends, updatedAt: new Date() };
   await setCache(cacheKey, result, 60 * 60);
   return result;
+};
+
+// ==================== REFRESH TRENDS FROM YOUTUBE ====================
+// Pulls mostPopular videos in a region and extracts keyword opportunities.
+// Requires YOUTUBE_API_KEY (no OAuth needed for public charts).
+const refreshTrendsFromYouTube = async (region = 'IN') => {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey) {
+    throw new Error('YOUTUBE_API_KEY not configured — cannot fetch trends');
+  }
+
+  const url = `https://www.googleapis.com/youtube/v3/videos`
+    + `?part=snippet,statistics&chart=mostPopular`
+    + `&regionCode=${region}&maxResults=50&key=${apiKey}`;
+
+  const res = await fetch(url);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error?.message || `YouTube trends ${res.status}`);
+  }
+  const data = await res.json();
+
+  // Group by primary tag/category to produce keyword trends
+  const keywordMap = new Map();
+  for (const v of data.items || []) {
+    const views = parseInt(v.statistics?.viewCount) || 0;
+    const likes = parseInt(v.statistics?.likeCount) || 0;
+    const engage = views ? (likes / views) * 100 : 0;
+    const tags = (v.snippet?.tags || []).slice(0, 5);
+    const category = mapYtCategory(v.snippet?.categoryId);
+
+    for (const tagRaw of tags) {
+      const tag = String(tagRaw).trim().toLowerCase();
+      if (tag.length < 3 || tag.length > 60) continue;
+      const cur = keywordMap.get(tag) || { count: 0, views: 0, engage: 0, category };
+      cur.count++;
+      cur.views += views;
+      cur.engage += engage;
+      keywordMap.set(tag, cur);
+    }
+  }
+
+  // Score & upsert top 30
+  const scored = [...keywordMap.entries()]
+    .map(([keyword, m]) => ({
+      keyword,
+      category: m.category,
+      searchVolume: m.views,
+      growthRate: Math.min(100, Math.round((m.count / (data.items?.length || 1)) * 100)),
+      opportunityScore: Math.min(100, Math.round(
+        m.count * 8 + Math.log10(m.views + 1) * 5 + (m.engage / m.count) * 4
+      )),
+      status: m.count >= 3 ? 'peaking' : 'rising',
+    }))
+    .sort((a, b) => b.opportunityScore - a.opportunityScore)
+    .slice(0, 30);
+
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+  for (const t of scored) {
+    await Trend.findOneAndUpdate(
+      { keyword: t.keyword, region },
+      { ...t, region, detectedAt: now, expiresAt },
+      { upsert: true, new: true }
+    );
+  }
+
+  console.log(`[trends] refreshed ${scored.length} trends for region=${region}`);
+  return { count: scored.length };
+};
+
+const mapYtCategory = (id) => {
+  const map = {
+    '10': 'Music', '17': 'Sports', '20': 'Gaming', '22': 'People & Blogs',
+    '23': 'Comedy', '24': 'Entertainment', '25': 'News', '26': 'Howto & Style',
+    '27': 'Education', '28': 'Technology', '19': 'Travel', '15': 'Pets',
+  };
+  return map[id] || 'General';
 };
 
 // ==================== GET PERFORMANCE SUGGESTIONS ====================
@@ -440,5 +527,6 @@ module.exports = {
   syncCompetitor,
   removeCompetitor,
   getTrends,
+  refreshTrendsFromYouTube,
   getPerformanceSuggestions,
 };

@@ -2,6 +2,7 @@
 // FIX: req.user._id → req.user.id (consistent with auth middleware .lean())
 
 const videoService = require('../services/video.service');
+const thumbnailService = require('../services/thumbnail.service');
 const {
   successResponse,
   errorResponse,
@@ -112,6 +113,32 @@ const cancelScheduled = async (req, res) => {
   }
 };
 
+// POST /api/v1/videos/:videoId/thumbnail
+const uploadThumbnail = async (req, res) => {
+  try {
+    if (!req.file) return errorResponse(res, 400, 'Thumbnail file is required');
+    const result = await thumbnailService.uploadThumbnail(
+      req.user.id,
+      req.params.videoId,
+      req.file.buffer,
+      req.file.mimetype
+    );
+    return successResponse(res, 200, result.message, result.thumbnail);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
+// DELETE /api/v1/videos/:videoId/thumbnail
+const deleteThumbnail = async (req, res) => {
+  try {
+    const result = await thumbnailService.deleteThumbnail(req.user.id, req.params.videoId);
+    return successResponse(res, 200, result.message);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
 module.exports = {
   createDraft,
   uploadVideo,
@@ -121,4 +148,6 @@ module.exports = {
   getVideo,
   getUpcoming,
   cancelScheduled,
+  uploadThumbnail,
+  deleteThumbnail,
 };

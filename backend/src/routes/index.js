@@ -13,6 +13,7 @@ const analyticsRoutes = require('./analytics.routes');
 const aiRoutes        = require('./ai.routes');
 const paymentRoutes   = require('./payment.routes');
 const adminRoutes     = require('./admin.routes');
+const referralRoutes  = require('./referral.routes');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -39,5 +40,6 @@ router.use('/analytics', analyticsRoutes);
 router.use('/ai',        aiRoutes);
 router.use('/payment',   paymentRoutes);
 router.use('/admin',     adminRoutes);
+router.use('/referral',  referralRoutes);
 
 module.exports = router;

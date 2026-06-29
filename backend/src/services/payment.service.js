@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { config } = require('../config/env');
 const User = require('../models/user.model');
 const { validateCoupon, redeemCoupon } = require('./coupon.service');
+const { recordEarningFromPayment } = require('./referral.service');
 
 const PLAN_PRICES = {
   creator: { amount: 19900, label: 'Creator Plan' },  // paise (₹199)
@@ -115,6 +116,18 @@ const verifyPayment = async (userId, { razorpayOrderId, razorpayPaymentId, razor
     { new: true }
   );
 
+  // Credit referrer (if user was referred). Non-fatal if it fails.
+  try {
+    await recordEarningFromPayment({
+      referredUserId:   userId,
+      paidAmountPaise:  PLAN_PRICES[plan].amount,
+      plan,
+      razorpayPaymentId,
+    });
+  } catch (err) {
+    console.error('[verifyPayment] referral credit failed (non-fatal):', err.message);
+  }
+
   return {
     plan: user.plan,
     subscriptionStartedAt: user.subscriptionStartedAt,
@@ -153,6 +166,17 @@ const handleWebhook = async (rawBody, signature) => {
         subscriptionExpiresAt: expiresAt,
         razorpaySubscriptionId: event.payload.payment.entity.id,
       });
+
+      try {
+        await recordEarningFromPayment({
+          referredUserId:   userId,
+          paidAmountPaise:  PLAN_PRICES[plan].amount,
+          plan,
+          razorpayPaymentId: event.payload.payment.entity.id,
+        });
+      } catch (err) {
+        console.error('[webhook] referral credit failed (non-fatal):', err.message);
+      }
     }
   }
 };

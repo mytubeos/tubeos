@@ -36,6 +36,14 @@ const startServer = async () => {
       console.warn('⚠️  BullMQ workers skipped (Upstash free plan limitation):', err.message);
     }
 
+    // 4b. Start in-process cron (always — replaces BullMQ where stubbed)
+    try {
+      const { startCron } = require('./src/jobs/cron');
+      startCron();
+    } catch (err) {
+      console.warn('⚠️  In-process cron failed to start:', err.message);
+    }
+
     // 5. Start Express server
     const PORT = config.port;
     const server = app.listen(PORT, '0.0.0.0', () => {

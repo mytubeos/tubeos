@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { formatNumber } from '../../utils/formatters'
 import toast from 'react-hot-toast'
+import referralAPI from '../../api/referral.api'
 
 const TIERS = [
   {
@@ -47,15 +48,38 @@ const TIERS = [
 export const Referral = () => {
   const { user } = useAuthStore()
   const [copied, setCopied] = useState(false)
-  const [stats] = useState({
+  const [stats, setStats] = useState({
     totalReferrals: 0,
     activeReferrals: 0,
     totalEarned: 0,
     pendingPayout: 0,
-    currentTier: 'Starter',
+    balance: 0,
+    code: null,
+    tier: 'Starter',
+    commissionRate: 10,
+    minPayout: 200,
   })
 
-  const referralCode = user?.referralCode || 'LOADING'
+  useEffect(() => {
+    referralAPI.getStats()
+      .then(res => {
+        const d = res.data?.data || res.data || {}
+        setStats({
+          totalReferrals:  d.totalReferrals  ?? 0,
+          activeReferrals: d.activeReferrals ?? 0,
+          totalEarned:     d.wallet?.totalEarned    ?? 0,
+          pendingPayout:   d.wallet?.pendingPayout  ?? 0,
+          balance:         d.wallet?.balance        ?? 0,
+          code:            d.code,
+          tier:            d.tier || 'Starter',
+          commissionRate:  d.commissionRate ?? 10,
+          minPayout:       d.minPayout ?? 200,
+        })
+      })
+      .catch(err => console.error('[Referral] stats load failed:', err.message))
+  }, [])
+
+  const referralCode = stats.code || user?.referral?.myCode || user?.referralCode || 'LOADING'
   const referralLink = `${window.location.origin}/signup?ref=${referralCode}`
 
   const copyCode = () => {

@@ -133,6 +133,8 @@ const handleOAuthCallback = async (code, state) => {
     await channel.save();
   }
 
+  await invalidateChannelCache(userId);
+
   return {
     channel: sanitizeChannel(channel),
     message: `YouTube channel "${channel.channelName}" connected successfully!`,
@@ -156,12 +158,22 @@ const getChannelInfo = async (accessToken) => {
 
 // ==================== GET ALL CONNECTED CHANNELS ====================
 const getMyChannels = async (userId) => {
+  const cacheKey = `yt:channels:${userId}`;
+  const cached = await getCache(cacheKey);
+  if (cached) return cached;
+
   const channels = await YoutubeChannel.find({
     userId,
     isActive: true,
   }).sort({ isPrimary: -1, createdAt: 1 });
 
-  return { channels: channels.map(sanitizeChannel) };
+  const result = { channels: channels.map(sanitizeChannel) };
+  await setCache(cacheKey, result, 5 * 60); // 5 min — invalidated on sync/connect/disconnect
+  return result;
+};
+
+const invalidateChannelCache = async (userId) => {
+  await deleteCache(`yt:channels:${userId}`);
 };
 
 // ==================== SYNC CHANNEL STATS ====================
@@ -208,6 +220,7 @@ const syncChannelStats = async (channelId, userId) => {
   channel.thumbnail = ytChannel.snippet?.thumbnails?.high?.url || channel.thumbnail;
 
   await channel.save();
+  await invalidateChannelCache(userId);
 
   return { channel: sanitizeChannel(channel) };
 };
@@ -226,6 +239,7 @@ const disconnectChannel = async (channelId, userId) => {
   channel.isActive = false;
   channel.connectionStatus = 'disconnected';
   await channel.save();
+  await invalidateChannelCache(userId);
 
   // Remove from user's channel list
   await User.findOneAndUpdate(
@@ -342,4 +356,5 @@ module.exports = {
   getQuotaStatus,
   getValidAccessToken,
   sanitizeChannel,
+  invalidateChannelCache,
 };

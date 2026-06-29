@@ -38,6 +38,7 @@ export const PLANS = {
     channels: 25,
     aiReplies: -1,
     uploads: -1,
+    comingSoon: true,
   },
 }
 

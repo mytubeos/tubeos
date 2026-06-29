@@ -1,5 +1,4 @@
 // src/config/ai.config.js
-// FIX: Model names updated to correct/current Anthropic model strings
 
 const { config } = require('./env');
 
@@ -9,6 +8,12 @@ const AI_MODELS = {
     provider:    'google',
     maxTokens:   1000,
     costPer1M:   0,
+  },
+  groq: {
+    name:        'llama-3.3-70b-versatile',
+    provider:    'groq',
+    maxTokens:   1000,
+    costPer1M:   0, // free tier
   },
   sonnet: {
     name:        'claude-sonnet-4-5',
@@ -23,7 +28,6 @@ const AI_MODELS = {
     costPer1M:   15,
   },
   haiku: {
-    // FIX: correct haiku model name
     name:        'claude-haiku-4-5-20251001',
     provider:    'anthropic',
     maxTokens:   500,
@@ -32,15 +36,22 @@ const AI_MODELS = {
 };
 
 const getModelForPlan = (plan, task = 'default') => {
+  const bulkModel = process.env.GROQ_API_KEY ? AI_MODELS.groq : AI_MODELS.haiku;
+
+  // TEST_MODE=true → sab Gemini (free), production pe false karo
+  const testMode = process.env.AI_TEST_MODE === 'true';
+  const paid = testMode ? AI_MODELS.gemini : AI_MODELS.sonnet;
+  const premium = testMode ? AI_MODELS.gemini : AI_MODELS.opus;
+
   const mapping = {
     free:    AI_MODELS.gemini,
-    creator: AI_MODELS.sonnet,
-    pro:     AI_MODELS.sonnet,
+    creator: paid,
+    pro:     paid,
     agency: {
-      default:       AI_MODELS.sonnet,
-      deep_analysis: AI_MODELS.opus,
-      bulk:          AI_MODELS.haiku,
-      growth:        AI_MODELS.opus,
+      default:       paid,
+      deep_analysis: premium,
+      bulk:          testMode ? AI_MODELS.gemini : bulkModel,
+      growth:        premium,
     },
   };
 
@@ -58,7 +69,91 @@ const callAI = async (plan, task, messages, systemPrompt) => {
     return callGemini(model.name, messages, systemPrompt);
   }
 
+  if (model.provider === 'groq') {
+    return callGroq(model.name, messages, systemPrompt, model.maxTokens);
+  }
+
   return callClaude(model.name, messages, systemPrompt, model.maxTokens);
+};
+
+// Vision call — analyze an image with the chosen model.
+// imageData: { base64, mimeType }
+// Anthropic & Gemini both support vision; Groq llama-3.3 does not — falls back to Gemini.
+const callAIVision = async (plan, task, { prompt, systemPrompt, base64, mimeType }) => {
+  const model = getModelForPlan(plan, task);
+
+  // Groq vision not available — route to Gemini
+  if (model.provider === 'groq') {
+    return callGeminiVision('gemini-2.0-flash', prompt, systemPrompt, base64, mimeType);
+  }
+
+  if (model.provider === 'google') {
+    return callGeminiVision(model.name, prompt, systemPrompt, base64, mimeType);
+  }
+
+  return callClaudeVision(model.name, prompt, systemPrompt, base64, mimeType, model.maxTokens);
+};
+
+const callClaudeVision = async (modelName, prompt, systemPrompt, base64, mimeType, maxTokens = 1000) => {
+  if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not configured');
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type':      'application/json',
+      'x-api-key':         process.env.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model:      modelName,
+      max_tokens: maxTokens,
+      system:     systemPrompt,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
+          { type: 'text', text: prompt },
+        ],
+      }],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Claude vision error: ${response.status}`);
+  }
+  const data = await response.json();
+  return data.content?.[0]?.text || '';
+};
+
+const callGeminiVision = async (modelName, prompt, systemPrompt, base64, mimeType) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      system_instruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
+      contents: [{
+        role: 'user',
+        parts: [
+          { inline_data: { mime_type: mimeType, data: base64 } },
+          { text: prompt },
+        ],
+      }],
+      generationConfig: { maxOutputTokens: 1000, temperature: 0.7 },
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Gemini vision error: ${response.status}`);
+  }
+  const data = await response.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 };
 
 const callClaude = async (modelName, messages, systemPrompt, maxTokens = 1000) => {
@@ -88,6 +183,37 @@ const callClaude = async (modelName, messages, systemPrompt, maxTokens = 1000) =
 
   const data = await response.json();
   return data.content?.[0]?.text || '';
+};
+
+const callGroq = async (modelName, messages, systemPrompt, maxTokens = 1000) => {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error('GROQ_API_KEY not configured');
+
+  const groqMessages = [];
+  if (systemPrompt) groqMessages.push({ role: 'system', content: systemPrompt });
+  groqMessages.push(...messages);
+
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model:      modelName,
+      messages:   groqMessages,
+      max_tokens: maxTokens,
+      temperature: 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Groq API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || '';
 };
 
 const callGemini = async (modelName, messages, systemPrompt) => {
@@ -120,4 +246,12 @@ const callGemini = async (modelName, messages, systemPrompt) => {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 };
 
-module.exports = { AI_MODELS, getModelForPlan, callAI, callClaude, callGemini };
+module.exports = {
+  AI_MODELS,
+  getModelForPlan,
+  callAI,
+  callAIVision,
+  callClaude,
+  callGemini,
+  callGroq,
+};

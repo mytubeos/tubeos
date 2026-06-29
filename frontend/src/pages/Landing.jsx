@@ -90,6 +90,22 @@ const PLANS = [
     highlighted: false,
     note: '₹899/mo after founders offer ends',
   },
+  {
+    name: 'Agency',
+    price: '₹2,999',
+    period: '/month',
+    comingSoon: true,
+    features: [
+      '25 channels',
+      'Unlimited AI replies',
+      'White-label dashboard',
+      'Priority support',
+      'Unlimited uploads',
+      'Advanced team access',
+    ],
+    cta: 'Notify Me',
+    highlighted: false,
+  },
 ]
 
 export const Landing = () => {
@@ -223,14 +239,16 @@ export const Landing = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
             {PLANS.map((plan) => (
               <div
                 key={plan.name}
                 className={`relative p-6 rounded-2xl transition-all
-                            ${plan.highlighted
-                              ? 'bg-brand/10 border-2 border-brand/40 shadow-brand'
-                              : 'glass'}`}
+                            ${plan.comingSoon
+                              ? 'glass opacity-70 border border-white/8'
+                              : plan.highlighted
+                                ? 'bg-brand/10 border-2 border-brand/40 shadow-brand'
+                                : 'glass'}`}
               >
                 {plan.badge && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2
@@ -239,10 +257,21 @@ export const Landing = () => {
                   </div>
                 )}
 
+                {plan.comingSoon && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2
+                                  bg-gray-700 text-gray-300 text-xs font-bold px-3 py-1 rounded-full
+                                  border border-white/10 whitespace-nowrap">
+                    Coming Soon
+                  </div>
+                )}
+
                 <div className="mb-5">
                   <p className="font-display font-bold text-white text-xl mb-1">{plan.name}</p>
                   <div className="flex items-end gap-1">
-                    <span className="font-display font-bold text-white text-4xl">{plan.price}</span>
+                    <span className={`font-display font-bold text-4xl
+                                     ${plan.comingSoon ? 'text-gray-500' : 'text-white'}`}>
+                      {plan.price}
+                    </span>
                     <span className="text-gray-500 text-sm mb-1">{plan.period}</span>
                   </div>
                   {plan.note && (
@@ -253,18 +282,22 @@ export const Landing = () => {
                 <div className="space-y-2.5 mb-6">
                   {plan.features.map(f => (
                     <div key={f} className="flex items-start gap-2.5">
-                      <Check size={14} className="text-emerald shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-300">{f}</span>
+                      <Check size={14}
+                        className={plan.comingSoon ? 'text-gray-600 shrink-0 mt-0.5' : 'text-emerald shrink-0 mt-0.5'}
+                      />
+                      <span className={`text-sm ${plan.comingSoon ? 'text-gray-600' : 'text-gray-300'}`}>{f}</span>
                     </div>
                   ))}
                 </div>
 
                 <Button
                   fullWidth
-                  variant={plan.highlighted ? 'brand' : 'ghost'}
-                  onClick={() => navigate('/signup')}
+                  variant={plan.comingSoon ? 'ghost' : plan.highlighted ? 'brand' : 'ghost'}
+                  disabled={plan.comingSoon}
+                  onClick={() => !plan.comingSoon && navigate('/signup')}
+                  className={plan.comingSoon ? 'opacity-40 cursor-not-allowed' : ''}
                 >
-                  {plan.cta}
+                  {plan.comingSoon ? '🔒 Coming Soon' : plan.cta}
                 </Button>
               </div>
             ))}

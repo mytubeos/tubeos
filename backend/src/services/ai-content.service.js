@@ -2,14 +2,21 @@
 // AI Content Engine
 // Generates titles, tags, descriptions, content ideas, Shorts scripts
 
-const { callAI } = require('../config/ai.config');
+const { callAI, callAIVision } = require('../config/ai.config');
 const User = require('../models/user.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
 const Video = require('../models/video.model');
 const { setCache, getCache } = require('../config/redis');
+const { sanitizePromptInput, sanitizePromptArray } = require('../utils/sanitize.utils');
 
 // ==================== GENERATE TITLES ====================
 const generateTitles = async (userId, { topic, description, tags, channelNiche, count = 5 }) => {
+  topic        = sanitizePromptInput(topic, 300);
+  description  = sanitizePromptInput(description, 1000);
+  tags         = sanitizePromptArray(tags, 50, 20);
+  channelNiche = sanitizePromptInput(channelNiche, 100);
+  count        = Math.min(Math.max(parseInt(count) || 5, 1), 10);
+
   const user = await User.findById(userId);
   const channel = await YoutubeChannel.findOne({ userId, isPrimary: true });
 
@@ -38,11 +45,16 @@ ${tags?.length ? `Keywords: ${tags.join(', ')}` : ''}`;
   const clean = result.replace(/```json|```/g, '').trim();
   const titles = JSON.parse(clean);
 
+  await User.findByIdAndUpdate(userId, { $inc: { 'usage.aiContentUsed': 1 } });
   return { titles, topic };
 };
 
 // ==================== GENERATE TAGS ====================
 const generateTags = async (userId, { title, description, category }) => {
+  title       = sanitizePromptInput(title, 200);
+  description = sanitizePromptInput(description, 1000);
+  category    = sanitizePromptInput(category, 50);
+
   const user = await User.findById(userId);
 
   const systemPrompt = `You are a YouTube SEO expert.
@@ -66,11 +78,16 @@ No explanation, no markdown.`;
   const clean = result.replace(/```json|```/g, '').trim();
   const tags = JSON.parse(clean);
 
+  await User.findByIdAndUpdate(userId, { $inc: { 'usage.aiContentUsed': 1 } });
   return { tags, title };
 };
 
 // ==================== GENERATE DESCRIPTION ====================
 const generateDescription = async (userId, { title, tags, channelName, addTimestamps = false }) => {
+  title       = sanitizePromptInput(title, 200);
+  tags        = sanitizePromptArray(tags, 50, 20);
+  channelName = sanitizePromptInput(channelName, 100);
+
   const user = await User.findById(userId);
   const channel = await YoutubeChannel.findOne({ userId, isPrimary: true });
 
@@ -95,11 +112,14 @@ Write the complete description directly, no extra commentary.`;
     systemPrompt
   );
 
+  await User.findByIdAndUpdate(userId, { $inc: { 'usage.aiContentUsed': 1 } });
   return { description: result.trim(), title };
 };
 
 // ==================== GENERATE CONTENT IDEAS ====================
 const generateContentIdeas = async (userId, { channelId, niche, count = 10 }) => {
+  niche = sanitizePromptInput(niche, 100);
+  count = Math.min(Math.max(parseInt(count) || 10, 1), 20);
   const cacheKey = `ai:ideas:${channelId}:${niche}`;
   const cached = await getCache(cacheKey);
   if (cached) return cached;
@@ -136,6 +156,10 @@ Return ONLY valid JSON array:
 
 // ==================== GENERATE SHORTS SCRIPT ====================
 const generateShortsScript = async (userId, { topic, style = 'educational', duration = 60 }) => {
+  topic    = sanitizePromptInput(topic, 500);
+  style    = ['educational','entertainment','trending','motivation'].includes(style) ? style : 'educational';
+  duration = Math.min(Math.max(parseInt(duration) || 60, 15), 60);
+
   const user = await User.findById(userId);
 
   const styleGuide = {
@@ -165,6 +189,7 @@ Return as plain text with section labels.`;
     systemPrompt
   );
 
+  await User.findByIdAndUpdate(userId, { $inc: { 'usage.aiContentUsed': 1 } });
   return {
     script: result.trim(),
     topic,
@@ -212,10 +237,13 @@ Return ONLY valid JSON:
 
 // ==================== THUMBNAIL SCORE ====================
 const scoreThumbnail = async (userId, { thumbnailUrl, title, niche }) => {
+  title = sanitizePromptInput(title, 200);
+  niche = sanitizePromptInput(niche, 100);
+
   const user = await User.findById(userId);
 
   const systemPrompt = `You are a YouTube thumbnail analyzer.
-Score this thumbnail concept and give actionable feedback.
+Score this thumbnail and give actionable feedback.
 Return ONLY valid JSON:
 {
   "score": 0-100,
@@ -225,14 +253,49 @@ Return ONLY valid JSON:
   "verdict": "brief verdict in 1 sentence"
 }`;
 
-  const result = await callAI(
-    user.plan,
-    'default',
-    [{ role: 'user', content: `Title: ${title}\nNiche: ${niche || 'general'}\nThumbnail URL: ${thumbnailUrl || 'Not provided — analyze title only'}` }],
-    systemPrompt
-  );
+  let result;
+  if (thumbnailUrl && /^https?:\/\//i.test(thumbnailUrl)) {
+    // Fetch the image and pass to a vision model
+    try {
+      const imgRes = await fetch(thumbnailUrl);
+      if (!imgRes.ok) throw new Error(`image fetch ${imgRes.status}`);
+      const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
+      if (!/^image\//.test(contentType)) throw new Error('URL did not return an image');
+
+      const arrayBuf = await imgRes.arrayBuffer();
+      // Cap at 4 MB to protect the AI provider
+      if (arrayBuf.byteLength > 4 * 1024 * 1024) {
+        throw new Error('Thumbnail image is larger than 4 MB');
+      }
+      const base64 = Buffer.from(arrayBuf).toString('base64');
+
+      const prompt = `Title: ${title}\nNiche: ${niche || 'general'}\nAnalyze the attached thumbnail.`;
+      result = await callAIVision(user.plan, 'default', {
+        prompt,
+        systemPrompt,
+        base64,
+        mimeType: contentType,
+      });
+    } catch (visionErr) {
+      console.warn('[scoreThumbnail] vision failed, falling back to text-only:', visionErr.message);
+      result = await callAI(
+        user.plan,
+        'default',
+        [{ role: 'user', content: `Title: ${title}\nNiche: ${niche || 'general'}\n(Image analysis unavailable — score based on title alone.)` }],
+        systemPrompt
+      );
+    }
+  } else {
+    result = await callAI(
+      user.plan,
+      'default',
+      [{ role: 'user', content: `Title: ${title}\nNiche: ${niche || 'general'}\n(No thumbnail provided — score based on title alone.)` }],
+      systemPrompt
+    );
+  }
 
   const clean = result.replace(/```json|```/g, '').trim();
+  await User.findByIdAndUpdate(userId, { $inc: { 'usage.aiContentUsed': 1 } });
   return JSON.parse(clean);
 };
 

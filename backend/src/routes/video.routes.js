@@ -16,6 +16,17 @@ const upload = multer({
 
 const parseVideoUpload = upload.single('video');
 
+const thumbnailUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB (YouTube limit)
+  fileFilter: (req, file, cb) => {
+    if (!/^image\/(jpeg|png|webp)$/i.test(file.mimetype)) {
+      return cb(new Error('Only JPEG/PNG/WebP thumbnails are allowed'));
+    }
+    cb(null, true);
+  },
+}).single('thumbnail');
+
 /**
  * @route   GET /api/v1/videos
  * @desc    Get all my videos (with filters + pagination)
@@ -86,5 +97,17 @@ router.post('/:videoId/cancel', protect, videoController.cancelScheduled);
  * @query   youtube=true to also delete from YouTube
  */
 router.delete('/:videoId', protect, videoController.deleteVideo);
+
+/**
+ * @route   POST /api/v1/videos/:videoId/thumbnail
+ * @desc    Upload custom thumbnail to Cloudinary (max 2MB, JPEG/PNG/WebP)
+ */
+router.post('/:videoId/thumbnail', protect, thumbnailUpload, videoController.uploadThumbnail);
+
+/**
+ * @route   DELETE /api/v1/videos/:videoId/thumbnail
+ * @desc    Remove custom thumbnail
+ */
+router.delete('/:videoId/thumbnail', protect, videoController.deleteThumbnail);
 
 module.exports = router;

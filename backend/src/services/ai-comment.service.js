@@ -197,10 +197,14 @@ Rules:
 - If it's a question, answer it briefly
 Reply with ONLY the reply text, nothing else.`;
 
+  const { sanitizePromptInput } = require('../utils/sanitize.utils');
+  const safeAuthor = sanitizePromptInput(comment.authorName, 100);
+  const safeText   = sanitizePromptInput(comment.text, 1500);
+
   const reply = await callAI(
     user.plan,
     'default',
-    [{ role: 'user', content: `Comment from ${comment.authorName}: "${comment.text}"` }],
+    [{ role: 'user', content: `Comment from ${safeAuthor}: "${safeText}"` }],
     systemPrompt
   );
 
@@ -335,11 +339,17 @@ const bulkGenerateReplies = async (userId, channelId, commentIds, tone = 'friend
     }
   }
 
+  // One bulk operation = one bulkReplies credit (regardless of size)
+  const successful = results.filter(r => r.success).length;
+  if (successful > 0) {
+    await User.findByIdAndUpdate(userId, { $inc: { 'usage.bulkRepliesUsed': 1 } });
+  }
+
   return {
     results,
     summary: {
       total: results.length,
-      successful: results.filter(r => r.success).length,
+      successful,
       failed: results.filter(r => !r.success).length,
     },
   };

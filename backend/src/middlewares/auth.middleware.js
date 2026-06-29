@@ -126,13 +126,38 @@ const requirePlan = (requiredPlan) => {
 };
 
 // Check if user has exceeded usage limits based on plan
+//   type: 'uploads' | 'aiReplies' | 'aiContent' | 'bulkReplies'
 const checkUsageLimit = (limitType) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return errorResponse(res, 401, 'Authentication required');
+  // Legacy alias support
+  const aliasMap = { upload: 'uploads', aireply: 'aiReplies', aicontent: 'aiContent' };
+  const type = aliasMap[limitType?.toLowerCase()] || limitType;
+
+  return async (req, res, next) => {
+    try {
+      if (!req.user) return errorResponse(res, 401, 'Authentication required');
+
+      const user = await User.findById(req.user.id);
+      if (!user) return errorResponse(res, 401, 'User not found');
+
+      await user.resetMonthlyUsageIfNeeded();
+
+      if (!user.hasUsageLeft(type)) {
+        const stats = user.getUsageStats();
+        const limit = stats[type]?.limit;
+        return errorResponse(
+          res,
+          429,
+          `Monthly ${type} limit reached (${limit}/month on ${user.plan} plan). Upgrade for more.`
+        );
+      }
+
+      // Attach for downstream controllers/services
+      req.usageType = type;
+      next();
+    } catch (err) {
+      console.error('[checkUsageLimit] error:', err.message);
+      return errorResponse(res, 500, 'Usage check failed');
     }
-    // Usage limit enforcement can be extended per plan here
-    next();
   };
 };
 

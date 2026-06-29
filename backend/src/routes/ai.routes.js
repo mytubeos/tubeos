@@ -58,6 +58,7 @@ router.post(
   '/comments/bulk-generate',
   protect,
   requirePlan('creator'),
+  checkUsageLimit('bulkReplies'),
   aiController.bulkGenerateReplies
 );
 
@@ -77,7 +78,7 @@ router.patch('/comments/:commentId/status', protect, aiController.updateStatus);
  * @access  Private
  * @body    { topic, description?, tags?, channelNiche?, count? }
  */
-router.post('/content/titles', protect, aiController.generateTitles);
+router.post('/content/titles', protect, checkUsageLimit('aiContent'), aiController.generateTitles);
 
 /**
  * @route   POST /api/v1/ai/content/tags
@@ -85,7 +86,7 @@ router.post('/content/titles', protect, aiController.generateTitles);
  * @access  Private
  * @body    { title, description?, category? }
  */
-router.post('/content/tags', protect, aiController.generateTags);
+router.post('/content/tags', protect, checkUsageLimit('aiContent'), aiController.generateTags);
 
 /**
  * @route   POST /api/v1/ai/content/description
@@ -93,7 +94,7 @@ router.post('/content/tags', protect, aiController.generateTags);
  * @access  Private
  * @body    { title, tags?, channelName?, addTimestamps? }
  */
-router.post('/content/description', protect, aiController.generateDescription);
+router.post('/content/description', protect, checkUsageLimit('aiContent'), aiController.generateDescription);
 
 /**
  * @route   GET /api/v1/ai/content/ideas
@@ -111,7 +112,7 @@ router.get('/content/ideas', protect, aiController.getContentIdeas);
  * @access  Private
  * @body    { topic, style?, duration? }
  */
-router.post('/shorts/script', protect, aiController.generateShortsScript);
+router.post('/shorts/script', protect, checkUsageLimit('aiContent'), aiController.generateShortsScript);
 
 /**
  * @route   POST /api/v1/ai/shorts/repurpose/:videoId
