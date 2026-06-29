@@ -25,8 +25,6 @@ const videoSchema = new mongoose.Schema(
     youtubeVideoId: {
       type: String,
       default: null,
-      // index removed — duplicate tha, schema.index() se defined hai neeche
-      sparse: true,
     },
 
     youtubeUrl: {
@@ -202,7 +200,7 @@ const videoSchema = new mongoose.Schema(
 videoSchema.index({ userId: 1, status: 1 });
 videoSchema.index({ userId: 1, scheduledAt: 1 });
 videoSchema.index({ channelId: 1, status: 1 });
-videoSchema.index({ youtubeVideoId: 1 });
+videoSchema.index({ youtubeVideoId: 1 }, { sparse: true }); // null allowed — sparse to skip null entries
 videoSchema.index({ scheduledAt: 1, status: 1 }); // For BullMQ queries
 
 // --- Virtual: YouTube watch URL ---

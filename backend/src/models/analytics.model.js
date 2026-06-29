@@ -108,7 +108,7 @@ const videoAnalyticsSchema = new mongoose.Schema(
     youtubeVideoId: {
       type: String,
       required: true,
-      index: true,
+      // index covered by compound unique {youtubeVideoId, date} below
     },
 
     date: {
