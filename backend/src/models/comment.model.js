@@ -36,7 +36,7 @@ const commentSchema = new mongoose.Schema(
     youtubeVideoId: {
       type: String,
       required: true,
-      index: true,
+      // index covered by compound index below
     },
 
     videoTitle: { type: String, default: null },

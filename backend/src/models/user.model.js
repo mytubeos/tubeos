@@ -219,8 +219,7 @@ const userSchema = new mongoose.Schema(
 );
 
 // ==================== INDEXES ====================
-userSchema.index({ email: 1 });
-userSchema.index({ 'referral.myCode': 1 });
+// email + referral.myCode indexed via unique:true — no duplicate needed
 userSchema.index({ createdAt: -1 });
 
 // ==================== HOOKS ====================
