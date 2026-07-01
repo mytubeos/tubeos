@@ -129,7 +129,8 @@ export const Channels = () => {
 function ChannelCard({ channel, onSync, onDisconnect, onSetPrimary, onReconnect, onUpgradeAnalytics }) {
   const isConnected = channel.connectionStatus === 'connected'
   const needsReconnect = channel.connectionStatus === 'token_expired' || channel.connectionStatus === 'reconnect_required'
-  const needsAnalytics = isConnected && !channel.hasAnalyticsScope
+  // Show button when: never synced (null) OR last sync fell back to basic mode
+  const needsAnalytics = isConnected && channel.analyticsMode !== 'full'
 
   return (
     <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl border border-white/7 bg-white/[0.03] hover:bg-white/[0.045] transition-colors">

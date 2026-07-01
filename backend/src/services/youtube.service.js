@@ -364,11 +364,9 @@ const getAnalyticsAuthUrl = async (userId, channelId) => {
 // ==================== HELPERS ====================
 const sanitizeChannel = (channel) => {
   const obj = channel.toObject ? channel.toObject({ virtuals: false }) : { ...channel };
-  // Expose whether this channel's token has analytics scope (without leaking the token itself)
-  const hasAnalyticsScope = (obj.oauth?.scope || '').includes('yt-analytics.readonly');
   delete obj.oauth;
   delete obj.__v;
-  return { ...obj, hasAnalyticsScope };
+  return obj;
 };
 
 module.exports = {

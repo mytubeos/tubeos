@@ -158,9 +158,10 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
     const error = await response.json().catch(() => ({}));
     if (response.status === 403) {
       // Analytics API needs yt-analytics scope — fall back to YouTube Data API (youtube.readonly)
-      console.log('[analytics] Analytics API 403 — falling back to video stats');
+      console.log('[analytics] Analytics API 403:', JSON.stringify(error?.error || error));
       const synced = await syncFromVideoStats(channel, accessToken, startDate, endDate, userId);
       await syncChannelVideos(channel, accessToken, userId);
+      await YoutubeChannel.findByIdAndUpdate(channel._id, { analyticsMode: 'basic' });
       await invalidateAnalyticsCache(channelId);
       return { synced, message: `Synced ${synced} days of data (basic mode — views, likes, comments)` };
     }
@@ -214,6 +215,7 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
   // Import/update all channel videos with latest stats
   await syncChannelVideos(channel, accessToken, userId);
 
+  await YoutubeChannel.findByIdAndUpdate(channel._id, { analyticsMode: 'full' });
   await invalidateAnalyticsCache(channelId);
   return { synced: bulkOps.length, message: `Synced ${bulkOps.length} days of analytics` };
 };

@@ -133,6 +133,16 @@ const youtubeChannelSchema = new mongoose.Schema(
       membershipEnabled: { type: Boolean, default: false },
     },
 
+    // --- Analytics Mode (set during sync) ---
+    // 'full'  = YouTube Analytics API worked (real watch time, CTR, subs gained)
+    // 'basic' = Analytics API 403, fell back to video stats only
+    // null    = never synced yet
+    analyticsMode: {
+      type: String,
+      enum: ['full', 'basic', null],
+      default: null,
+    },
+
     // --- Best Time Data (calculated by Time Intelligence System) ---
     bestTimeData: {
       lastCalculatedAt: { type: Date, default: null },
