@@ -109,4 +109,3 @@ export const KPIGrid = ({ overview, loading = false, channelStats = null }) => {
   )
 }
 
-const { formatNumber: fn } = { formatNumber }

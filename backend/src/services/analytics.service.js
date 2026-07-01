@@ -7,7 +7,7 @@ const Video = require('../models/video.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
 const { getValidAccessToken } = require('./youtube.service');
 const { youtubeRequest } = require('../config/youtube.config');
-const { setCache, getCache } = require('../config/redis');
+const { setCache, getCache, deleteCache } = require('../config/redis');
 
 // ==================== SYNC CHANNEL VIDEOS ====================
 // Imports all existing YouTube channel videos into the Video collection.
@@ -105,6 +105,18 @@ const parseDuration = (iso) => {
   return (parseInt(match[1] || 0) * 3600) + (parseInt(match[2] || 0) * 60) + parseInt(match[3] || 0);
 };
 
+// Clears all analytics caches for a channel so next request gets fresh DB data
+const invalidateAnalyticsCache = async (channelId) => {
+  const periods = ['7d', '30d', '90d'];
+  const metrics = ['views', 'subscribers', 'likes', 'comments', 'watchTime', 'ctr'];
+  await Promise.all([
+    ...periods.map(p => deleteCache(`analytics:overview:${channelId}:${p}`)),
+    ...periods.flatMap(p => metrics.map(m => deleteCache(`analytics:daily:${channelId}:${p}:${m}`))),
+    deleteCache(`analytics:topvideos:${channelId}:5:views`),
+    deleteCache(`analytics:topvideos:${channelId}:10:views`),
+  ]);
+};
+
 // ==================== SYNC CHANNEL ANALYTICS ====================
 // Fetches last N days of analytics from YouTube API
 const syncChannelAnalytics = async (channelId, userId, days = 30) => {
@@ -149,6 +161,7 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
       console.log('[analytics] Analytics API 403 — falling back to video stats');
       const synced = await syncFromVideoStats(channel, accessToken, startDate, endDate, userId);
       await syncChannelVideos(channel, accessToken, userId);
+      await invalidateAnalyticsCache(channelId);
       return { synced, message: `Synced ${synced} days of data (basic mode — views, likes, comments)` };
     }
     const err = new Error(error.error?.message || 'Failed to fetch analytics');
@@ -201,6 +214,7 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
   // Import/update all channel videos with latest stats
   await syncChannelVideos(channel, accessToken, userId);
 
+  await invalidateAnalyticsCache(channelId);
   return { synced: bulkOps.length, message: `Synced ${bulkOps.length} days of analytics` };
 };
 
@@ -383,6 +397,7 @@ const getOverview = async (userId, channelId, period = '30d') => {
         $group: {
           _id: null,
           totalViews: { $sum: '$metrics.views' },
+          totalWatchTime: { $sum: '$metrics.estimatedMinutesWatched' },
           subscribersGained: { $sum: '$metrics.subscribersGained' },
           totalLikes: { $sum: '$metrics.likes' },
           totalRevenue: { $sum: '$metrics.estimatedRevenue' },
@@ -442,7 +457,7 @@ const getOverview = async (userId, channelId, period = '30d') => {
       watchTime: {
         value: curr.totalWatchTime || 0,
         formatted: formatWatchTime(curr.totalWatchTime || 0),
-        change: calcChange(curr.totalWatchTime, prev.totalViews),
+        change: calcChange(curr.totalWatchTime, prev.totalWatchTime),
       },
       subscribers: {
         gained: curr.subscribersGained || 0,
