@@ -252,76 +252,81 @@ const syncTrafficSources = async (channel, accessToken, startDate, endDate, user
 
 // ==================== FALLBACK: SYNC FROM VIDEO STATS (youtube.readonly scope) ====================
 // Used when Analytics API returns 403 (missing yt-analytics scope on stored token).
-// Fetches video stats from YouTube Data API v3 — gives views, likes, comments per video.
+// Fetches ALL video stats and writes aggregate into today's ChannelAnalytics row.
+// NOTE: Old code filtered by publishedAt (last 30 days) so old channels always got 0.
 const syncFromVideoStats = async (channel, accessToken, startDate, endDate, userId) => {
   try {
     // 1. Get uploads playlist ID
     const channelData = await youtubeRequest(
-      `/channels?part=contentDetails&mine=true`,
+      `/channels?part=contentDetails,statistics&mine=true`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     const uploadsId = channelData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
-    if (!uploadsId) return 0;
+    const channelStats = channelData.items?.[0]?.statistics || {};
 
-    // 2. Fetch recent videos from uploads playlist
-    const playlistData = await youtubeRequest(
-      `/playlistItems?part=contentDetails,snippet&playlistId=${uploadsId}&maxResults=50`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
+    const today = new Date().toISOString().split('T')[0];
 
-    const recentItems = (playlistData.items || []).filter(item => {
-      const pub = new Date(item.snippet?.publishedAt);
-      return pub >= new Date(startDate) && pub <= new Date(endDate);
-    });
-
-    if (recentItems.length === 0) {
-      // No recent videos — still populate today's row with 0s so dashboard isn't empty
-      const today = new Date().toISOString().split('T')[0];
+    if (!uploadsId) {
+      // At minimum write channel-level subscriber count
       await ChannelAnalytics.findOneAndUpdate(
         { channelId: channel._id, date: new Date(today) },
-        { $setOnInsert: { userId, channelId: channel._id, date: new Date(today) } },
-        { upsert: true }
-      );
-      return 0;
-    }
-
-    // 3. Get stats for those videos
-    const videoIds = recentItems.map(i => i.contentDetails.videoId).slice(0, 50);
-    const statsData = await youtubeRequest(
-      `/videos?part=statistics,snippet&id=${videoIds.join(',')}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-
-    // 4. Aggregate per-day
-    const dayMap = {};
-    for (const video of (statsData.items || [])) {
-      const day = new Date(video.snippet.publishedAt).toISOString().split('T')[0];
-      if (!dayMap[day]) dayMap[day] = { views: 0, likes: 0, comments: 0 };
-      dayMap[day].views    += parseInt(video.statistics.viewCount)    || 0;
-      dayMap[day].likes    += parseInt(video.statistics.likeCount)    || 0;
-      dayMap[day].comments += parseInt(video.statistics.commentCount) || 0;
-    }
-
-    // 5. Upsert into ChannelAnalytics
-    const bulkOps = Object.entries(dayMap).map(([day, stats]) => ({
-      updateOne: {
-        filter: { channelId: channel._id, date: new Date(day) },
-        update: {
+        {
           $set: {
             userId,
             channelId: channel._id,
-            date: new Date(day),
-            'metrics.views':  stats.views,
-            'metrics.likes':  stats.likes,
-            'metrics.comments': stats.comments,
+            date: new Date(today),
+            'metrics.views': parseInt(channelStats.viewCount) || 0,
+            'metrics.subscribersGained': parseInt(channelStats.subscriberCount) || 0,
           },
         },
-        upsert: true,
-      },
-    }));
+        { upsert: true }
+      );
+      return 1;
+    }
 
-    if (bulkOps.length > 0) await ChannelAnalytics.bulkWrite(bulkOps);
-    return bulkOps.length;
+    // 2. Fetch ALL videos from uploads playlist (no date filter — old code was wrong here)
+    const playlistData = await youtubeRequest(
+      `/playlistItems?part=contentDetails&playlistId=${uploadsId}&maxResults=50`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    const allItems = playlistData.items || [];
+
+    // 3. Get stats for all videos
+    const videoIds = allItems.map(i => i.contentDetails.videoId).filter(Boolean).slice(0, 50);
+
+    let totalViews = 0, totalLikes = 0, totalComments = 0;
+
+    if (videoIds.length > 0) {
+      const statsData = await youtubeRequest(
+        `/videos?part=statistics&id=${videoIds.join(',')}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+
+      for (const video of (statsData.items || [])) {
+        totalViews    += parseInt(video.statistics?.viewCount)    || 0;
+        totalLikes    += parseInt(video.statistics?.likeCount)    || 0;
+        totalComments += parseInt(video.statistics?.commentCount) || 0;
+      }
+    }
+
+    // 4. Write aggregate into today's ChannelAnalytics row
+    await ChannelAnalytics.findOneAndUpdate(
+      { channelId: channel._id, date: new Date(today) },
+      {
+        $set: {
+          userId,
+          channelId: channel._id,
+          date: new Date(today),
+          'metrics.views':    totalViews,
+          'metrics.likes':    totalLikes,
+          'metrics.comments': totalComments,
+        },
+      },
+      { upsert: true }
+    );
+
+    return 1;
   } catch (err) {
     console.error('[analytics] Video stats fallback failed:', err.message);
     return 0;
@@ -382,8 +387,45 @@ const getOverview = async (userId, channelId, period = '30d') => {
     ]),
   ]);
 
-  const curr = current[0] || {};
+  let curr = current[0] || {};
   const prev = previous[0] || {};
+
+  // Fallback: if no ChannelAnalytics data, sum from Video.performance
+  // This happens when user has no yt-analytics scope and fallback sync hasn't run yet
+  if (!curr.totalViews && !curr.totalLikes) {
+    const mongoose = require('mongoose');
+    const videoFallback = await Video.aggregate([
+      {
+        $match: {
+          channelId: mongoose.Types.ObjectId.createFromHexString(channelId),
+          status: 'published',
+          'performance.lastSyncedAt': { $exists: true },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalViews:    { $sum: '$performance.views' },
+          totalLikes:    { $sum: '$performance.likes' },
+          totalComments: { $sum: '$performance.comments' },
+        },
+      },
+    ]);
+    if (videoFallback[0]?.totalViews) {
+      curr = {
+        totalViews:         videoFallback[0].totalViews,
+        totalLikes:         videoFallback[0].totalLikes,
+        totalComments:      videoFallback[0].totalComments,
+        totalWatchTime:     0,
+        subscribersGained:  0,
+        subscribersLost:    0,
+        totalImpressions:   0,
+        avgCtr:             0,
+        avgViewDuration:    0,
+        totalRevenue:       0,
+      };
+    }
+  }
 
   const result = {
     period,
