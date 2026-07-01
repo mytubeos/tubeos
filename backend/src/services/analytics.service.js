@@ -295,18 +295,21 @@ const syncFromVideoStats = async (channel, accessToken, startDate, endDate, user
     // 3. Get stats for all videos
     const videoIds = allItems.map(i => i.contentDetails.videoId).filter(Boolean).slice(0, 50);
 
-    let totalViews = 0, totalLikes = 0, totalComments = 0;
+    let totalViews = 0, totalLikes = 0, totalComments = 0, totalEstimatedMinutes = 0;
 
     if (videoIds.length > 0) {
       const statsData = await youtubeRequest(
-        `/videos?part=statistics&id=${videoIds.join(',')}`,
+        `/videos?part=statistics,contentDetails&id=${videoIds.join(',')}`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
       for (const video of (statsData.items || [])) {
-        totalViews    += parseInt(video.statistics?.viewCount)    || 0;
+        const views    = parseInt(video.statistics?.viewCount)    || 0;
+        const durationSec = parseDuration(video.contentDetails?.duration || 'PT0S');
+        totalViews    += views;
         totalLikes    += parseInt(video.statistics?.likeCount)    || 0;
         totalComments += parseInt(video.statistics?.commentCount) || 0;
+        totalEstimatedMinutes += Math.round(views * (durationSec / 60) * 0.4);
       }
     }
 
@@ -318,9 +321,10 @@ const syncFromVideoStats = async (channel, accessToken, startDate, endDate, user
           userId,
           channelId: channel._id,
           date: new Date(today),
-          'metrics.views':    totalViews,
-          'metrics.likes':    totalLikes,
-          'metrics.comments': totalComments,
+          'metrics.views':                   totalViews,
+          'metrics.likes':                   totalLikes,
+          'metrics.comments':                totalComments,
+          'metrics.estimatedMinutesWatched': totalEstimatedMinutes,
         },
       },
       { upsert: true }
