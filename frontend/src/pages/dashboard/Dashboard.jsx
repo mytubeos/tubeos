@@ -21,7 +21,7 @@ import toast from 'react-hot-toast'
 export const Dashboard = () => {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const { activeChannel } = useChannelStore()
+  const { activeChannel, fetchChannels } = useChannelStore()
   const [period, setPeriod] = useState('30d')
   const [syncing, setSyncing] = useState(false)
   const [upcoming, setUpcoming] = useState([])
@@ -59,7 +59,7 @@ export const Dashboard = () => {
     setSyncing(true)
     try {
       await analyticsApi.sync(activeChannel._id, 30)
-      await refetch()
+      await Promise.all([refetch(), fetchChannels()])
       if (!silent) toast.success('Synced!')
     } catch {
       if (!silent) toast.error('Sync failed. Try again.')

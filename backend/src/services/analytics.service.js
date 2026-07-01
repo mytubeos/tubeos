@@ -5,7 +5,7 @@
 const { ChannelAnalytics, VideoAnalytics } = require('../models/analytics.model');
 const Video = require('../models/video.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
-const { getValidAccessToken } = require('./youtube.service');
+const { getValidAccessToken, invalidateChannelCache } = require('./youtube.service');
 const { youtubeRequest } = require('../config/youtube.config');
 const { setCache, getCache, deleteCache } = require('../config/redis');
 
@@ -277,6 +277,15 @@ const syncFromVideoStats = async (channel, accessToken, startDate, endDate, user
     );
     const uploadsId = channelData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
     const channelStats = channelData.items?.[0]?.statistics || {};
+
+    // Save fresh subscriber/view counts to YoutubeChannel so dashboard always shows latest
+    await YoutubeChannel.findByIdAndUpdate(channel._id, {
+      'stats.subscriberCount': parseInt(channelStats.subscriberCount) || 0,
+      'stats.viewCount':       parseInt(channelStats.viewCount)       || 0,
+      'stats.videoCount':      parseInt(channelStats.videoCount)      || 0,
+      'stats.lastSyncedAt':    new Date(),
+    });
+    await invalidateChannelCache(userId);
 
     const today = new Date().toISOString().split('T')[0];
 

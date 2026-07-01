@@ -72,11 +72,11 @@ export const KPICard = ({ type, value, change, subtitle, loading = false }) => {
 
 export const KPIGrid = ({ overview, loading = false, channelStats = null }) => {
   const metrics = overview?.metrics || {}
-  const hasAnalytics = !!overview
-
-  // Subscriber display: period-based "gained" from Analytics API, else total from channel stats
-  const subValue    = hasAnalytics ? metrics.subscribers?.net : channelStats?.subscriberCount
-  const subSubtitle = hasAnalytics
+  // Show period-based gained/lost only when we have real Analytics API data
+  // In fallback mode (youtube.readonly only), gained/lost are both 0 — show total instead
+  const hasRealSubData = (metrics.subscribers?.gained || 0) > 0 || (metrics.subscribers?.lost || 0) > 0
+  const subValue    = hasRealSubData ? metrics.subscribers?.net : channelStats?.subscriberCount
+  const subSubtitle = hasRealSubData
     ? `+${formatNumber(metrics.subscribers?.gained ?? 0)} gained`
     : 'Total subscribers'
 
