@@ -108,12 +108,42 @@ export const useChannel = () => {
     }
   }, [fetchChannels])
 
+  // Upgrade existing channel token to include yt-analytics.readonly scope
+  // Same popup flow as connectYouTube but uses a different auth URL endpoint
+  const upgradeAnalytics = useCallback(async (channelId) => {
+    try {
+      const res = await youtubeApi.getAnalyticsAuthUrl(channelId)
+      const { authUrl } = res.data?.data || {}
+      if (!authUrl) throw new Error('Could not generate auth URL')
+
+      const result = await youtubeApi.connectChannel(authUrl)
+
+      if (result.success) {
+        toast.success('Analytics access granted! Sync now for real data.')
+        await fetchChannels()
+      } else if (result.error && result.error !== 'popup_closed') {
+        const msgs = {
+          access_denied:  'You cancelled. Analytics access not granted.',
+          connect_failed: 'Failed to grant access. Please try again.',
+        }
+        toast.error(msgs[result.error] || 'Could not grant analytics access.')
+      }
+    } catch (err) {
+      if (err.message?.includes('Popup blocked')) {
+        toast.error('Popup blocked! Please allow popups and try again.')
+      } else {
+        toast.error(err.response?.data?.message || 'Failed to grant analytics access')
+      }
+    }
+  }, [fetchChannels])
+
   return {
     channels,
     activeChannel,
     isLoading,
     fetchChannels,
     connectYouTube,
+    upgradeAnalytics,
     handleOAuthReturn,
     syncChannel,
     disconnectChannel,

@@ -124,8 +124,19 @@ const getQuota = async (req, res) => {
   }
 };
 
+// GET /api/v1/youtube/channels/:channelId/analytics-auth
+const getAnalyticsAuthUrl = async (req, res) => {
+  try {
+    const result = await youtubeService.getAnalyticsAuthUrl(req.user.id, req.params.channelId);
+    return successResponse(res, 200, 'Analytics OAuth URL generated', result);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
 module.exports = {
   getAuthUrl,
+  getAnalyticsAuthUrl,
   handleCallback,
   getMyChannels,
   syncChannel,

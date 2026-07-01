@@ -59,4 +59,11 @@ router.patch('/channels/:channelId/primary', protect, youtubeController.setPrima
  */
 router.get('/channels/:channelId/quota', protect, youtubeController.getQuota);
 
+/**
+ * @route   GET /api/v1/youtube/channels/:channelId/analytics-auth
+ * @desc    OAuth URL for upgrading existing channel token with yt-analytics scope
+ * @access  Private
+ */
+router.get('/channels/:channelId/analytics-auth', protect, youtubeController.getAnalyticsAuthUrl);
+
 module.exports = router;

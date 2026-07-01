@@ -344,16 +344,36 @@ const getValidAccessToken = async (channel) => {
   return channel.oauth.accessToken;
 };
 
+// ==================== GRANT ANALYTICS SCOPE ====================
+// Generates an OAuth URL for an EXISTING channel to upgrade its token
+// with yt-analytics.readonly scope — no channel-limit check needed.
+const getAnalyticsAuthUrl = async (userId, channelId) => {
+  const channel = await YoutubeChannel.findOne({ _id: channelId, userId, isActive: true });
+  if (!channel) {
+    const err = new Error('Channel not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const state = uuidv4();
+  await setCache(`oauth_state:${state}`, { userId }, 30 * 60);
+  const authUrl = getAuthUrl(state);
+  return { authUrl };
+};
+
 // ==================== HELPERS ====================
 const sanitizeChannel = (channel) => {
   const obj = channel.toObject ? channel.toObject({ virtuals: false }) : { ...channel };
+  // Expose whether this channel's token has analytics scope (without leaking the token itself)
+  const hasAnalyticsScope = (obj.oauth?.scope || '').includes('yt-analytics.readonly');
   delete obj.oauth;
   delete obj.__v;
-  return obj;
+  return { ...obj, hasAnalyticsScope };
 };
 
 module.exports = {
   getOAuthUrl,
+  getAnalyticsAuthUrl,
   handleOAuthCallback,
   getMyChannels,
   syncChannelStats,

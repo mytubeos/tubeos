@@ -64,9 +64,10 @@ export const youtubeApi = {
     })
   },
 
-  getChannels:       () => api.get('/youtube/channels'),
-  syncChannel:       (channelId) => api.post(`/youtube/channels/${channelId}/sync`),
-  disconnectChannel: (channelId) => api.delete(`/youtube/channels/${channelId}`),
-  setPrimary:        (channelId) => api.patch(`/youtube/channels/${channelId}/primary`),
-  getQuota:          (channelId) => api.get(`/youtube/channels/${channelId}/quota`),
+  getChannels:          () => api.get('/youtube/channels'),
+  syncChannel:          (channelId) => api.post(`/youtube/channels/${channelId}/sync`),
+  disconnectChannel:    (channelId) => api.delete(`/youtube/channels/${channelId}`),
+  setPrimary:           (channelId) => api.patch(`/youtube/channels/${channelId}/primary`),
+  getQuota:             (channelId) => api.get(`/youtube/channels/${channelId}/quota`),
+  getAnalyticsAuthUrl:  (channelId) => api.get(`/youtube/channels/${channelId}/analytics-auth`),
 }

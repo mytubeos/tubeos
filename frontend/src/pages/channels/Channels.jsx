@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Youtube, RefreshCw, Trash2, Plus, WifiOff, Star, Zap } from 'lucide-react'
+import { Youtube, RefreshCw, Trash2, Plus, WifiOff, Star, Zap, BarChart2 } from 'lucide-react'
 import { useChannel } from '../../hooks/useChannel'
 import { useAuthStore } from '../../store/authStore'
 
@@ -12,6 +12,7 @@ export const Channels = () => {
     isLoading,
     fetchChannels,
     connectYouTube,
+    upgradeAnalytics,
     handleOAuthReturn,
     syncChannel,
     disconnectChannel,
@@ -105,6 +106,7 @@ export const Channels = () => {
               }}
               onSetPrimary={() => setPrimary(ch._id)}
               onReconnect={connectYouTube}
+              onUpgradeAnalytics={() => upgradeAnalytics(ch._id)}
             />
           ))}
         </div>
@@ -124,9 +126,10 @@ export const Channels = () => {
 }
 
 /* ── Single channel card ── */
-function ChannelCard({ channel, onSync, onDisconnect, onSetPrimary, onReconnect }) {
+function ChannelCard({ channel, onSync, onDisconnect, onSetPrimary, onReconnect, onUpgradeAnalytics }) {
   const isConnected = channel.connectionStatus === 'connected'
   const needsReconnect = channel.connectionStatus === 'token_expired' || channel.connectionStatus === 'reconnect_required'
+  const needsAnalytics = isConnected && !channel.hasAnalyticsScope
 
   return (
     <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl border border-white/7 bg-white/[0.03] hover:bg-white/[0.045] transition-colors">
@@ -187,6 +190,12 @@ function ChannelCard({ channel, onSync, onDisconnect, onSetPrimary, onReconnect 
             {Number(channel.stats?.viewCount || 0).toLocaleString()} views
           </span>
         </div>
+
+        {needsAnalytics && (
+          <p className="text-[10px] text-indigo-400/70 mt-1">
+            ⚡ Click "Enable Analytics" for real watch time, CTR & subscriber data
+          </p>
+        )}
       </div>
 
       {/* Actions */}
@@ -199,6 +208,17 @@ function ChannelCard({ channel, onSync, onDisconnect, onSetPrimary, onReconnect 
           >
             <WifiOff size={11} />
             Reconnect
+          </button>
+        )}
+
+        {needsAnalytics && (
+          <button
+            onClick={onUpgradeAnalytics}
+            title="Enable real watch time, CTR, subscribers data"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/8 text-indigo-400 text-[10px] hover:bg-indigo-500/15 transition-colors"
+          >
+            <BarChart2 size={11} />
+            Enable Analytics
           </button>
         )}
 
