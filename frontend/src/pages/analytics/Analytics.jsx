@@ -66,11 +66,14 @@ export const Analytics = () => {
       .catch(() => {})
   }, [activeMetric, channelId, period])
 
+  // Pull enough history for the selected tab (incl. its previous-period delta where cheap)
+  const SYNC_DAYS = { '7d': 60, '30d': 90, '90d': 180, '365d': 365 }
+
   const handleSync = async () => {
     if (!channelId) return
     setSyncing(true)
     try {
-      await analyticsApi.sync(channelId, 90)
+      await analyticsApi.sync(channelId, SYNC_DAYS[period] || 180)
       await fetchAll()
       toast.success('Analytics synced!')
     } catch {
@@ -113,7 +116,7 @@ export const Analytics = () => {
       </div>
 
       {/* KPI Cards */}
-      <KPIGrid overview={overview} loading={loading} />
+      <KPIGrid overview={overview} loading={loading} period={period} />
 
       {/* Chart with metric tabs */}
       <Card>

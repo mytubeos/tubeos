@@ -1,9 +1,11 @@
 // src/components/features/TopVideos.jsx
+import { useNavigate } from 'react-router-dom'
 import { ExternalLink, Eye, ThumbsUp, Clock } from 'lucide-react'
 import { formatNumber, formatDate, formatDuration, timeAgo } from '../../utils/formatters'
 import { Card, CardHeader } from '../ui/Card'
 
 const VideoRow = ({ video, rank }) => {
+  const navigate = useNavigate()
   const rankColors = {
     1: 'text-amber bg-amber/15',
     2: 'text-gray-300 bg-white/10',
@@ -11,7 +13,12 @@ const VideoRow = ({ video, rank }) => {
   }
 
   return (
-    <div className="flex items-center gap-3 py-3 border-b border-white/5 last:border-0
+    <div
+      onClick={() => navigate(`/analytics/video/${video._id}`)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/analytics/video/${video._id}`) }}
+      className="flex items-center gap-3 py-3 border-b border-white/5 last:border-0 cursor-pointer
                     hover:bg-white/[0.02] transition-colors -mx-2 px-2 rounded-lg group">
       {/* Rank */}
       <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0
@@ -59,6 +66,7 @@ const VideoRow = ({ video, rank }) => {
             href={`https://www.youtube.com/watch?v=${video.youtubeVideoId}`}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
             className="w-7 h-7 rounded-lg flex items-center justify-center
                        text-gray-600 hover:text-brand hover:bg-brand/10
                        transition-all opacity-0 group-hover:opacity-100"

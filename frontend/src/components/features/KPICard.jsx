@@ -74,7 +74,7 @@ const PERIOD_LABEL = {
   '7d': 'last 7 days',
   '30d': 'last 30 days',
   '90d': 'last 90 days',
-  '1y': 'last year',
+  '365d': 'last 12 months',
 }
 
 export const KPIGrid = ({ overview, loading = false, channelStats = null, period = '30d' }) => {
