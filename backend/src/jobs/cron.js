@@ -8,6 +8,7 @@ const YoutubeChannel = require('../models/youtube-channel.model');
 const { Trend } = require('../models/growth.model');
 
 let running = false;
+let analyticsSyncRunning = false;
 const timers = [];
 
 // ---------- Scheduled video publish reaper ----------
@@ -59,6 +60,48 @@ const reapPublishedSchedules = async () => {
   }
 };
 
+// ---------- Daily analytics snapshot sync ----------
+// THE foundation job. syncChannelAnalytics() pulls per-DAY rows from the YouTube
+// Analytics API (which backfills history in a single call) and upserts them into
+// ChannelAnalytics + VideoAnalytics. Without this running on a schedule the tables
+// stay empty, so getOverview() falls back to lifetime video totals — which is why
+// the dashboard boxes showed "total" instead of "gained in this period".
+//
+// Runs once/day. 180-day window keeps every tab correct: the 90d tab compares
+// against the previous 90 days, so it needs 180 days present. An Analytics API
+// report call costs the same quota regardless of date range (a wider range just
+// returns more rows), so 180 is effectively free vs 90. Channels are synced one
+// at a time with a small gap to spread quota. Errors are isolated per channel so
+// one bad token never stops the rest.
+const syncAllChannelsAnalytics = async () => {
+  if (analyticsSyncRunning) return;
+  analyticsSyncRunning = true;
+  try {
+    const { syncChannelAnalytics } = require('../services/analytics.service');
+    const channels = await YoutubeChannel.find({ isActive: true })
+      .select('_id userId')
+      .lean();
+
+    console.log(`[cron] daily analytics sync starting for ${channels.length} channel(s)`);
+    let ok = 0;
+    for (const ch of channels) {
+      try {
+        await syncChannelAnalytics(ch._id.toString(), ch.userId.toString(), 180);
+        ok++;
+      } catch (err) {
+        console.error(`[cron] analytics sync failed for channel ${ch._id}:`, err.message);
+      }
+      // Spread quota — small pause between channels
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+    console.log(`[cron] daily analytics sync done: ${ok}/${channels.length} channels synced`);
+  } catch (err) {
+    console.error('[cron] syncAllChannelsAnalytics error:', err.message);
+  } finally {
+    analyticsSyncRunning = false;
+  }
+};
+
 // ---------- Trend refresh ----------
 const refreshTrends = async () => {
   try {
@@ -88,12 +131,17 @@ const startCron = () => {
   // Every 12h: refresh trends
   timers.push(setInterval(refreshTrends, 12 * 60 * 60 * 1000));
 
+  // Every 24h: daily analytics snapshot sync (dashboard/analytics/growth foundation)
+  timers.push(setInterval(syncAllChannelsAnalytics, 24 * 60 * 60 * 1000));
+
   // Every 24h: weekly report check
   timers.push(setInterval(sendWeeklyReports, 24 * 60 * 60 * 1000));
 
   // Fire once on boot (best-effort)
   setTimeout(reapPublishedSchedules, 5_000);
   setTimeout(refreshTrends, 10_000);
+  // Delay the first analytics sync so boot isn't slowed and quota isn't hit at startup
+  setTimeout(syncAllChannelsAnalytics, 30_000);
 };
 
 const stopCron = () => {
