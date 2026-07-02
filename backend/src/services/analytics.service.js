@@ -136,23 +136,40 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
     .toISOString().split('T')[0];
 
-  // Fetch from YouTube Analytics API
-  const analyticsUrl = new URL('https://youtubeanalytics.googleapis.com/v2/reports');
-  analyticsUrl.searchParams.set('ids', `channel==MINE`);
-  analyticsUrl.searchParams.set('startDate', startDate);
-  analyticsUrl.searchParams.set('endDate', endDate);
-  analyticsUrl.searchParams.set('metrics', [
+  const BASE_METRICS = [
     'views', 'estimatedMinutesWatched', 'averageViewDuration',
     'averageViewPercentage', 'subscribersGained', 'subscribersLost',
     'likes', 'comments', 'shares', 'impressions', 'impressionsCtr',
-    // estimatedRevenue removed — requires yt-analytics-monetary.readonly scope
-  ].join(','));
-  analyticsUrl.searchParams.set('dimensions', 'day');
-  analyticsUrl.searchParams.set('sort', 'day');
+  ];
 
-  const response = await fetch(analyticsUrl.toString(), {
+  const buildAnalyticsUrl = (metrics) => {
+    const url = new URL('https://youtubeanalytics.googleapis.com/v2/reports');
+    url.searchParams.set('ids', `channel==MINE`);
+    url.searchParams.set('startDate', startDate);
+    url.searchParams.set('endDate', endDate);
+    url.searchParams.set('metrics', metrics.join(','));
+    url.searchParams.set('dimensions', 'day');
+    url.searchParams.set('sort', 'day');
+    return url;
+  };
+
+  // Try WITH revenue first (requires yt-analytics-monetary.readonly + monetized channel)
+  let response = await fetch(buildAnalyticsUrl([...BASE_METRICS, 'estimatedRevenue']).toString(), {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
+  let revenueAvailable = true;
+
+  if (!response.ok) {
+    const revenueError = await response.clone().json().catch(() => ({}));
+    const revenueMsg = revenueError.error?.message || '';
+    if (response.status === 403 && /revenue|monetary|monetization/i.test(revenueMsg)) {
+      // Channel isn't monetized / token predates the monetary scope — retry without revenue
+      revenueAvailable = false;
+      response = await fetch(buildAnalyticsUrl(BASE_METRICS).toString(), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+    }
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
@@ -161,7 +178,10 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
       console.log('[analytics] Analytics API 403:', JSON.stringify(error?.error || error));
       const synced = await syncFromVideoStats(channel, accessToken, startDate, endDate, userId);
       await syncChannelVideos(channel, accessToken, userId);
-      await YoutubeChannel.findByIdAndUpdate(channel._id, { analyticsMode: 'basic' });
+      await YoutubeChannel.findByIdAndUpdate(channel._id, {
+        analyticsMode: 'basic',
+        'monetization.revenueDataAvailable': false,
+      });
       await invalidateAnalyticsCache(channelId);
       return { synced, message: `Synced ${synced} days of data (basic mode — views, likes, comments)` };
     }
@@ -198,6 +218,7 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
             'metrics.shares': record.shares || 0,
             'metrics.impressions': record.impressions || 0,
             'metrics.impressionsCtr': record.impressionsCtr || 0,
+            ...(revenueAvailable ? { 'metrics.estimatedRevenue': record.estimatedRevenue || 0 } : {}),
           },
         },
         upsert: true,
@@ -215,7 +236,13 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
   // Import/update all channel videos with latest stats
   await syncChannelVideos(channel, accessToken, userId);
 
-  await YoutubeChannel.findByIdAndUpdate(channel._id, { analyticsMode: 'full' });
+  // Per-video daily breakdown — top videos by views (bounded to control API quota)
+  await syncTopVideoAnalytics(channel, accessToken, userId, startDate, endDate);
+
+  await YoutubeChannel.findByIdAndUpdate(channel._id, {
+    analyticsMode: 'full',
+    'monetization.revenueDataAvailable': revenueAvailable,
+  });
   await invalidateAnalyticsCache(channelId);
   return { synced: bulkOps.length, message: `Synced ${bulkOps.length} days of analytics` };
 };
@@ -263,6 +290,96 @@ const syncTrafficSources = async (channel, accessToken, startDate, endDate, user
     );
   } catch (err) {
     console.error('Traffic sources sync failed:', err.message);
+  }
+};
+
+// ==================== SYNC PER-VIDEO DAILY ANALYTICS ====================
+// Populates VideoAnalytics (day-by-day per video) — powers the Video Analytics
+// breakdown page. Bounded to the channel's top-viewed videos so a full channel
+// sync doesn't burn one YouTube Analytics quota unit per video the channel has ever posted.
+const MAX_VIDEOS_PER_SYNC = 20;
+
+const syncTopVideoAnalytics = async (channel, accessToken, userId, startDate, endDate) => {
+  try {
+    const topVideos = await Video.find({
+      channelId: channel._id,
+      status: 'published',
+      youtubeVideoId: { $exists: true },
+    })
+      .sort({ 'performance.views': -1 })
+      .limit(MAX_VIDEOS_PER_SYNC)
+      .select('_id youtubeVideoId')
+      .lean();
+
+    await syncVideoAnalyticsBatch(channel, accessToken, userId, topVideos, startDate, endDate);
+  } catch (err) {
+    console.error('[analytics] syncTopVideoAnalytics failed:', err.message);
+  }
+};
+
+// Fetches per-day metrics for a specific set of videos from the YouTube Analytics API
+// (one request per video — the API has no multi-video "day" dimension breakdown).
+const syncVideoAnalyticsBatch = async (channel, accessToken, userId, videos, startDate, endDate) => {
+  for (const video of videos) {
+    if (!video.youtubeVideoId) continue;
+    try {
+      const url = new URL('https://youtubeanalytics.googleapis.com/v2/reports');
+      url.searchParams.set('ids', 'channel==MINE');
+      url.searchParams.set('startDate', startDate);
+      url.searchParams.set('endDate', endDate);
+      url.searchParams.set('metrics', [
+        'views', 'estimatedMinutesWatched', 'averageViewDuration',
+        'averageViewPercentage', 'likes', 'comments', 'shares',
+        'impressions', 'impressionsCtr',
+      ].join(','));
+      url.searchParams.set('dimensions', 'day');
+      url.searchParams.set('filters', `video==${video.youtubeVideoId}`);
+      url.searchParams.set('sort', 'day');
+
+      const response = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!response.ok) continue; // skip video on error (e.g. too old, no data) — don't fail the whole sync
+
+      const data = await response.json();
+      const rows = data.rows || [];
+      const headers = data.columnHeaders?.map(h => h.name) || [];
+
+      const bulkOps = rows.map(row => {
+        const record = {};
+        headers.forEach((h, i) => { record[h] = row[i]; });
+        return {
+          updateOne: {
+            filter: { youtubeVideoId: video.youtubeVideoId, date: new Date(record.day) },
+            update: {
+              $set: {
+                userId,
+                channelId: channel._id,
+                videoId: video._id,
+                youtubeVideoId: video.youtubeVideoId,
+                date: new Date(record.day),
+                'metrics.views': record.views || 0,
+                'metrics.estimatedMinutesWatched': record.estimatedMinutesWatched || 0,
+                'metrics.averageViewDuration': record.averageViewDuration || 0,
+                'metrics.averageViewPercentage': record.averageViewPercentage || 0,
+                'metrics.likes': record.likes || 0,
+                'metrics.comments': record.comments || 0,
+                'metrics.shares': record.shares || 0,
+                'metrics.impressions': record.impressions || 0,
+                'metrics.impressionsCtr': record.impressionsCtr || 0,
+              },
+            },
+            upsert: true,
+          },
+        };
+      });
+
+      if (bulkOps.length > 0) {
+        await VideoAnalytics.bulkWrite(bulkOps);
+      }
+    } catch (err) {
+      console.error(`[analytics] video analytics sync failed for ${video.youtubeVideoId}:`, err.message);
+    }
   }
 };
 
@@ -656,9 +773,33 @@ const getVideoBreakdown = async (userId, videoId) => {
   }
 
   // Get daily breakdown
-  const dailyData = await VideoAnalytics.find({ videoId })
+  let dailyData = await VideoAnalytics.find({ videoId })
     .sort({ date: 1 })
     .lean();
+
+  // Lazy sync: this video hasn't had its per-day breakdown pulled yet
+  // (e.g. it wasn't in the top-N videos synced by the channel-wide sync).
+  // Fetch it on demand so the page isn't permanently empty.
+  if (dailyData.length === 0 && video.youtubeVideoId) {
+    try {
+      const channel = await YoutubeChannel.findOne({ _id: video.channelId._id || video.channelId, userId, isActive: true })
+        .select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
+      if (channel) {
+        const accessToken = await getValidAccessToken(channel);
+        const endDate = new Date().toISOString().split('T')[0];
+        const startDate = (video.publishedAt ? new Date(video.publishedAt) : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000))
+          .toISOString().split('T')[0];
+        await syncVideoAnalyticsBatch(
+          channel, accessToken, userId,
+          [{ _id: video._id, youtubeVideoId: video.youtubeVideoId }],
+          startDate, endDate
+        );
+        dailyData = await VideoAnalytics.find({ videoId }).sort({ date: 1 }).lean();
+      }
+    } catch (err) {
+      console.error('[analytics] on-demand video sync failed:', err.message);
+    }
+  }
 
   // Aggregate totals
   const totals = dailyData.reduce((acc, d) => ({

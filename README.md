@@ -196,6 +196,7 @@ tubeos3.0/
 | `GEMINI_API_KEY` | Google Gemini — Free plan ke liye (set karo taaki free users ko AI mile) |
 | `BREVO_API_KEY` | Email delivery — nahi hai to emails skip ho jaate hain |
 | `EMAIL_FROM_ADDRESS` | Sender email address |
+| `YOUTUBE_API_KEY` | YouTube Data API v3 key (no OAuth) — Growth tab ke Trend Opportunity Scanner ke liye. Iske bina Trends hamesha static curated list dikhayega. |
 
 ### Frontend — `frontend/.env`
 

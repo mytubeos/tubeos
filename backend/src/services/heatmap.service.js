@@ -21,30 +21,52 @@ const buildHeatmap = async (userId, channelId) => {
     throw err;
   }
 
-  // Try YouTube Analytics API first (real audience activity)
+  // The channel's own video-performance-by-publish-hour is the only *real* signal
+  // we can get for the hour axis (YouTube Analytics has no "hour" dimension at all —
+  // it only reports view totals per day). Compute it first so it can shape the
+  // YouTube-Analytics day totals below instead of falling back to a generic curve.
+  const videoPattern = await buildHeatmapFromVideoData(userId, channelId);
+  const hasOwnHourSignal = videoPattern.dataPoints >= 5;
+
   let grid = null;
   let dataSource = 'default';
   let dataPoints = 0;
 
   try {
     const accessToken = await getValidAccessToken(channel);
-    const result = await buildHeatmapFromYouTube(accessToken, channelId);
+    const result = await buildHeatmapFromYouTube(
+      accessToken,
+      channelId,
+      hasOwnHourSignal ? videoPattern.grid : null
+    );
     if (result.dataPoints >= 10) {
       grid = result.grid;
-      dataSource = 'youtube_analytics';
+      dataSource = result.hourSource;
       dataPoints = result.dataPoints;
     }
   } catch (err) {
     console.error('YouTube heatmap fetch failed, using fallback:', err.message);
   }
 
-  // Fallback: Build from our own video performance data
+  // Fallback: Build from our own video performance data (real day + hour signal,
+  // just an indirect one — based on when this channel's videos did well)
   if (!grid) {
-    const result = await buildHeatmapFromVideoData(userId, channelId);
-    grid = result.grid;
-    dataSource = result.dataSource;
-    dataPoints = result.dataPoints;
+    grid = videoPattern.grid;
+    dataSource = videoPattern.dataSource;
+    dataPoints = videoPattern.dataPoints;
   }
+
+  const dataSourceNotes = {
+    'youtube_analytics+own_video_pattern':
+      'Daily totals are real audience view counts from YouTube Analytics; hour-of-day shape is learned from when your own videos performed best.',
+    'youtube_analytics+estimated_pattern':
+      'Daily totals are real audience view counts from YouTube Analytics; hour-of-day shape uses a general research pattern (post more videos for a personalized hour pattern).',
+    video_performance:
+      'Built from when your own published videos performed best — connect full analytics access for real daily view totals too.',
+    india_defaults:
+      'No channel data yet — showing general India market research defaults.',
+  };
+  const note = dataSourceNotes[dataSource] || null;
 
   // Normalize grid to 0-100 scale
   const normalizedGrid = normalizeGrid(grid);
@@ -70,6 +92,8 @@ const buildHeatmap = async (userId, channelId) => {
         worstSlots,
         dataPoints,
         confidence,
+        dataSource,
+        note,
         basedOnDays: Math.min(dataPoints, 90),
         calculatedAt: new Date(),
         nextRecalcAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Recalc weekly
@@ -100,8 +124,12 @@ const buildHeatmap = async (userId, channelId) => {
 };
 
 // ==================== BUILD FROM YOUTUBE ANALYTICS ====================
-const buildHeatmapFromYouTube = async (accessToken, channelId) => {
-  // YouTube Analytics: audience activity by hour and day
+// NOTE: YouTube Analytics has no "hour" dimension — it only ever gives real
+// per-DAY view totals. The hour-of-day shape within each day is necessarily
+// an approximation; `videoShapeGrid`, when available, lets us use the
+// channel's own video-performance-by-publish-hour instead of a generic curve.
+const buildHeatmapFromYouTube = async (accessToken, channelId, videoShapeGrid = null) => {
+  // YouTube Analytics: real audience view totals per day
   const endDate = new Date().toISOString().split('T')[0];
   const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
     .toISOString().split('T')[0];
@@ -129,8 +157,9 @@ const buildHeatmapFromYouTube = async (accessToken, channelId) => {
   rows.forEach(([dateStr, views]) => {
     const date = new Date(dateStr);
     const day = date.getDay();
-    // Use hour distribution approximation (peak hours model)
-    distributeViewsByHour(grid, counts, day, views);
+    // Shape each day's real view total across hours using either the channel's
+    // own video-performance pattern (real signal) or a generic fallback curve.
+    distributeViewsByHour(grid, counts, day, views, videoShapeGrid ? videoShapeGrid[day] : null);
   });
 
   // Average out
@@ -142,7 +171,11 @@ const buildHeatmapFromYouTube = async (accessToken, channelId) => {
     }
   }
 
-  return { grid, dataPoints: rows.length };
+  return {
+    grid,
+    dataPoints: rows.length,
+    hourSource: videoShapeGrid ? 'youtube_analytics+own_video_pattern' : 'youtube_analytics+estimated_pattern',
+  };
 };
 
 // ==================== BUILD FROM VIDEO PERFORMANCE DATA ====================
@@ -288,6 +321,8 @@ const formatHeatmapResponse = (heatmap) => ({
   worstSlots: heatmap.worstSlots,
   confidence: heatmap.confidence,
   dataPoints: heatmap.dataPoints,
+  dataSource: heatmap.dataSource,
+  note: heatmap.note,
   calculatedAt: heatmap.calculatedAt,
   nextRecalcAt: heatmap.nextRecalcAt,
   dayLabels: DAY_NAMES,
@@ -321,6 +356,7 @@ const getDefaultHeatmapResponse = (channelId) => ({
   ],
   confidence: 'low',
   dataPoints: 0,
+  dataSource: 'india_defaults',
   calculatedAt: new Date(),
   dayLabels: DAY_NAMES,
   hourLabels: Array.from({ length: 24 }, (_, i) => formatHour(i)),
@@ -365,15 +401,20 @@ const getWorstDays = (grid) => {
   return dayTotals.sort((a, b) => a.total - b.total).slice(0, 3).map(d => d.day);
 };
 
-const distributeViewsByHour = (grid, counts, day, totalViews) => {
-  // Approximated India viewership pattern
-  const hourWeights = [
-    2, 1, 1, 1, 1, 2, 3, 5, 7, 8, 8, 9,    // 12AM-11AM
-    9, 8, 8, 7, 8, 10, 12, 14, 13, 11, 8, 4  // 12PM-11PM
-  ];
-  const totalWeight = hourWeights.reduce((a, b) => a + b, 0);
+// Default fallback curve — used only when there's no real per-channel hour
+// signal (dayShapeRow) to shape the day's real view total with.
+const GENERIC_HOUR_WEIGHTS = [
+  2, 1, 1, 1, 1, 2, 3, 5, 7, 8, 8, 9,    // 12AM-11AM
+  9, 8, 8, 7, 8, 10, 12, 14, 13, 11, 8, 4  // 12PM-11PM
+];
 
-  hourWeights.forEach((weight, hour) => {
+const distributeViewsByHour = (grid, counts, day, totalViews, dayShapeRow = null) => {
+  const weights = (dayShapeRow && dayShapeRow.some(v => v > 0))
+    ? dayShapeRow
+    : GENERIC_HOUR_WEIGHTS;
+  const totalWeight = weights.reduce((a, b) => a + b, 0) || 1;
+
+  weights.forEach((weight, hour) => {
     const viewsForHour = (weight / totalWeight) * totalViews;
     grid[day][hour] += viewsForHour;
     counts[day][hour]++;
@@ -385,4 +426,5 @@ module.exports = {
   getHeatmap,
   getBestTimeSlots,
   getLowTrafficHours,
+  getDefaultGrid,
 };

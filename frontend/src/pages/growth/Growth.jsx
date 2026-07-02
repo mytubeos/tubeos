@@ -63,7 +63,7 @@ export const Growth = () => {
     try {
       // Extract channel ID from URL if needed
       let channelId_yt = competitorUrl.trim()
-      if (channelUrl.includes('youtube.com/channel/')) {
+      if (competitorUrl.includes('youtube.com/channel/')) {
         channelId_yt = competitorUrl.split('youtube.com/channel/')[1].split('/')[0]
       } else if (competitorUrl.includes('youtube.com/@')) {
         channelId_yt = competitorUrl // handle will be resolved by backend

@@ -5,6 +5,7 @@
 const Schedule = require('../models/schedule.model');
 const Video = require('../models/video.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
+const { getDefaultGrid } = require('./heatmap.service');
 const {
   scheduleVideoPublish,
   cancelScheduledJob,
@@ -314,7 +315,8 @@ const bulkSchedule = async (userId, schedules) => {
 
 // ==================== HELPERS ====================
 const buildRecommendation = (bestTimeData, channel) => {
-  const nextSlots = getNextBestSlots(bestTimeData.bestDays, bestTimeData.bestHours);
+  const grid = bestTimeData.heatmapData?.grid || null;
+  const nextSlots = getNextBestSlots(bestTimeData.bestDays, bestTimeData.bestHours, 5, grid);
 
   return {
     channelId: channel._id,
@@ -336,7 +338,7 @@ const getDefaultRecommendation = (channel) => {
   const defaultBestDays = ['friday', 'saturday', 'sunday'];
   const defaultBestHours = [18, 19, 20, 21]; // 6PM - 9PM IST
 
-  const nextSlots = getNextBestSlots(defaultBestDays, defaultBestHours);
+  const nextSlots = getNextBestSlots(defaultBestDays, defaultBestHours, 5, getDefaultGrid());
 
   return {
     channelId: channel._id,
@@ -353,19 +355,15 @@ const getDefaultRecommendation = (channel) => {
   };
 };
 
-const getNextBestSlots = (bestDays, bestHours, count = 5) => {
-  const dayMap = {
-    sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
-    thursday: 4, friday: 5, saturday: 6,
-  };
-
+const getNextBestSlots = (bestDays, bestHours, count = 5, grid = null) => {
   const slots = [];
   const now = new Date();
 
   for (let daysAhead = 0; daysAhead <= 14 && slots.length < count; daysAhead++) {
     const date = new Date(now);
     date.setDate(date.getDate() + daysAhead);
-    const dayName = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][date.getDay()];
+    const dayIndex = date.getDay();
+    const dayName = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][dayIndex];
 
     if (bestDays.includes(dayName)) {
       for (const hour of bestHours) {
@@ -377,7 +375,9 @@ const getNextBestSlots = (bestDays, bestHours, count = 5) => {
             datetime: slot.toISOString(),
             day: dayName,
             hour: `${hour}:00`,
-            score: Math.floor(Math.random() * 20) + 80, // 80-100 score
+            // Real activity score from this channel's heatmap grid when available,
+            // otherwise a flat estimate — never a random number.
+            score: grid ? Math.round(grid[dayIndex][hour]) : 80,
           });
         }
       }

@@ -197,6 +197,17 @@ const heatmapSchema = new mongoose.Schema(
     basedOnDays: { type: Number, default: 0 }, // Days of data used
     calculatedAt: { type: Date, default: Date.now },
     nextRecalcAt: { type: Date, default: null },
+
+    // Where the grid came from, for UI transparency:
+    // 'youtube_analytics+own_video_pattern' = real daily view totals (YouTube Analytics API)
+    //    shaped by hour using this channel's own video-performance-by-publish-hour
+    // 'youtube_analytics+estimated_pattern' = real daily view totals, hour shape is a
+    //    generic researched curve (not enough of the channel's own video data yet)
+    // 'video_performance' = no Analytics API access; built from this channel's video
+    //    publish times/performance only
+    // 'india_defaults' = no data at all; generic market research defaults
+    dataSource: { type: String, default: 'india_defaults' },
+    note: { type: String, default: null },
   },
   {
     timestamps: true,

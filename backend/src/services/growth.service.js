@@ -115,6 +115,33 @@ const getGrowthPrediction = async (userId, channelId) => {
   return result;
 };
 
+// Resolves a user-pasted channel ID, @handle, or full YouTube URL to a real
+// channel via the Data API. `id=` only accepts UC... IDs, so handles/URLs
+// need `forHandle=` / `forUsername=` instead — otherwise lookups silently 404.
+const resolveYoutubeChannel = async (rawInput, accessToken) => {
+  let raw = String(rawInput || '').trim();
+  raw = raw.replace(/^(https?:\/\/)?(www\.)?youtube\.com\//i, '').replace(/\/+$/, '');
+
+  let query;
+  if (/^UC[\w-]{22}$/.test(raw)) {
+    query = `id=${raw}`;
+  } else if (raw.startsWith('channel/')) {
+    query = `id=${raw.slice('channel/'.length)}`;
+  } else if (raw.startsWith('c/') || raw.startsWith('user/')) {
+    query = `forUsername=${encodeURIComponent(raw.split('/')[1])}`;
+  } else {
+    // @handle (with or without the leading @), e.g. "@mkbhd" or "mkbhd"
+    const handle = raw.startsWith('@') ? raw : `@${raw}`;
+    query = `forHandle=${encodeURIComponent(handle)}`;
+  }
+
+  const data = await youtubeRequest(
+    `/channels?part=snippet,statistics&${query}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  return data.items?.[0] || null;
+};
+
 // ==================== ADD COMPETITOR ====================
 const addCompetitor = async (userId, channelId, youtubeChannelId) => {
   // Check plan limits
@@ -135,36 +162,31 @@ const addCompetitor = async (userId, channelId, youtubeChannelId) => {
     throw err;
   }
 
-  // Check not duplicate
-  const existing = await Competitor.findOne({ userId: { $eq: userId }, youtubeChannelId: { $eq: youtubeChannelId } });
-  if (existing) {
-    const err = new Error('Already tracking this competitor');
-    err.statusCode = 409;
-    throw err;
-  }
-
-  // Fetch competitor channel info from YouTube
+  // Fetch competitor channel info from YouTube (resolves ID, @handle, or full URL)
   const trackingChannel = await YoutubeChannel.findOne({ _id: { $eq: channelId }, userId: { $eq: userId } })
     .select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
 
   const accessToken = await getValidAccessToken(trackingChannel);
 
-  const data = await youtubeRequest(
-    `/channels?part=snippet,statistics&id=${youtubeChannelId}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-
-  const yt = data.items?.[0];
+  const yt = await resolveYoutubeChannel(youtubeChannelId, accessToken);
   if (!yt) {
     const err = new Error('YouTube channel not found');
     err.statusCode = 404;
     throw err;
   }
 
+  // Check not duplicate — by the real resolved channel ID, not whatever the user typed
+  const existing = await Competitor.findOne({ userId: { $eq: userId }, youtubeChannelId: { $eq: yt.id } });
+  if (existing) {
+    const err = new Error('Already tracking this competitor');
+    err.statusCode = 409;
+    throw err;
+  }
+
   const competitor = await Competitor.create({
     userId,
     trackingChannelId: channelId,
-    youtubeChannelId,
+    youtubeChannelId: yt.id,
     channelName: yt.snippet.title,
     channelHandle: yt.snippet.customUrl || null,
     thumbnail: yt.snippet.thumbnails?.high?.url || null,

@@ -131,6 +131,9 @@ const youtubeChannelSchema = new mongoose.Schema(
     monetization: {
       isMonetized: { type: Boolean, default: false },
       membershipEnabled: { type: Boolean, default: false },
+      // Whether the last analytics sync could pull estimatedRevenue
+      // (needs yt-analytics-monetary.readonly scope + a monetized channel)
+      revenueDataAvailable: { type: Boolean, default: false },
     },
 
     // --- Analytics Mode (set during sync) ---

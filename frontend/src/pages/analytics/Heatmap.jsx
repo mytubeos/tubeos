@@ -104,9 +104,9 @@ export const Heatmap = () => {
               {heatmap.confidence} confidence · {heatmap.dataPoints} data points
             </p>
             <p className="text-xs text-gray-500">
-              {heatmap.confidence === 'low'
+              {heatmap.note || (heatmap.confidence === 'low'
                 ? 'Sync more analytics data for personalized insights'
-                : `Based on ${heatmap.basedOnDays} days of audience data`}
+                : `Based on ${heatmap.basedOnDays} days of audience data`)}
             </p>
           </div>
           {heatmap.calculatedAt && (
