@@ -58,7 +58,8 @@ export const Dashboard = () => {
     if (!activeChannel?._id) return
     setSyncing(true)
     try {
-      await analyticsApi.sync(activeChannel._id, 30)
+      // 180 days so every tab (incl. 90d's previous-period delta) has data
+      await analyticsApi.sync(activeChannel._id, 180)
       await Promise.all([refetch(), fetchChannels()])
       if (!silent) toast.success('Synced!')
     } catch {
@@ -134,7 +135,7 @@ export const Dashboard = () => {
       </div>
 
       {/* KPI Cards */}
-      <KPIGrid overview={overview} loading={isLoading} channelStats={activeChannel?.stats} />
+      <KPIGrid overview={overview} loading={isLoading} channelStats={activeChannel?.stats} period={period} />
 
       {/* Main chart + sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

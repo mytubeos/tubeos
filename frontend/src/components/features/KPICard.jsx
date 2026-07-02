@@ -5,7 +5,7 @@ import { formatNumber, formatWatchTime, formatCurrency, formatPct } from '../../
 
 const KPI_CONFIG = {
   views: {
-    label: 'Total Views',
+    label: 'Views',
     icon: Eye,
     iconColor: 'brand',
     format: formatNumber,
@@ -70,14 +70,23 @@ export const KPICard = ({ type, value, change, subtitle, loading = false }) => {
   )
 }
 
-export const KPIGrid = ({ overview, loading = false, channelStats = null }) => {
+const PERIOD_LABEL = {
+  '7d': 'last 7 days',
+  '30d': 'last 30 days',
+  '90d': 'last 90 days',
+  '1y': 'last year',
+}
+
+export const KPIGrid = ({ overview, loading = false, channelStats = null, period = '30d' }) => {
   const metrics = overview?.metrics || {}
+  const periodLabel = PERIOD_LABEL[period] || 'this period'
+
   // Show period-based gained/lost only when we have real Analytics API data
   // In fallback mode (youtube.readonly only), gained/lost are both 0 — show total instead
   const hasRealSubData = (metrics.subscribers?.gained || 0) > 0 || (metrics.subscribers?.lost || 0) > 0
   const subValue    = hasRealSubData ? metrics.subscribers?.net : channelStats?.subscriberCount
   const subSubtitle = hasRealSubData
-    ? `+${formatNumber(metrics.subscribers?.gained ?? 0)} gained`
+    ? `+${formatNumber(metrics.subscribers?.gained ?? 0)} gained · ${periodLabel}`
     : 'Total subscribers'
 
   return (
@@ -86,23 +95,27 @@ export const KPIGrid = ({ overview, loading = false, channelStats = null }) => {
         type="views"
         value={metrics.views?.value}
         change={metrics.views?.change}
+        subtitle={periodLabel}
         loading={loading}
       />
       <KPICard
         type="subscribers"
         value={subValue}
-        change={metrics.subscribers?.change}
+        change={hasRealSubData ? metrics.subscribers?.change : undefined}
         subtitle={subSubtitle}
         loading={loading}
       />
       <KPICard
         type="watchTime"
         value={metrics.watchTime?.value}
+        change={metrics.watchTime?.change}
+        subtitle={periodLabel}
         loading={loading}
       />
       <KPICard
         type="ctr"
         value={metrics.ctr?.value}
+        subtitle={`avg · ${periodLabel}`}
         loading={loading}
       />
     </div>
