@@ -17,6 +17,11 @@ const app = express();
 // ==================== SECURITY MIDDLEWARES ====================
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
+  // Helmet's default COOP is 'same-origin', which severs window.opener and
+  // blocks the parent's `popup.closed` check — breaking the Google OAuth popup
+  // (the "Cross-Origin-Opener-Policy would block the window.closed call" errors).
+  // 'same-origin-allow-popups' keeps the opener link so the popup flow works.
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
 }));
 
 // FIX: CORS — sab allowed origins env se lo

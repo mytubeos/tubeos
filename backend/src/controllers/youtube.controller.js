@@ -46,6 +46,14 @@ const handleCallback = async (req, res) => {
       `${config.cors.clientUrl}/youtube-callback?youtube_connected=true&channel=${encodeURIComponent(result.channel.channelName)}`
     );
   } catch (err) {
+    // Duplicate callback (browser prefetch / double navigation): the first request
+    // already connected the channel, so send the user to the success page, not an error.
+    if (err.code === 'DUPLICATE_CALLBACK') {
+      return res.redirect(
+        `${config.cors.clientUrl}/youtube-callback?youtube_connected=true`
+      );
+    }
+
     console.error('[youtube.controller] Callback error:', err.message, '| code:', err.code);
 
     const errorCode = err.code === 'NO_REFRESH_TOKEN'

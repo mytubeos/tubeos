@@ -52,8 +52,21 @@ const handleOAuthCallback = async (code, state) => {
     throw err;
   }
 
+  // The browser can hit this callback twice (link prefetch / double navigation).
+  // The first request completes the connection and marks the state used; a later
+  // duplicate must NOT be reported as an error, or the user sees a false failure
+  // and retries. Recognize the duplicate and let the controller treat it as success.
+  if (cached.used) {
+    const err = new Error('OAuth callback already processed.');
+    err.code = 'DUPLICATE_CALLBACK';
+    err.statusCode = 200;
+    throw err;
+  }
+
   const { userId } = cached;
-  await deleteCache(`oauth_state:${state}`);
+  // Mark used (keep briefly) instead of deleting immediately, so a duplicate hit
+  // within the window is recognized rather than treated as an invalid state.
+  await setCache(`oauth_state:${state}`, { userId, used: true }, 120);
 
   // 2. Exchange code for tokens
   const tokens = await exchangeCodeForTokens(code);
