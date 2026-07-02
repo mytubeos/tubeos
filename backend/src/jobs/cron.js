@@ -78,6 +78,7 @@ const syncAllChannelsAnalytics = async () => {
   analyticsSyncRunning = true;
   try {
     const { syncChannelAnalytics } = require('../services/analytics.service');
+    const { syncComments } = require('../services/ai-comment.service');
     const channels = await YoutubeChannel.find({ isActive: true })
       .select('_id userId')
       .lean();
@@ -90,6 +91,14 @@ const syncAllChannelsAnalytics = async () => {
         ok++;
       } catch (err) {
         console.error(`[cron] analytics sync failed for channel ${ch._id}:`, err.message);
+      }
+      // Refresh comments (timestamps only, no sentiment LLM) so the Audience
+      // Activity heatmap always has fresh data and the inbox stays current.
+      // Isolated so a comment failure never blocks the analytics sync.
+      try {
+        await syncComments(ch.userId.toString(), ch._id.toString(), null, { analyze: false });
+      } catch (err) {
+        console.error(`[cron] comment sync failed for channel ${ch._id}:`, err.message);
       }
       // Spread quota — small pause between channels
       await new Promise((r) => setTimeout(r, 3000));

@@ -5,6 +5,7 @@
 const { Heatmap, ChannelAnalytics } = require('../models/analytics.model');
 const Video = require('../models/video.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
+const Comment = require('../models/comment.model');
 const { getValidAccessToken } = require('./youtube.service');
 const { setCache, getCache } = require('../config/redis');
 
@@ -21,12 +22,28 @@ const buildHeatmap = async (userId, channelId) => {
     throw err;
   }
 
-  // The channel's own video-performance-by-publish-hour is the only *real* signal
-  // we can get for the hour axis (YouTube Analytics has no "hour" dimension at all —
-  // it only reports view totals per day). Compute it first so it can shape the
-  // YouTube-Analytics day totals below instead of falling back to a generic curve.
+  // Timezone for this channel. Comments are stored as absolute UTC instants, so
+  // converting them to the creator's local timezone buckets a multi-country
+  // audience correctly on its own — a US viewer's 8PM comment lands on the
+  // matching creator-clock hour without needing per-viewer geography.
+  const timeZone = getChannelTimeZone(channel);
+
+  // Comment timestamps are the strongest ToS-safe hour-of-day signal available:
+  // they mark when this channel's real audience is actually active. YouTube
+  // Analytics has no "hour" dimension (only per-day view totals), so we use the
+  // comment-activity shape to distribute those daily totals across hours —
+  // preferring it over the older "when videos were published" proxy.
+  const commentPattern = await buildHeatmapFromComments(channelId, timeZone);
+  const hasCommentSignal = commentPattern.dataPoints >= 20;
+
+  // Fallback hour signal: this channel's own video-performance-by-publish-hour.
   const videoPattern = await buildHeatmapFromVideoData(userId, channelId);
-  const hasOwnHourSignal = videoPattern.dataPoints >= 5;
+  const hasVideoSignal = videoPattern.dataPoints >= 5;
+
+  // Best available hour-shape to spread real daily view totals across 24 hours.
+  const hourShapeGrid = hasCommentSignal ? commentPattern.grid
+    : hasVideoSignal ? videoPattern.grid
+    : null;
 
   let grid = null;
   let dataSource = 'default';
@@ -34,29 +51,36 @@ const buildHeatmap = async (userId, channelId) => {
 
   try {
     const accessToken = await getValidAccessToken(channel);
-    const result = await buildHeatmapFromYouTube(
-      accessToken,
-      channelId,
-      hasOwnHourSignal ? videoPattern.grid : null
-    );
+    const result = await buildHeatmapFromYouTube(accessToken, channelId, hourShapeGrid);
     if (result.dataPoints >= 10) {
       grid = result.grid;
-      dataSource = result.hourSource;
+      dataSource = hasCommentSignal ? 'youtube_analytics+comment_activity' : result.hourSource;
       dataPoints = result.dataPoints;
     }
   } catch (err) {
     console.error('YouTube heatmap fetch failed, using fallback:', err.message);
   }
 
-  // Fallback: Build from our own video performance data (real day + hour signal,
-  // just an indirect one — based on when this channel's videos did well)
+  // Fallbacks when YouTube Analytics daily totals aren't available:
   if (!grid) {
-    grid = videoPattern.grid;
-    dataSource = videoPattern.dataSource;
-    dataPoints = videoPattern.dataPoints;
+    if (hasCommentSignal) {
+      // Comments alone give a real day AND hour distribution — best fallback.
+      grid = commentPattern.grid;
+      dataSource = 'comment_activity';
+      dataPoints = commentPattern.dataPoints;
+    } else {
+      // Otherwise use our own video-performance pattern (indirect hour signal).
+      grid = videoPattern.grid;
+      dataSource = videoPattern.dataSource;
+      dataPoints = videoPattern.dataPoints;
+    }
   }
 
   const dataSourceNotes = {
+    'youtube_analytics+comment_activity':
+      'Daily totals are real audience view counts from YouTube Analytics; the hour-of-day shape is learned from when your audience actually comments (converted to your channel’s timezone) — a real engagement signal.',
+    comment_activity:
+      'Built from when your audience actually comments (converted to your channel’s timezone) — a real per-hour engagement signal. Connect full analytics access for real daily view totals too.',
     'youtube_analytics+own_video_pattern':
       'Daily totals are real audience view counts from YouTube Analytics; hour-of-day shape is learned from when your own videos performed best.',
     'youtube_analytics+estimated_pattern':
@@ -220,6 +244,83 @@ const buildHeatmapFromVideoData = async (userId, channelId) => {
     dataSource: 'video_performance',
     dataPoints: videos.length,
   };
+};
+
+// ==================== BUILD FROM COMMENT TIMESTAMPS ====================
+// Compact country -> primary IANA timezone map (most common creator countries).
+// Multi-timezone countries use their most-populous zone; good enough for
+// bucketing engagement by hour-of-day.
+const COUNTRY_TZ = {
+  IN: 'Asia/Kolkata', US: 'America/New_York', GB: 'Europe/London', CA: 'America/Toronto',
+  AU: 'Australia/Sydney', PK: 'Asia/Karachi', BD: 'Asia/Dhaka', NP: 'Asia/Kathmandu',
+  LK: 'Asia/Colombo', AE: 'Asia/Dubai', SA: 'Asia/Riyadh', QA: 'Asia/Qatar',
+  ID: 'Asia/Jakarta', PH: 'Asia/Manila', MY: 'Asia/Kuala_Lumpur', SG: 'Asia/Singapore',
+  DE: 'Europe/Berlin', FR: 'Europe/Paris', ES: 'Europe/Madrid', IT: 'Europe/Rome',
+  NL: 'Europe/Amsterdam', PL: 'Europe/Warsaw', BR: 'America/Sao_Paulo', MX: 'America/Mexico_City',
+  AR: 'America/Argentina/Buenos_Aires', CO: 'America/Bogota', NG: 'Africa/Lagos',
+  ZA: 'Africa/Johannesburg', EG: 'Africa/Cairo', KE: 'Africa/Nairobi', TR: 'Europe/Istanbul',
+  RU: 'Europe/Moscow', JP: 'Asia/Tokyo', KR: 'Asia/Seoul', CN: 'Asia/Shanghai',
+  TH: 'Asia/Bangkok', VN: 'Asia/Ho_Chi_Minh',
+};
+const DEFAULT_TZ = 'Asia/Kolkata';
+
+const getChannelTimeZone = (channel) => {
+  const cc = (channel && channel.country ? String(channel.country) : '').toUpperCase();
+  return COUNTRY_TZ[cc] || DEFAULT_TZ;
+};
+
+const DAY_INDEX = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+
+// Day-of-week (0=Sun) and hour (0-23) of a UTC instant, in a target IANA timezone.
+// Uses Intl (built into Node) so no timezone dependency is needed.
+const getDayHourInTZ = (date, timeZone) => {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone, weekday: 'short', hour: '2-digit', hour12: false,
+    }).formatToParts(date);
+    let weekday, hour;
+    for (const p of parts) {
+      if (p.type === 'weekday') weekday = p.value;
+      else if (p.type === 'hour') hour = parseInt(p.value, 10);
+    }
+    if (hour === 24) hour = 0; // some engines report midnight as 24
+    const day = DAY_INDEX[weekday];
+    if (day == null || Number.isNaN(hour)) return { day: null, hour: null };
+    return { day, hour };
+  } catch {
+    return { day: null, hour: null };
+  }
+};
+
+// Builds a 7x24 activity grid from when this channel's audience actually comments.
+// Recent comments are weighted more (90-day half-life) so the pattern tracks the
+// channel's current audience rather than years-old behavior.
+const buildHeatmapFromComments = async (channelId, timeZone) => {
+  const since = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
+  const comments = await Comment.find({
+    channelId,
+    publishedAt: { $gte: since },
+  })
+    .select('publishedAt')
+    .lean();
+
+  if (comments.length === 0) {
+    return { grid: null, dataPoints: 0 };
+  }
+
+  const grid = Array(7).fill(null).map(() => Array(24).fill(0));
+  const now = Date.now();
+  const HALF_LIFE = 90 * 24 * 60 * 60 * 1000;
+
+  comments.forEach((c) => {
+    const when = new Date(c.publishedAt);
+    const { day, hour } = getDayHourInTZ(when, timeZone);
+    if (day == null || hour == null) return;
+    const recency = Math.pow(0.5, (now - when.getTime()) / HALF_LIFE);
+    grid[day][hour] += recency;
+  });
+
+  return { grid, dataPoints: comments.length };
 };
 
 // ==================== GET HEATMAP ====================

@@ -11,7 +11,11 @@ const { callAI } = require('../config/ai.config');
 const { setCache, getCache } = require('../config/redis');
 
 // ==================== SYNC COMMENTS ====================
-const syncComments = async (userId, channelId, youtubeVideoId = null) => {
+// options.analyze (default true): run LLM sentiment on new comments. The daily
+// cron passes false — it only needs the comment timestamps for the Audience
+// Activity heatmap, and skipping sentiment keeps the scheduled job LLM-cost-free.
+const syncComments = async (userId, channelId, youtubeVideoId = null, options = {}) => {
+  const { analyze = true } = options;
   const channel = await YoutubeChannel.findOne({ _id: channelId, userId, isActive: true })
     .select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
 
@@ -86,8 +90,10 @@ const syncComments = async (userId, channelId, youtubeVideoId = null) => {
     if (totalSynced >= 500) break;
   } while (pageToken);
 
-  // Run sentiment analysis on new unanalyzed comments
-  await analyzeSentimentBatch(userId, channelId);
+  // Run sentiment analysis on new unanalyzed comments (skippable for cron)
+  if (analyze) {
+    await analyzeSentimentBatch(userId, channelId);
+  }
 
   return {
     synced: totalSynced,
