@@ -72,6 +72,13 @@ const config = {
     clientSecret: process.env.YOUTUBE_CLIENT_SECRET,
     redirectUri: process.env.YOUTUBE_REDIRECT_URI,
   },
+
+  // Google Cloud Storage — used to stage video uploads instead of RAM.
+  // Optional: if bucket is unset, uploads fall back to in-memory (dev only).
+  gcs: {
+    bucket: process.env.GCS_BUCKET,
+    projectId: process.env.GCS_PROJECT_ID,
+  },
 };
 
 module.exports = { config, validateEnv };

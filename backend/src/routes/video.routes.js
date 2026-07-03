@@ -6,15 +6,12 @@ const router = express.Router();
 const videoController = require('../controllers/video.controller');
 const { protect, checkUsageLimit } = require('../middlewares/auth.middleware');
 const { uploadLimiter } = require('../middlewares/rateLimiter.middleware');
+const { uploadVideoFile } = require('../middlewares/upload.middleware');
 
 const multer = require('multer');
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 2 * 1024 * 1024 * 1024 },
-});
-
-const parseVideoUpload = upload.single('video');
+// Video upload: streams to GCS when configured, else buffers in RAM (dev).
+const parseVideoUpload = uploadVideoFile;
 
 const thumbnailUpload = multer({
   storage: multer.memoryStorage(),

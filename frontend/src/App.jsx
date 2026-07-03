@@ -51,8 +51,11 @@ const ProtectedRoute = ({ children }) => {
 }
 
 const AdminRoute = ({ children }) => {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   if (!isAuthenticated) return <Navigate to="/login" replace />
+  // Only real admins (isAdmin flag from backend) may enter the admin panel.
+  // Non-admins are bounced to their dashboard.
+  if (!user?.isAdmin) return <Navigate to="/dashboard" replace />
   return children
 }
 

@@ -32,11 +32,20 @@ const uploadVideo = async (req, res) => {
       return errorResponse(res, 400, 'Video file is required');
     }
 
-    const fileBuffer = req.file ? req.file.buffer : Buffer.from(req.body.fileBuffer, 'base64');
-    const mimeType   = req.file ? req.file.mimetype : req.body.mimeType || 'video/mp4';
+    // fileRef is either a GCS reference (streamed, low-RAM) or an in-memory
+    // Buffer (dev fallback / base64 body). video.service handles both.
+    let fileRef;
+    if (req.file?.gcsPath) {
+      fileRef = { gcsPath: req.file.gcsPath, bucket: req.file.bucket, size: req.file.size };
+    } else if (req.file?.buffer) {
+      fileRef = req.file.buffer;
+    } else {
+      fileRef = Buffer.from(req.body.fileBuffer, 'base64');
+    }
+    const mimeType = req.file ? req.file.mimetype : req.body.mimeType || 'video/mp4';
 
     // FIX: req.user.id
-    const result = await videoService.uploadVideo(req.user.id, videoId, fileBuffer, mimeType);
+    const result = await videoService.uploadVideo(req.user.id, videoId, fileRef, mimeType);
     return successResponse(res, 200, result.message, {
       video: result.video,
       youtubeVideoId: result.youtubeVideoId,

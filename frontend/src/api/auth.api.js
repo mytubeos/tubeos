@@ -41,6 +41,8 @@ const authAPI = {
 
   logout: () => api.post('/auth/logout'),
   logoutAll: () => api.post('/auth/logout-all'),
+
+  updatePreferences: (prefs) => api.patch('/auth/preferences', prefs),
 }
 
 export default authAPI

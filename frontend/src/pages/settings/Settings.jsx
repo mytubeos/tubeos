@@ -1,9 +1,10 @@
 // src/pages/settings/Settings.jsx
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Lock, Bell, CreditCard, Check, Loader2 } from 'lucide-react'
+import { User, Lock, Bell, CreditCard, Check, Loader2, Tag, X } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import authApi from '../../api/auth.api'
+import paymentAPI from '../../api/payment.api'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
@@ -54,6 +55,26 @@ export const Settings = () => {
     onSuccess: () => navigate('/dashboard'),
   })
 
+  // Coupon state for the in-app upgrade cards (keyed by which plan's box is open)
+  const [coupon, setCoupon] = useState({ plan: null, code: '', validating: false, result: null })
+
+  const openCoupon = (planKey) =>
+    setCoupon({ plan: planKey, code: '', validating: false, result: null })
+  const closeCoupon = () =>
+    setCoupon({ plan: null, code: '', validating: false, result: null })
+
+  const applyCoupon = async (planKey) => {
+    if (!coupon.code.trim()) return
+    setCoupon(s => ({ ...s, validating: true, result: null }))
+    try {
+      const res = await paymentAPI.validateCoupon(coupon.code.trim(), planKey)
+      setCoupon(s => ({ ...s, validating: false, result: res.data.data }))
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Invalid coupon')
+      setCoupon(s => ({ ...s, validating: false, result: null }))
+    }
+  }
+
   // Profile state
   const [name, setName] = useState(user?.name || '')
   const [savingProfile, setSavingProfile] = useState(false)
@@ -62,14 +83,14 @@ export const Settings = () => {
   const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' })
   const [savingPassword, setSavingPassword] = useState(false)
 
-  // Notifications state
+  // Notifications state — seeded from user preferences (saved in DB)
   const [notifications, setNotifications] = useState({
-    weeklyReport: true,
-    dailyReport: false,
-    spikeAlert: true,
-    scheduledPost: true,
-    commentReply: false,
+    emailNotifications: user?.preferences?.emailNotifications ?? true,
+    weeklyReport:       user?.preferences?.weeklyReport       ?? true,
+    reportFrequency:    user?.preferences?.reportFrequency    || 'weekly',
+    marketingEmails:    user?.preferences?.marketingEmails    ?? false,
   })
+  const [savingNotifications, setSavingNotifications] = useState(false)
 
   const handleSaveProfile = async () => {
     if (!name.trim()) { toast.error('Name is required'); return }
@@ -110,6 +131,24 @@ export const Settings = () => {
       toast.error(err.response?.data?.message || 'Failed to change password')
     } finally {
       setSavingPassword(false)
+    }
+  }
+
+  const handleSaveNotifications = async () => {
+    setSavingNotifications(true)
+    try {
+      const res = await authApi.updatePreferences({
+        emailNotifications: notifications.emailNotifications,
+        weeklyReport:       notifications.weeklyReport,
+        reportFrequency:    notifications.reportFrequency,
+        marketingEmails:    notifications.marketingEmails,
+      })
+      updateUser({ preferences: res.data.data?.preferences })
+      toast.success('Preferences saved!')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save preferences')
+    } finally {
+      setSavingNotifications(false)
     }
   }
 
@@ -284,19 +323,79 @@ export const Settings = () => {
                           </div>
                         ))}
                       </div>
-                      <Button
-                        size="sm"
-                        fullWidth
-                        className="mt-4"
-                        variant={key === 'pro' ? 'brand' : 'ghost'}
-                        disabled={loadingPlan === key}
-                        onClick={() => startCheckout(key)}
-                      >
-                        {loadingPlan === key
-                          ? <Loader2 size={14} className="animate-spin mx-auto" />
-                          : 'Upgrade'
-                        }
-                      </Button>
+                      {/* Coupon box */}
+                      {coupon.plan === key ? (
+                        <div className="mt-4 space-y-2">
+                          <div className="flex gap-1">
+                            <input
+                              className="input-field h-8 text-xs px-2 flex-1 uppercase"
+                              placeholder="COUPON CODE"
+                              value={coupon.code}
+                              onChange={e => setCoupon(s => ({ ...s, code: e.target.value.toUpperCase(), result: null }))}
+                              onKeyDown={e => e.key === 'Enter' && applyCoupon(key)}
+                            />
+                            <button
+                              onClick={() => applyCoupon(key)}
+                              disabled={coupon.validating}
+                              className="px-2 h-8 bg-brand/20 border border-brand/30 rounded-lg text-brand text-xs
+                                         hover:bg-brand/30 transition-colors disabled:opacity-50"
+                            >
+                              {coupon.validating ? <Loader2 size={11} className="animate-spin" /> : 'Apply'}
+                            </button>
+                            <button
+                              onClick={closeCoupon}
+                              className="p-1.5 h-8 glass border border-white/10 rounded-lg text-gray-500 hover:text-white"
+                            >
+                              <X size={11} />
+                            </button>
+                          </div>
+
+                          {coupon.result && (
+                            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-emerald/10 border border-emerald/20 rounded-lg">
+                              <Check size={11} className="text-emerald shrink-0" />
+                              <span className="text-2xs text-emerald">
+                                ₹{coupon.result.originalPrice} → ₹{coupon.result.discountedPrice}
+                              </span>
+                            </div>
+                          )}
+
+                          <Button
+                            size="sm"
+                            fullWidth
+                            variant={key === 'pro' ? 'brand' : 'ghost'}
+                            disabled={loadingPlan === key}
+                            onClick={() => startCheckout(key, coupon.code.trim() || null)}
+                          >
+                            {loadingPlan === key
+                              ? <Loader2 size={14} className="animate-spin mx-auto" />
+                              : 'Upgrade'
+                            }
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <Button
+                            size="sm"
+                            fullWidth
+                            className="mt-4"
+                            variant={key === 'pro' ? 'brand' : 'ghost'}
+                            disabled={loadingPlan === key}
+                            onClick={() => startCheckout(key)}
+                          >
+                            {loadingPlan === key
+                              ? <Loader2 size={14} className="animate-spin mx-auto" />
+                              : 'Upgrade'
+                            }
+                          </Button>
+                          <button
+                            onClick={() => openCoupon(key)}
+                            className="flex items-center justify-center gap-1 w-full text-2xs text-gray-600
+                                       hover:text-gray-400 transition-colors py-1 mt-1.5"
+                          >
+                            <Tag size={10} /> Have a coupon?
+                          </button>
+                        </>
+                      )}
                     </div>
                   ))}
               </div>
@@ -307,36 +406,112 @@ export const Settings = () => {
 
       {/* Notifications */}
       {activeTab === 'notifications' && (
-        <Card>
-          <CardHeader title="Notification Preferences" icon={Bell} />
-          <div className="space-y-4">
-            {[
-              { key: 'weeklyReport', label: 'Weekly Performance Report', desc: 'Every Monday morning' },
-              { key: 'dailyReport', label: 'Daily Stats Digest', desc: 'Every day at 9 AM' },
-              { key: 'spikeAlert', label: 'Traffic Spike Alert', desc: 'When a video goes viral' },
-              { key: 'scheduledPost', label: 'Scheduled Post Published', desc: 'When video goes live' },
-              { key: 'commentReply', label: 'New Comments', desc: 'When viewers comment' },
-            ].map(({ key, label, desc }) => (
-              <div key={key} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
-                <div>
-                  <p className="text-sm font-medium text-white">{label}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+        <div className="space-y-4">
+          {/* Email toggles */}
+          <Card>
+            <CardHeader title="Email Preferences" icon={Bell} />
+            <div className="space-y-1">
+              {[
+                {
+                  key: 'emailNotifications',
+                  label: 'Email Notifications',
+                  desc: 'Receive all transactional emails from TubeOS',
+                },
+                {
+                  key: 'marketingEmails',
+                  label: 'Product Updates & Tips',
+                  desc: 'New features, creator tips, and platform news',
+                },
+              ].map(({ key, label, desc }) => (
+                <div key={key} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
+                  <div>
+                    <p className="text-sm font-medium text-white">{label}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                  </div>
+                  <button
+                    onClick={() => setNotifications(p => ({ ...p, [key]: !p[key] }))}
+                    className={`w-11 h-6 rounded-full transition-all relative shrink-0
+                                ${notifications[key] ? 'bg-brand' : 'bg-white/10'}`}
+                  >
+                    <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all
+                                      ${notifications[key] ? 'left-6' : 'left-1'}`} />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setNotifications(p => ({ ...p, [key]: !p[key] }))}
-                  className={`w-11 h-6 rounded-full transition-all relative shrink-0
-                              ${notifications[key] ? 'bg-brand' : 'bg-white/10'}`}
-                >
-                  <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all
-                                    ${notifications[key] ? 'left-6' : 'left-1'}`} />
-                </button>
+              ))}
+            </div>
+          </Card>
+
+          {/* Weekly Report card */}
+          <Card>
+            <CardHeader title="Weekly Performance Report" icon={Bell} iconColor="brand" />
+            <p className="text-xs text-gray-500 mb-4">
+              A personalised email every Monday with your channel's KPIs, top videos, AI insights, and action plan.
+            </p>
+
+            {/* Toggle row */}
+            <div className="flex items-center justify-between py-3 border-b border-white/5">
+              <div>
+                <p className="text-sm font-medium text-white">Enable Weekly Report</p>
+                <p className="text-xs text-gray-500 mt-0.5">Sent every Monday at 9 AM UTC</p>
               </div>
-            ))}
-            <Button onClick={() => toast.success('Preferences saved!')} className="mt-2">
+              <button
+                onClick={() => setNotifications(p => ({ ...p, weeklyReport: !p.weeklyReport }))}
+                className={`w-11 h-6 rounded-full transition-all relative shrink-0
+                            ${notifications.weeklyReport ? 'bg-brand' : 'bg-white/10'}`}
+              >
+                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all
+                                  ${notifications.weeklyReport ? 'left-6' : 'left-1'}`} />
+              </button>
+            </div>
+
+            {/* Frequency selector — shown only when enabled */}
+            {notifications.weeklyReport && (
+              <div className="flex items-center justify-between py-3">
+                <div>
+                  <p className="text-sm font-medium text-white">Report Frequency</p>
+                  <p className="text-xs text-gray-500 mt-0.5">How often you receive the report</p>
+                </div>
+                <div className="flex gap-2">
+                  {['weekly', 'monthly'].map(freq => (
+                    <button
+                      key={freq}
+                      onClick={() => setNotifications(p => ({ ...p, reportFrequency: freq }))}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all
+                                  ${notifications.reportFrequency === freq
+                                    ? 'bg-brand text-white'
+                                    : 'glass text-gray-400 hover:text-white'}`}
+                    >
+                      {freq}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Preview chip */}
+            {notifications.weeklyReport && (
+              <div className="mt-2 p-3 glass rounded-xl border border-brand/20 flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-brand/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <Bell size={14} className="text-brand" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-white">What's included</p>
+                  <p className="text-2xs text-gray-500 mt-1 leading-relaxed">
+                    Views · Watch Time · Subscribers · CTR · 7-day bar chart · Top 3 videos · AI insights · Best posting times · Milestones · 4-item action plan
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <Button
+              onClick={handleSaveNotifications}
+              loading={savingNotifications}
+              className="mt-4"
+            >
               Save Preferences
             </Button>
-          </div>
-        </Card>
+          </Card>
+        </div>
       )}
     </div>
   )

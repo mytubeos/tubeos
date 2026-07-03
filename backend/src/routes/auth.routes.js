@@ -48,4 +48,7 @@ router.post('/logout', protect, authController.logout);
 // POST /api/v1/auth/logout-all — Logout from all devices
 router.post('/logout-all', protect, authController.logoutAll);
 
+// PATCH /api/v1/auth/preferences — Update email/notification preferences
+router.patch('/preferences', protect, authController.updatePreferences);
+
 module.exports = router;

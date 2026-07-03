@@ -7,6 +7,7 @@ const User = require('../models/user.model');
 const { getValidAccessToken } = require('./youtube.service');
 const { youtubeRequest, QUOTA_COSTS } = require('../config/youtube.config');
 const { setCache, getCache } = require('../config/redis');
+const storageService = require('./storage.service');
 
 // ==================== CREATE DRAFT ====================
 const createDraft = async (userId, channelId, videoData) => {
@@ -46,7 +47,11 @@ const createDraft = async (userId, channelId, videoData) => {
 };
 
 // ==================== UPLOAD VIDEO TO YOUTUBE ====================
-const uploadVideo = async (userId, videoId, fileBuffer, mimeType) => {
+// fileRef is either a Buffer (in-memory / dev fallback) or a GCS reference
+// { gcsPath, bucket, size } that we stream straight to YouTube without ever
+// holding the whole file in RAM.
+const uploadVideo = async (userId, videoId, fileRef, mimeType) => {
+  const gcsPath = fileRef && !Buffer.isBuffer(fileRef) ? fileRef.gcsPath : null;
   // 1. Get video
   const video = await Video.findOne({ _id: videoId, userId });
   if (!video) {
@@ -124,7 +129,7 @@ const uploadVideo = async (userId, videoId, fileBuffer, mimeType) => {
     const youtubeVideoId = await uploadToYouTube(
       accessToken,
       videoResource,
-      fileBuffer,
+      fileRef,
       mimeType
     );
 
@@ -171,11 +176,27 @@ const uploadVideo = async (userId, videoId, fileBuffer, mimeType) => {
     await video.save();
 
     throw err;
+  } finally {
+    // The file now lives on YouTube — drop the GCS staging copy either way.
+    if (gcsPath) await storageService.deleteFile(gcsPath);
   }
 };
 
 // ==================== UPLOAD TO YOUTUBE (Resumable Upload) ====================
-const uploadToYouTube = async (accessToken, videoResource, fileBuffer, mimeType) => {
+// fileRef: a Buffer (in-memory) OR a GCS reference { gcsPath, size }.
+// For GCS we stream the object into the PUT body so the file never lives
+// in process memory.
+const uploadToYouTube = async (accessToken, videoResource, fileRef, mimeType) => {
+  const isGcs = fileRef && !Buffer.isBuffer(fileRef);
+
+  // Determine total byte length (required for the resumable upload headers)
+  let contentLength;
+  if (isGcs) {
+    contentLength = fileRef.size || (await storageService.getSize(fileRef.gcsPath));
+  } else {
+    contentLength = fileRef.length;
+  }
+
   // Step 1: Initiate resumable upload session
   const initResponse = await fetch(
     'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',
@@ -185,7 +206,7 @@ const uploadToYouTube = async (accessToken, videoResource, fileBuffer, mimeType)
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Upload-Content-Type': mimeType,
-        'X-Upload-Content-Length': fileBuffer.length,
+        'X-Upload-Content-Length': contentLength,
       },
       body: JSON.stringify(videoResource),
     }
@@ -202,14 +223,17 @@ const uploadToYouTube = async (accessToken, videoResource, fileBuffer, mimeType)
     throw new Error('No upload URL received from YouTube');
   }
 
-  // Step 2: Upload video content
+  // Step 2: Upload video content (streamed from GCS, or buffered in dev)
+  const body = isGcs ? storageService.createReadStream(fileRef.gcsPath) : fileRef;
   const uploadResponse = await fetch(uploadUrl, {
     method: 'PUT',
     headers: {
       'Content-Type': mimeType,
-      'Content-Length': fileBuffer.length,
+      'Content-Length': contentLength,
     },
-    body: fileBuffer,
+    body,
+    // Node/undici requires this when streaming a request body
+    ...(isGcs ? { duplex: 'half' } : {}),
   });
 
   if (!uploadResponse.ok) {

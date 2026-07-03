@@ -48,6 +48,7 @@ const NAV_GROUPS = [
 export const Sidebar = ({ collapsed = false }) => {
   const { user, logout } = useAuthStore()
   const { activeChannel } = useChannelStore()
+  const navigate = useNavigate()
 
   return (
     <aside className={`h-screen bg-base-800 border-r border-white/8 flex flex-col
@@ -128,6 +129,23 @@ export const Sidebar = ({ collapsed = false }) => {
           </div>
         ))}
       </nav>
+
+      {/* Upgrade CTA — always visible, no need to dig into Settings */}
+      {user && user.plan !== 'agency' && (
+        <div className="px-3 pt-2">
+          <button
+            onClick={() => navigate('/pricing')}
+            title="Upgrade Plan"
+            className={`w-full flex items-center justify-center gap-2 rounded-xl
+                        bg-brand-gradient text-white font-semibold shadow-brand
+                        hover:opacity-90 transition-all duration-150
+                        ${collapsed ? 'p-2.5' : 'px-3 py-2.5 text-sm'}`}
+          >
+            <Sparkles size={16} className="shrink-0" />
+            {!collapsed && <span>Upgrade Plan</span>}
+          </button>
+        </div>
+      )}
 
       {/* User + Plan */}
       <div className="p-3 border-t border-white/8 space-y-2">

@@ -172,6 +172,19 @@ const userSchema = new mongoose.Schema(
         type: String,
         default: 'en',
       },
+      weeklyReport: {
+        type: Boolean,
+        default: true,
+      },
+      reportFrequency: {
+        type: String,
+        enum: ['weekly', 'monthly'],
+        default: 'weekly',
+      },
+      reportDay: {
+        type: Number,
+        default: 1, // 0=Sun, 1=Mon, 2=Tue ... 6=Sat
+      },
     },
 
     // ==================== METADATA ====================

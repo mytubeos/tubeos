@@ -274,6 +274,23 @@ const logoutAll = async (req, res) => {
   }
 };
 
+// PATCH /api/v1/auth/preferences
+const updatePreferences = async (req, res) => {
+  try {
+    const User = require('../models/user.model');
+    const allowed = ['emailNotifications', 'marketingEmails', 'weeklyReport', 'reportFrequency', 'reportDay', 'timezone', 'language'];
+    const updates = {};
+    allowed.forEach(key => {
+      if (req.body[key] !== undefined) updates[`preferences.${key}`] = req.body[key];
+    });
+    if (Object.keys(updates).length === 0) return errorResponse(res, 400, 'No valid preference fields provided');
+    const user = await User.findByIdAndUpdate(req.user.id, { $set: updates }, { new: true }).select('preferences');
+    return successResponse(res, 200, 'Preferences updated', { preferences: user.preferences });
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
 module.exports = {
   register,
   verifyEmail,
@@ -287,5 +304,6 @@ module.exports = {
   changePassword,
   logout,
   logoutAll,
+  updatePreferences,
 };
   

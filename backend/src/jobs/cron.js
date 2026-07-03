@@ -123,12 +123,48 @@ const refreshTrends = async () => {
 };
 
 // ---------- Weekly report ----------
+// Runs every 24h; fires real emails only on Monday (UTC).
+// Sends to every active user who has preferences.weeklyReport === true.
 const sendWeeklyReports = async () => {
-  // Stubbed for MVP — sends nothing unless a creator opts in.
-  // Hook for future implementation. Runs once/day, body checks day == Monday.
-  const day = new Date().getUTCDay(); // 0 = Sun
+  const day = new Date().getUTCDay(); // 0=Sun 1=Mon
   if (day !== 1) return;
-  console.log('[cron] weekly-report hook fired (no-op MVP)');
+
+  console.log('[cron] weekly-report: starting Monday send');
+
+  const User = require('../models/user.model');
+  const { gatherReportData } = require('../services/report.service');
+  const { sendWeeklyReportEmail } = require('../utils/email.utils');
+
+  const users = await User.find({
+    isActive: true,
+    isBanned: false,
+    isEmailVerified: true,
+    'preferences.weeklyReport': { $ne: false },
+    youtubeChannels: { $exists: true, $not: { $size: 0 } },
+  }).select('name email preferences youtubeChannels').lean();
+
+  console.log(`[cron] weekly-report: sending to ${users.length} user(s)`);
+  let sent = 0;
+
+  for (const user of users) {
+    const channelId = user.youtubeChannels?.[0];
+    if (!channelId) continue;
+
+    try {
+      const reportData = await gatherReportData(user._id.toString(), channelId.toString());
+      if (!reportData) continue;
+
+      await sendWeeklyReportEmail(user, reportData);
+      sent++;
+
+      // Brevo free tier rate limit: 300 emails/day — small gap between sends
+      await new Promise(r => setTimeout(r, 2000));
+    } catch (err) {
+      console.error(`[cron] weekly-report failed for ${user.email}:`, err.message);
+    }
+  }
+
+  console.log(`[cron] weekly-report done: ${sent}/${users.length} emails sent`);
 };
 
 const startCron = () => {

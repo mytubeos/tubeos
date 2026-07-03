@@ -234,8 +234,8 @@ const login = async ({ email, password, ip }) => {
     throw error;
   }
 
-  // Find user
-  const user = await User.findOne({ email }).select('+password');
+  // Find user (+isAdmin so the frontend can gate the admin panel)
+  const user = await User.findOne({ email }).select('+password +isAdmin');
   console.log(`[login] email=${email} found=${!!user} verified=${user?.isEmailVerified} active=${user?.isActive}`);
   if (!user) {
     const error = new Error('Invalid email or password');
@@ -455,7 +455,8 @@ const refreshToken = async (token) => {
 
 // ==================== GET PROFILE ====================
 const getProfile = async (userId) => {
-  const user = await User.findById(userId);
+  // +isAdmin so refreshUser() exposes the flag for the frontend AdminRoute
+  const user = await User.findById(userId).select('+isAdmin');
   if (!user) {
     const error = new Error('User not found');
     error.statusCode = 404;
