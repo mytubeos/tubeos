@@ -4,15 +4,20 @@
 
 require('dotenv').config();
 
+// Initialize Sentry before anything else so early startup crashes are captured too.
+const sentry = require('./src/config/sentry');
+sentry.init();
+
 const { validateEnv, config } = require('./src/config/env');
 const { connectDB } = require('./src/config/db');
 const redisConfig = require('./src/config/redis');
 const app = require('./src/app');
+const logger = require('./src/config/logger');
 
 // ==================== STARTUP ====================
 const startServer = async () => {
   try {
-    console.log('\n🚀 Starting TubeOS Server...\n');
+    logger.info('Starting TubeOS Server...');
 
     // 1. Validate environment variables
     validateEnv();
@@ -25,7 +30,7 @@ const startServer = async () => {
     if (typeof connectRedisFn === 'function') {
       connectRedisFn();
     } else {
-      console.warn('⚠️  Redis connectRedis not found, skipping...');
+      logger.warn('Redis connectRedis not found, skipping...');
     }
 
     // 4. Start BullMQ Workers (skip if Upstash free plan blocks evalsha)
@@ -33,7 +38,7 @@ const startServer = async () => {
       const { startWorkers } = require('./src/jobs/index');
       startWorkers();
     } catch (err) {
-      console.warn('⚠️  BullMQ workers skipped (Upstash free plan limitation):', err.message);
+      logger.warn('BullMQ workers skipped (Upstash free plan limitation)', { error: err.message });
     }
 
     // 4b. Start in-process cron (always — replaces BullMQ where stubbed)
@@ -41,43 +46,41 @@ const startServer = async () => {
       const { startCron } = require('./src/jobs/cron');
       startCron();
     } catch (err) {
-      console.warn('⚠️  In-process cron failed to start:', err.message);
+      logger.warn('In-process cron failed to start', { error: err.message });
     }
 
     // 5. Start Express server
     const PORT = config.port;
     const server = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`\n✅ TubeOS Server running!`);
-      console.log(`🌐 URL:         http://localhost:${PORT}`);
-      console.log(`📡 API:         http://localhost:${PORT}/api/v1`);
-      console.log(`❤️  Health:      http://localhost:${PORT}/api/v1/health`);
-      console.log(`🏓 Ping:        http://localhost:${PORT}/api/v1/ping`);
-      console.log(`🌍 Environment: ${config.nodeEnv}`);
-      console.log('\n💀 TubeOS is ready to serve creators!\n');
+      logger.info('TubeOS Server running!', {
+        url: `http://localhost:${PORT}`,
+        api: `http://localhost:${PORT}/api/v1`,
+        environment: config.nodeEnv,
+      });
     });
 
     // ==================== GRACEFUL SHUTDOWN ====================
     const shutdown = async (signal) => {
-      console.log(`\n⚠️  ${signal} received. Graceful shutdown starting...`);
+      logger.info(`${signal} received. Graceful shutdown starting...`);
 
       server.close(async () => {
-        console.log('✅ HTTP server closed');
+        logger.info('HTTP server closed');
 
         try {
           const mongoose = require('mongoose');
           await mongoose.connection.close();
-          console.log('✅ MongoDB connection closed');
+          logger.info('MongoDB connection closed');
         } catch (err) {
-          console.error('Error closing MongoDB:', err);
+          logger.error('Error closing MongoDB', { error: err.message });
         }
 
-        console.log('👋 TubeOS shutdown complete');
+        logger.info('TubeOS shutdown complete');
         process.exit(0);
       });
 
       // Force shutdown after 10 seconds
       setTimeout(() => {
-        console.error('⚠️  Forced shutdown after timeout');
+        logger.error('Forced shutdown after timeout');
         process.exit(1);
       }, 10000);
     };
@@ -87,18 +90,21 @@ const startServer = async () => {
 
     // ==================== UNHANDLED ERRORS ====================
     process.on('uncaughtException', (err) => {
-      console.error('🚨 Uncaught Exception:', err);
+      logger.error('Uncaught Exception', { error: err.message, stack: err.stack });
+      sentry.captureException(err);
       process.exit(1);
     });
 
     process.on('unhandledRejection', (reason, promise) => {
-      console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason);
+      logger.error('Unhandled Rejection', { reason: reason instanceof Error ? reason.message : String(reason) });
+      sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)));
       process.exit(1);
     });
 
     return server;
   } catch (err) {
-    console.error('❌ Failed to start server:', err.message);
+    logger.error('Failed to start server', { error: err.message });
+    sentry.captureException(err);
     process.exit(1);
   }
 };

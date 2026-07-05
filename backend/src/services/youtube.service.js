@@ -12,6 +12,7 @@ const {
   youtubeRequest,
   QUOTA_COSTS,
 } = require('../config/youtube.config');
+const logger = require('../config/logger');
 
 // ==================== STEP 1: GET AUTH URL ====================
 const getOAuthUrl = async (userId, plan) => {
@@ -151,7 +152,7 @@ const handleOAuthCallback = async (code, state) => {
   // 8. Fire-and-forget: import existing channel videos into Video collection
   setImmediate(() => {
     require('./analytics.service').syncChannelVideos(channel, access_token, userId)
-      .catch(err => console.error('[youtube] Initial video sync failed:', err.message));
+      .catch(err => logger.error('[youtube] Initial video sync failed', { error: err.message }));
   });
 
   return {
@@ -167,10 +168,10 @@ const getChannelInfo = async (accessToken) => {
       '/channels?part=snippet,statistics&mine=true',
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
-    console.log('[getChannelInfo] items count:', data.items?.length);
+    logger.debug('[getChannelInfo] items count', { count: data.items?.length });
     return data.items?.[0] || null;
   } catch (err) {
-    console.error('[getChannelInfo] Failed:', err.message, '| status:', err.statusCode, '| ytError:', JSON.stringify(err.youtubeError));
+    logger.error('[getChannelInfo] Failed', { error: err.message, statusCode: err.statusCode, youtubeError: err.youtubeError });
     return null;
   }
 };

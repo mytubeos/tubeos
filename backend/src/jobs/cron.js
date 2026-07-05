@@ -6,6 +6,7 @@ const Schedule = require('../models/schedule.model');
 const Video = require('../models/video.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
 const { Trend } = require('../models/growth.model');
+const logger = require('../config/logger');
 
 let running = false;
 let analyticsSyncRunning = false;
@@ -44,17 +45,17 @@ const reapPublishedSchedules = async () => {
         s.executedAt = new Date();
         await s.save();
 
-        console.log(`[cron] schedule ${s._id} marked published (video ${video._id})`);
+        logger.info(`[cron] schedule ${s._id} marked published`, { videoId: video._id });
       } catch (err) {
         s.status = 'failed';
         s.failReason = err.message;
         s.failedAt = new Date();
         await s.save();
-        console.error(`[cron] schedule ${s._id} failed:`, err.message);
+        logger.error(`[cron] schedule ${s._id} failed`, { error: err.message });
       }
     }
   } catch (err) {
-    console.error('[cron] reapPublishedSchedules error:', err.message);
+    logger.error('[cron] reapPublishedSchedules error', { error: err.message });
   } finally {
     running = false;
   }
@@ -83,14 +84,14 @@ const syncAllChannelsAnalytics = async () => {
       .select('_id userId')
       .lean();
 
-    console.log(`[cron] daily analytics sync starting for ${channels.length} channel(s)`);
+    logger.info(`[cron] daily analytics sync starting for ${channels.length} channel(s)`);
     let ok = 0;
     for (const ch of channels) {
       try {
         await syncChannelAnalytics(ch._id.toString(), ch.userId.toString(), 180);
         ok++;
       } catch (err) {
-        console.error(`[cron] analytics sync failed for channel ${ch._id}:`, err.message);
+        logger.error(`[cron] analytics sync failed for channel ${ch._id}`, { error: err.message });
       }
       // Refresh comments (timestamps only, no sentiment LLM) so the Audience
       // Activity heatmap always has fresh data and the inbox stays current.
@@ -98,14 +99,14 @@ const syncAllChannelsAnalytics = async () => {
       try {
         await syncComments(ch.userId.toString(), ch._id.toString(), null, { analyze: false });
       } catch (err) {
-        console.error(`[cron] comment sync failed for channel ${ch._id}:`, err.message);
+        logger.error(`[cron] comment sync failed for channel ${ch._id}`, { error: err.message });
       }
       // Spread quota — small pause between channels
       await new Promise((r) => setTimeout(r, 3000));
     }
-    console.log(`[cron] daily analytics sync done: ${ok}/${channels.length} channels synced`);
+    logger.info(`[cron] daily analytics sync done: ${ok}/${channels.length} channels synced`);
   } catch (err) {
-    console.error('[cron] syncAllChannelsAnalytics error:', err.message);
+    logger.error('[cron] syncAllChannelsAnalytics error', { error: err.message });
   } finally {
     analyticsSyncRunning = false;
   }
@@ -118,7 +119,7 @@ const refreshTrends = async () => {
     const { refreshTrendsFromYouTube } = require('../services/growth.service');
     await refreshTrendsFromYouTube('IN');
   } catch (err) {
-    console.warn('[cron] refreshTrends error:', err.message);
+    logger.warn('[cron] refreshTrends error', { error: err.message });
   }
 };
 
@@ -129,7 +130,7 @@ const sendWeeklyReports = async () => {
   const day = new Date().getUTCDay(); // 0=Sun 1=Mon
   if (day !== 1) return;
 
-  console.log('[cron] weekly-report: starting Monday send');
+  logger.info('[cron] weekly-report: starting Monday send');
 
   const User = require('../models/user.model');
   const { gatherReportData } = require('../services/report.service');
@@ -143,7 +144,7 @@ const sendWeeklyReports = async () => {
     youtubeChannels: { $exists: true, $not: { $size: 0 } },
   }).select('name email preferences youtubeChannels').lean();
 
-  console.log(`[cron] weekly-report: sending to ${users.length} user(s)`);
+  logger.info(`[cron] weekly-report: sending to ${users.length} user(s)`);
   let sent = 0;
 
   for (const user of users) {
@@ -160,15 +161,15 @@ const sendWeeklyReports = async () => {
       // Brevo free tier rate limit: 300 emails/day — small gap between sends
       await new Promise(r => setTimeout(r, 2000));
     } catch (err) {
-      console.error(`[cron] weekly-report failed for ${user.email}:`, err.message);
+      logger.error(`[cron] weekly-report failed for ${user.email}`, { error: err.message });
     }
   }
 
-  console.log(`[cron] weekly-report done: ${sent}/${users.length} emails sent`);
+  logger.info(`[cron] weekly-report done: ${sent}/${users.length} emails sent`);
 };
 
 const startCron = () => {
-  console.log('🕒 In-process cron started');
+  logger.info('In-process cron started');
 
   // Every 60s: publish reaper
   timers.push(setInterval(reapPublishedSchedules, 60 * 1000));

@@ -8,6 +8,7 @@ const { getValidAccessToken } = require('./youtube.service');
 const { youtubeRequest, QUOTA_COSTS } = require('../config/youtube.config');
 const { setCache, getCache } = require('../config/redis');
 const storageService = require('./storage.service');
+const logger = require('../config/logger');
 
 // ==================== CREATE DRAFT ====================
 const createDraft = async (userId, channelId, videoData) => {
@@ -52,62 +53,68 @@ const createDraft = async (userId, channelId, videoData) => {
 // holding the whole file in RAM.
 const uploadVideo = async (userId, videoId, fileRef, mimeType) => {
   const gcsPath = fileRef && !Buffer.isBuffer(fileRef) ? fileRef.gcsPath : null;
-  // 1. Get video
-  const video = await Video.findOne({ _id: videoId, userId });
-  if (!video) {
-    const err = new Error('Video not found');
-    err.statusCode = 404;
-    throw err;
-  }
 
-  if (!['draft', 'failed'].includes(video.status)) {
-    const err = new Error(`Cannot upload video with status: ${video.status}`);
-    err.statusCode = 400;
-    throw err;
-  }
-
-  // 2. Get channel with OAuth tokens
-  const channel = await YoutubeChannel.findOne({
-    _id: video.channelId,
-    userId,
-    isActive: true,
-  }).select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
-
-  if (!channel) {
-    const err = new Error('Channel not found');
-    err.statusCode = 404;
-    throw err;
-  }
-
-  // 3. Check upload quota
-  await channel.resetDailyQuotaIfNeeded();
-  if (channel.quota.uploadCount >= channel.quota.uploadDailyLimit) {
-    const err = new Error(
-      `Daily upload limit reached (${channel.quota.uploadDailyLimit}/day). Try again tomorrow.`
-    );
-    err.statusCode = 429;
-    throw err;
-  }
-
-  // 4. Check user plan upload limit
-  const user = await User.findById(userId);
-  if (!user.hasUsageLeft('uploads')) {
-    const err = new Error(
-      `Monthly upload limit reached. Upgrade your plan for more uploads.`
-    );
-    err.statusCode = 429;
-    throw err;
-  }
-
-  // 5. Get valid access token
-  const accessToken = await getValidAccessToken(channel);
-
-  // 6. Update video status to uploading
-  video.status = 'uploading';
-  video.uploadInfo.uploadStartedAt = new Date();
-  await video.save();
-
+  // Everything below runs AFTER multer has already fully streamed the file to
+  // GCS staging — so every exit path (early validation failure, upload
+  // failure, or success) must clean up the staging object. Hence this try
+  // wraps steps 1-11, not just the YouTube-upload step.
   try {
+    // 1. Get video
+    const video = await Video.findOne({ _id: videoId, userId });
+    if (!video) {
+      const err = new Error('Video not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    if (!['draft', 'failed'].includes(video.status)) {
+      const err = new Error(`Cannot upload video with status: ${video.status}`);
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // 2. Get channel with OAuth tokens
+    const channel = await YoutubeChannel.findOne({
+      _id: video.channelId,
+      userId,
+      isActive: true,
+    }).select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
+
+    if (!channel) {
+      const err = new Error('Channel not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    // 3. Check upload quota
+    await channel.resetDailyQuotaIfNeeded();
+    if (channel.quota.uploadCount >= channel.quota.uploadDailyLimit) {
+      const err = new Error(
+        `Daily upload limit reached (${channel.quota.uploadDailyLimit}/day). Try again tomorrow.`
+      );
+      err.statusCode = 429;
+      throw err;
+    }
+
+    // 4. Check user plan upload limit
+    const user = await User.findById(userId);
+    if (!user.hasUsageLeft('uploads')) {
+      const err = new Error(
+        `Monthly upload limit reached. Upgrade your plan for more uploads.`
+      );
+      err.statusCode = 429;
+      throw err;
+    }
+
+    // 5. Get valid access token
+    const accessToken = await getValidAccessToken(channel);
+
+    // 6. Update video status to uploading
+    video.status = 'uploading';
+    video.uploadInfo.uploadStartedAt = new Date();
+    await video.save();
+
+    try {
     // 7. Prepare video metadata for YouTube
     const videoResource = {
       snippet: {
@@ -175,9 +182,13 @@ const uploadVideo = async (userId, videoId, fileRef, mimeType) => {
     video.retryCount += 1;
     await video.save();
 
-    throw err;
+      throw err;
+    }
   } finally {
-    // The file now lives on YouTube — drop the GCS staging copy either way.
+    // Every exit path — early validation failure (video/channel not found,
+    // quota exceeded, etc.), YouTube upload failure, or success — must drop
+    // the GCS staging copy so it never leaks. Multer already streamed the
+    // whole file to GCS before this function even started running.
     if (gcsPath) await storageService.deleteFile(gcsPath);
   }
 };
@@ -268,7 +279,7 @@ const uploadThumbnailToYouTube = async (accessToken, youtubeVideoId, thumbnailUr
     );
   } catch (err) {
     // Non-critical — don't fail upload if thumbnail fails
-    console.error('Thumbnail upload failed:', err.message);
+    logger.error('Thumbnail upload failed', { error: err.message });
   }
 };
 
@@ -328,7 +339,7 @@ const updateVideo = async (userId, videoId, updates) => {
         }
       );
     } catch (err) {
-      console.error('Failed to update YouTube metadata:', err.message);
+      logger.error('Failed to update YouTube metadata', { error: err.message });
       // Don't fail — local update succeeded
     }
   }
@@ -360,7 +371,7 @@ const deleteVideo = async (userId, videoId, deleteFromYouTube = false) => {
         }
       );
     } catch (err) {
-      console.error('Failed to delete from YouTube:', err.message);
+      logger.error('Failed to delete from YouTube', { error: err.message });
     }
   }
 

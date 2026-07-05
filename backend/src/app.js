@@ -11,6 +11,7 @@ const { config } = require('./config/env');
 const routes = require('./routes/index');
 const { notFound, globalErrorHandler } = require('./middlewares/error.middleware');
 const { apiLimiter } = require('./middlewares/rateLimiter.middleware');
+const logger = require('./config/logger');
 
 const app = express();
 
@@ -86,19 +87,23 @@ app.use(mongoSanitize());
 // ==================== RATE LIMITING ====================
 app.use('/api', apiLimiter);
 
-// ==================== REQUEST LOGGING (Dev only) ====================
-if (config.isDev) {
-  app.use((req, res, next) => {
-    const start = Date.now();
-    res.on('finish', () => {
-      const duration = Date.now() - start;
-      const status = res.statusCode;
-      const color = status >= 500 ? '\x1b[31m' : status >= 400 ? '\x1b[33m' : '\x1b[32m';
-      console.log(`${color}${req.method}\x1b[0m ${req.originalUrl} ${color}${status}\x1b[0m - ${duration}ms`);
+// ==================== REQUEST LOGGING ====================
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const status = res.statusCode;
+    const level = status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info';
+    logger.log(level, `${req.method} ${req.originalUrl} ${status} - ${duration}ms`, {
+      method: req.method,
+      url: req.originalUrl,
+      status,
+      durationMs: duration,
+      ip: req.ip,
     });
-    next();
   });
-}
+  next();
+});
 
 // ==================== ROUTES ====================
 app.use('/api/v1', routes);

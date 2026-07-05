@@ -8,6 +8,7 @@
 const multer = require('multer');
 const { randomUUID } = require('crypto');
 const storageService = require('../services/storage.service');
+const logger = require('../config/logger');
 
 const MAX_VIDEO_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB
 
@@ -59,7 +60,7 @@ const videoStorage = storageService.isConfigured()
   : multer.memoryStorage();
 
 if (!storageService.isConfigured()) {
-  console.warn('[upload] GCS not configured — videos buffered in RAM (dev only)');
+  logger.warn('[upload] GCS not configured — videos buffered in RAM (dev only)');
 }
 
 const uploadVideoFile = multer({

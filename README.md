@@ -491,7 +491,6 @@ Fix:     req.user._id → req.user.id (~line 75 in auth.middleware.js)
 - **Cloudinary missing** — `thumbnail.cloudinaryId` field hai model mein par package nahi
 - **Email config mismatch** — `BREVO_API_KEY` set hai par nodemailer SMTP credentials expect karta hai
 - **Referral backend missing** — Frontend page hai par `/api/v1/referral/*` routes exist nahi karte (404)
-- **No `.dockerignore`** — Local `node_modules/` Docker image mein aa sakta hai
 
 ### 🟠 Medium Priority
 
@@ -504,20 +503,20 @@ Fix:     req.user._id → req.user.id (~line 75 in auth.middleware.js)
 ## 🗺️ Roadmap
 
 ### Phase 1 — Critical Fixes
-- [ ] Video file → Google Cloud Storage
-- [ ] `checkUsageLimit` `_id` bug fix
-- [ ] `.dockerignore` add karo
+- [x] Video file → Google Cloud Storage
+- [x] `checkUsageLimit` `_id` bug fix
+- [x] `.dockerignore` add karo
 - [ ] Email service config fix (Brevo SMTP)
 - [ ] Referral backend banao (routes + controller + service)
 - [ ] `GEMINI_API_KEY` production mein set karo
 
 ### Phase 2 — Launch Ready
-- [ ] Payment gateway (Razorpay / Stripe)
-- [ ] Cloudinary thumbnail upload
-- [ ] Admin dashboard
-- [ ] Trend data source (Google Trends API)
-- [ ] Error monitoring (Sentry)
-- [ ] Weekly email reports implement karo
+- [x] Payment gateway (Razorpay)
+- [x] Cloudinary thumbnail upload
+- [x] Admin dashboard
+- [x] Trend data source (YouTube Data API `mostPopular` chart)
+- [x] Error monitoring (Sentry)
+- [x] Weekly email reports implement karo
 
 ### Phase 3 — Scale
 - [ ] TypeScript migration

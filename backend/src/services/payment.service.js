@@ -5,6 +5,7 @@ const { config } = require('../config/env');
 const User = require('../models/user.model');
 const { validateCoupon, redeemCoupon } = require('./coupon.service');
 const { recordEarningFromPayment } = require('./referral.service');
+const logger = require('../config/logger');
 
 const PLAN_PRICES = {
   creator: { amount: 19900, label: 'Creator Plan' },  // paise (₹199)
@@ -125,7 +126,7 @@ const verifyPayment = async (userId, { razorpayOrderId, razorpayPaymentId, razor
       razorpayPaymentId,
     });
   } catch (err) {
-    console.error('[verifyPayment] referral credit failed (non-fatal):', err.message);
+    logger.error('[verifyPayment] referral credit failed (non-fatal)', { error: err.message });
   }
 
   return {
@@ -175,7 +176,7 @@ const handleWebhook = async (rawBody, signature) => {
           razorpayPaymentId: event.payload.payment.entity.id,
         });
       } catch (err) {
-        console.error('[webhook] referral credit failed (non-fatal):', err.message);
+        logger.error('[webhook] referral credit failed (non-fatal)', { error: err.message });
       }
     }
   }

@@ -8,6 +8,7 @@ const YoutubeChannel = require('../models/youtube-channel.model');
 const { getValidAccessToken } = require('./youtube.service');
 const { youtubeRequest } = require('../config/youtube.config');
 const { setCache, getCache } = require('../config/redis');
+const logger = require('../config/logger');
 
 // ==================== GROWTH PREDICTION ====================
 const getGrowthPrediction = async (userId, channelId) => {
@@ -293,7 +294,7 @@ const getTrends = async (userId, channelId, category = null) => {
   const stale = !newest || (Date.now() - new Date(newest.detectedAt).getTime()) > 12 * 60 * 60 * 1000;
   if (stale) {
     try { await refreshTrendsFromYouTube('IN'); }
-    catch (err) { console.warn('[trends] refresh failed:', err.message); }
+    catch (err) { logger.warn('[trends] refresh failed', { error: err.message }); }
   }
 
   const query = {
@@ -384,7 +385,7 @@ const refreshTrendsFromYouTube = async (region = 'IN') => {
     );
   }
 
-  console.log(`[trends] refreshed ${scored.length} trends for region=${region}`);
+  logger.info(`[trends] refreshed ${scored.length} trends`, { region });
   return { count: scored.length };
 };
 

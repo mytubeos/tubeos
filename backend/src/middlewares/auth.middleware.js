@@ -3,6 +3,7 @@
 const { verifyAccessToken } = require('../utils/jwt.utils');
 const { errorResponse } = require('../utils/response.utils');
 const User = require('../models/user.model');
+const logger = require('../config/logger');
 
 // Protect route — verify JWT and attach user to request
 const protect = async (req, res, next) => {
@@ -61,7 +62,7 @@ const protect = async (req, res, next) => {
 
     next();
   } catch (err) {
-    console.error('[auth.middleware] Unexpected error:', err.message);
+    logger.error('[auth.middleware] Unexpected error', { error: err.message });
     return errorResponse(res, 500, 'Authentication error');
   }
 };
@@ -91,12 +92,12 @@ const optionalAuth = async (req, res, next) => {
       }
     } catch (err) {
       // Token invalid/expired - continue as guest
-      console.log('[auth.middleware] Optional token invalid, continuing as guest');
+      logger.debug('[auth.middleware] Optional token invalid, continuing as guest');
     }
 
     next();
   } catch (err) {
-    console.error('[auth.middleware] Optional auth error:', err.message);
+    logger.error('[auth.middleware] Optional auth error', { error: err.message });
     next(); // Continue anyway
   }
 };
@@ -155,7 +156,7 @@ const checkUsageLimit = (limitType) => {
       req.usageType = type;
       next();
     } catch (err) {
-      console.error('[checkUsageLimit] error:', err.message);
+      logger.error('[checkUsageLimit] error', { error: err.message });
       return errorResponse(res, 500, 'Usage check failed');
     }
   };

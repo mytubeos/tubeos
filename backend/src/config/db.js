@@ -3,6 +3,7 @@
 
 const mongoose = require('mongoose');
 const { config } = require('./env');
+const logger = require('./logger');
 
 const connectDB = async (retries = 5) => {
   for (let i = 0; i < retries; i++) {
@@ -12,24 +13,24 @@ const connectDB = async (retries = 5) => {
         socketTimeoutMS: 45000,
       });
 
-      console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+      logger.info('MongoDB Connected', { host: conn.connection.host });
 
       mongoose.connection.on('error', (err) => {
-        console.error('❌ MongoDB connection error:', err);
+        logger.error('MongoDB connection error', { error: err.message });
       });
 
       mongoose.connection.on('disconnected', () => {
-        console.warn('⚠️  MongoDB disconnected. Attempting reconnect...');
+        logger.warn('MongoDB disconnected. Attempting reconnect...');
       });
 
       mongoose.connection.on('reconnected', () => {
-        console.log('✅ MongoDB reconnected');
+        logger.info('MongoDB reconnected');
       });
 
       return; // success — loop se bahar
 
     } catch (error) {
-      console.error(`❌ MongoDB attempt ${i + 1}/${retries} failed:`, error.message);
+      logger.error(`MongoDB attempt ${i + 1}/${retries} failed`, { error: error.message });
       if (i === retries - 1) throw error; // last retry pe throw karo
       await new Promise((res) => setTimeout(res, 3000)); // 3s wait
     }
@@ -38,7 +39,7 @@ const connectDB = async (retries = 5) => {
 
 const disconnectDB = async () => {
   await mongoose.connection.close();
-  console.log('MongoDB connection closed');
+  logger.info('MongoDB connection closed');
 };
 
 module.exports = { connectDB, disconnectDB };

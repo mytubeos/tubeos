@@ -8,6 +8,7 @@ const YoutubeChannel = require('../models/youtube-channel.model');
 const Comment = require('../models/comment.model');
 const { getValidAccessToken } = require('./youtube.service');
 const { setCache, getCache } = require('../config/redis');
+const logger = require('../config/logger');
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -58,7 +59,7 @@ const buildHeatmap = async (userId, channelId) => {
       dataPoints = result.dataPoints;
     }
   } catch (err) {
-    console.error('YouTube heatmap fetch failed, using fallback:', err.message);
+    logger.error('YouTube heatmap fetch failed, using fallback', { error: err.message });
   }
 
   // Fallbacks when YouTube Analytics daily totals aren't available:
@@ -338,7 +339,7 @@ const getHeatmap = async (userId, channelId) => {
       heatmap = built.heatmap;
     } catch (err) {
       // Return default if build fails
-      console.error('Heatmap build failed:', err.message);
+      logger.error('Heatmap build failed', { error: err.message });
     }
   }
 

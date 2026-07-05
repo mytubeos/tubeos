@@ -9,6 +9,7 @@
 const youtubeService = require('../services/youtube.service');
 const { successResponse, errorResponse } = require('../utils/response.utils');
 const { config } = require('../config/env');
+const logger = require('../config/logger');
 
 // GET /api/v1/youtube/auth
 // FIX 1: req.user.id — JWT middleware 'id' attach karta hai, '_id' nahi
@@ -54,7 +55,7 @@ const handleCallback = async (req, res) => {
       );
     }
 
-    console.error('[youtube.controller] Callback error:', err.message, '| code:', err.code);
+    logger.error('[youtube.controller] Callback error', { error: err.message, code: err.code });
 
     const errorCode = err.code === 'NO_REFRESH_TOKEN'
       ? 'no_refresh_token'

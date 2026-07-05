@@ -9,6 +9,7 @@ const { getValidAccessToken } = require('./youtube.service');
 const { youtubeRequest } = require('../config/youtube.config');
 const { callAI } = require('../config/ai.config');
 const { setCache, getCache } = require('../config/redis');
+const { sanitizePromptInput } = require('../utils/sanitize.utils');
 
 // ==================== SYNC COMMENTS ====================
 // options.analyze (default true): run LLM sentiment on new comments. The daily
@@ -133,10 +134,12 @@ label: positive/negative/neutral/question/spam
 score: -1.0 to 1.0 (negative to positive)
 confidence: 0-100`;
 
+    const safeText = sanitizePromptInput(comment.text, 500);
+
     const result = await callAI(
       plan,
       'bulk',
-      [{ role: 'user', content: `Analyze: "${comment.text.substring(0, 500)}"` }],
+      [{ role: 'user', content: `Analyze: "${safeText}"` }],
       systemPrompt
     );
 
@@ -203,7 +206,6 @@ Rules:
 - If it's a question, answer it briefly
 Reply with ONLY the reply text, nothing else.`;
 
-  const { sanitizePromptInput } = require('../utils/sanitize.utils');
   const safeAuthor = sanitizePromptInput(comment.authorName, 100);
   const safeText   = sanitizePromptInput(comment.text, 1500);
 

@@ -8,6 +8,7 @@ const YoutubeChannel = require('../models/youtube-channel.model');
 const Video = require('../models/video.model');
 const { setCache, getCache } = require('../config/redis');
 const { sanitizePromptInput, sanitizePromptArray } = require('../utils/sanitize.utils');
+const logger = require('../config/logger');
 
 // ==================== GENERATE TITLES ====================
 const generateTitles = async (userId, { topic, description, tags, channelNiche, count = 5 }) => {
@@ -219,10 +220,14 @@ For each Short:
 Return ONLY valid JSON:
 [{"title":"string","timestampHint":"string","script":"string","whyItWorks":"string"}]`;
 
+  const safeTitle       = sanitizePromptInput(video.title, 200);
+  const safeDescription = sanitizePromptInput(video.description, 500);
+  const safeTags        = sanitizePromptArray(video.tags, 50, 10);
+
   const result = await callAI(
     user.plan,
     'default',
-    [{ role: 'user', content: `Original video title: ${video.title}\nDescription: ${video.description?.substring(0, 500) || 'No description'}\nTags: ${video.tags?.slice(0, 10).join(', ')}` }],
+    [{ role: 'user', content: `Original video title: ${safeTitle}\nDescription: ${safeDescription || 'No description'}\nTags: ${safeTags.join(', ')}` }],
     systemPrompt
   );
 
@@ -277,7 +282,7 @@ Return ONLY valid JSON:
         mimeType: contentType,
       });
     } catch (visionErr) {
-      console.warn('[scoreThumbnail] vision failed, falling back to text-only:', visionErr.message);
+      logger.warn('[scoreThumbnail] vision failed, falling back to text-only', { error: visionErr.message });
       result = await callAI(
         user.plan,
         'default',

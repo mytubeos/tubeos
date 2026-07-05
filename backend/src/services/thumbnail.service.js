@@ -3,13 +3,14 @@
 // is not configured (so the rest of the app keeps working).
 
 const Video = require('../models/video.model');
+const logger = require('../config/logger');
 
 let cloudinary = null;
 try {
   // Optional dependency — won't crash boot if missing
   cloudinary = require('cloudinary').v2;
 } catch (err) {
-  console.warn('[thumbnail] cloudinary package not installed — uploads disabled');
+  logger.warn('[thumbnail] cloudinary package not installed — uploads disabled');
 }
 
 const isConfigured = () => {
@@ -58,7 +59,7 @@ const uploadThumbnail = async (userId, videoId, fileBuffer, mimeType) => {
   // Delete old thumbnail if exists
   if (video.thumbnail?.cloudinaryId) {
     try { await cloudinary.uploader.destroy(video.thumbnail.cloudinaryId); }
-    catch (err) { console.warn('[thumbnail] old destroy failed:', err.message); }
+    catch (err) { logger.warn('[thumbnail] old destroy failed', { error: err.message }); }
   }
 
   // Upload via stream
@@ -96,7 +97,7 @@ const deleteThumbnail = async (userId, videoId) => {
 
   if (video.thumbnail?.cloudinaryId && isConfigured()) {
     try { await cloudinary.uploader.destroy(video.thumbnail.cloudinaryId); }
-    catch (err) { console.warn('[thumbnail] destroy failed:', err.message); }
+    catch (err) { logger.warn('[thumbnail] destroy failed', { error: err.message }); }
   }
 
   video.thumbnail = { url: null, cloudinaryId: null, isCustom: false };

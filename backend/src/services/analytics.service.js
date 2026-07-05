@@ -8,6 +8,7 @@ const YoutubeChannel = require('../models/youtube-channel.model');
 const { getValidAccessToken, invalidateChannelCache } = require('./youtube.service');
 const { youtubeRequest } = require('../config/youtube.config');
 const { setCache, getCache, deleteCache } = require('../config/redis');
+const logger = require('../config/logger');
 
 // ==================== SYNC CHANNEL VIDEOS ====================
 // Imports all existing YouTube channel videos into the Video collection.
@@ -90,10 +91,10 @@ const syncChannelVideos = async (channel, accessToken, userId) => {
       }
     }
 
-    console.log(`[analytics] syncChannelVideos: imported ${totalSynced} videos for channel ${channel._id}`);
+    logger.info(`[analytics] syncChannelVideos: imported ${totalSynced} videos`, { channelId: channel._id });
     return totalSynced;
   } catch (err) {
-    console.error('[analytics] syncChannelVideos failed:', err.message);
+    logger.error('[analytics] syncChannelVideos failed', { error: err.message });
     return 0;
   }
 };
@@ -175,7 +176,7 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
     const error = await response.json().catch(() => ({}));
     if (response.status === 403) {
       // Analytics API needs yt-analytics scope — fall back to YouTube Data API (youtube.readonly)
-      console.log('[analytics] Analytics API 403:', JSON.stringify(error?.error || error));
+      logger.info('[analytics] Analytics API 403', { error: error?.error || error });
       const synced = await syncFromVideoStats(channel, accessToken, startDate, endDate, userId);
       await syncChannelVideos(channel, accessToken, userId);
       await YoutubeChannel.findByIdAndUpdate(channel._id, {
@@ -289,7 +290,7 @@ const syncTrafficSources = async (channel, accessToken, startDate, endDate, user
       { upsert: true }
     );
   } catch (err) {
-    console.error('Traffic sources sync failed:', err.message);
+    logger.error('Traffic sources sync failed', { error: err.message });
   }
 };
 
@@ -313,7 +314,7 @@ const syncTopVideoAnalytics = async (channel, accessToken, userId, startDate, en
 
     await syncVideoAnalyticsBatch(channel, accessToken, userId, topVideos, startDate, endDate);
   } catch (err) {
-    console.error('[analytics] syncTopVideoAnalytics failed:', err.message);
+    logger.error('[analytics] syncTopVideoAnalytics failed', { error: err.message });
   }
 };
 
@@ -378,7 +379,7 @@ const syncVideoAnalyticsBatch = async (channel, accessToken, userId, videos, sta
         await VideoAnalytics.bulkWrite(bulkOps);
       }
     } catch (err) {
-      console.error(`[analytics] video analytics sync failed for ${video.youtubeVideoId}:`, err.message);
+      logger.error(`[analytics] video analytics sync failed for ${video.youtubeVideoId}`, { error: err.message });
     }
   }
 };
@@ -474,7 +475,7 @@ const syncFromVideoStats = async (channel, accessToken, startDate, endDate, user
 
     return 1;
   } catch (err) {
-    console.error('[analytics] Video stats fallback failed:', err.message);
+    logger.error('[analytics] Video stats fallback failed', { error: err.message });
     return 0;
   }
 };
@@ -797,7 +798,7 @@ const getVideoBreakdown = async (userId, videoId) => {
         dailyData = await VideoAnalytics.find({ videoId }).sort({ date: 1 }).lean();
       }
     } catch (err) {
-      console.error('[analytics] on-demand video sync failed:', err.message);
+      logger.error('[analytics] on-demand video sync failed', { error: err.message });
     }
   }
 

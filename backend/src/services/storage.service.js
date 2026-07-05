@@ -14,12 +14,14 @@
 // automatically — you only need GCS_BUCKET. Locally, point
 // GOOGLE_APPLICATION_CREDENTIALS at a service-account key file.
 
+const logger = require('../config/logger');
+
 let Storage = null;
 try {
   // Optional dependency — won't crash boot if missing
   ({ Storage } = require('@google-cloud/storage'));
 } catch (err) {
-  console.warn('[storage] @google-cloud/storage not installed — GCS disabled');
+  logger.warn('[storage] @google-cloud/storage not installed — GCS disabled');
 }
 
 let _client = null;
@@ -76,7 +78,7 @@ const deleteFile = async (gcsPath) => {
   try {
     await getBucket().file(gcsPath).delete({ ignoreNotFound: true });
   } catch (err) {
-    console.warn('[storage] delete failed:', err.message);
+    logger.warn('[storage] delete failed', { error: err.message });
   }
 };
 

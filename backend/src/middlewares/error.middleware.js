@@ -2,6 +2,8 @@
 // Global error handler — catches all unhandled errors
 
 const { errorResponse } = require('../utils/response.utils');
+const sentry = require('../config/sentry');
+const logger = require('../config/logger');
 
 // 404 handler — route not found
 const notFound = (req, res, next) => {
@@ -50,18 +52,17 @@ const globalErrorHandler = (err, req, res, next) => {
     message = 'Token expired';
   }
 
-  // Log error in development
+  // Log error — full stack in development, message-only for 5xx in production
   if (process.env.NODE_ENV === 'development') {
-    console.error('🚨 Error:', {
-      message: err.message,
-      stack: err.stack,
-      statusCode,
-    });
-  } else {
-    // In production only log 500 errors
-    if (statusCode === 500) {
-      console.error('🚨 Server Error:', err.message);
-    }
+    logger.error('Error', { message: err.message, stack: err.stack, statusCode });
+  } else if (statusCode === 500) {
+    logger.error('Server Error', { message: err.message, path: req.originalUrl, method: req.method });
+  }
+
+  // Only real server errors go to Sentry — 4xx (bad input, auth, not found)
+  // is expected user-facing noise, not something to page on.
+  if (statusCode >= 500) {
+    sentry.captureException(err, { path: req.originalUrl, method: req.method });
   }
 
   return errorResponse(res, statusCode, message, errors);

@@ -12,6 +12,7 @@ const {
   sendPasswordResetEmail,
   sendWelcomeEmail,
 } = require('../utils/email.utils');
+const logger = require('../config/logger');
 
 // ==================== HELPER FUNCTIONS ====================
 const sanitizeUser = (user) => {
@@ -85,9 +86,9 @@ const register = async ({ name, email, password, referralCode }) => {
     const redisClient = getRedisClient();
     await redisClient.set(otpKey, otp, 'EX', 600);
     const stored = await redisClient.get(otpKey);
-    console.log(`[register] OTP stored in Redis: ${stored ? 'YES' : 'FAILED'} | key=${otpKey}`);
+    logger.debug(`[register] OTP stored in Redis: ${stored ? 'YES' : 'FAILED'}`, { key: otpKey });
   } catch (redisErr) {
-    console.error('[register] Redis SET failed:', redisErr.message);
+    logger.error('[register] Redis SET failed', { error: redisErr.message });
     const err = new Error('Server error: Could not save OTP. Please try again.');
     err.statusCode = 500;
     throw err;
@@ -96,12 +97,11 @@ const register = async ({ name, email, password, referralCode }) => {
   // Send OTP email via Brevo
   try {
     await sendOTPEmail(user.email, user.name, otp);
-    console.log(`[register] OTP email sent to ${user.email}`);
+    logger.info(`[register] OTP email sent`, { email: user.email });
   } catch (emailError) {
-    console.error('[register] Failed to send OTP email:', emailError.message);
-    console.error('[register] Brevo error details:', emailError.response?.data);
+    logger.error('[register] Failed to send OTP email', { error: emailError.message, brevoError: emailError.response?.data });
     // Log OTP for testing when email fails (remove before full production)
-    console.log(`[register] OTP for ${user.email}: ${otp}`);
+    logger.debug(`[register] OTP for ${user.email}: ${otp}`);
   }
 
   // Update referrer's referral count
@@ -135,7 +135,7 @@ const verifyEmail = async (otp, userId) => {
 
   // Get OTP from Redis
   const storedOtp = await getCache(`email_otp:${userId}`);
-  console.log(`[verifyEmail] Redis lookup userId=${userId} storedOtp=${storedOtp} inputOtp=${otp}`);
+  logger.debug('[verifyEmail] Redis lookup', { userId, storedOtp, inputOtp: otp });
   if (!storedOtp) {
     const error = new Error('OTP expired or not found. Click "Resend OTP" to get a new one.');
     error.statusCode = 400;
@@ -172,7 +172,7 @@ const verifyEmail = async (otp, userId) => {
   try {
     await sendWelcomeEmail(user.email, user.name);
   } catch (emailError) {
-    console.error('[verifyEmail] Welcome email failed:', emailError.message);
+    logger.error('[verifyEmail] Welcome email failed', { error: emailError.message });
   }
 
   return {
@@ -212,12 +212,11 @@ const resendOTP = async (email) => {
   // Send email
   try {
     await sendOTPEmail(user.email, user.name, otp);
-    console.log(`[resendOTP] OTP email sent to ${user.email}`);
+    logger.info(`[resendOTP] OTP email sent`, { email: user.email });
   } catch (emailError) {
-    console.error('[resendOTP] Failed to send OTP:', emailError.message);
-    console.error('[resendOTP] Brevo error details:', emailError.response?.data);
+    logger.error('[resendOTP] Failed to send OTP', { error: emailError.message, brevoError: emailError.response?.data });
     // Log OTP for testing when email fails (remove before full production)
-    console.log(`[resendOTP] OTP for ${user.email}: ${otp}`);
+    logger.debug(`[resendOTP] OTP for ${user.email}: ${otp}`);
   }
 
   return {
@@ -236,7 +235,7 @@ const login = async ({ email, password, ip }) => {
 
   // Find user (+isAdmin so the frontend can gate the admin panel)
   const user = await User.findOne({ email }).select('+password +isAdmin');
-  console.log(`[login] email=${email} found=${!!user} verified=${user?.isEmailVerified} active=${user?.isActive}`);
+  logger.debug('[login] lookup', { email, found: !!user, verified: user?.isEmailVerified, active: user?.isActive });
   if (!user) {
     const error = new Error('Invalid email or password');
     error.statusCode = 401;
@@ -253,7 +252,7 @@ const login = async ({ email, password, ip }) => {
 
   // Compare passwords
   const isPasswordCorrect = await user.comparePassword(password);
-  console.log(`[login] email=${email} passwordMatch=${isPasswordCorrect}`);
+  logger.debug('[login] password check', { email, passwordMatch: isPasswordCorrect });
   if (!isPasswordCorrect) {
     const error = new Error('Invalid email or password');
     error.statusCode = 401;
@@ -297,7 +296,7 @@ const forgotPassword = async (email) => {
   }
 
   const user = await User.findOne({ email });
-  console.log(`[forgotPassword] email=${email} found=${!!user}`);
+  logger.debug('[forgotPassword] lookup', { email, found: !!user });
   if (!user) {
     // Don't reveal if email exists or not (security)
     return {
@@ -312,9 +311,9 @@ const forgotPassword = async (email) => {
   // Store in Redis (non-fatal)
   try {
     await setCache(`pwd_reset:${hashedToken}`, user._id.toString(), 15 * 60);
-    console.log(`[forgotPassword] Token stored in Redis for ${user.email}`);
+    logger.debug('[forgotPassword] Token stored in Redis', { email: user.email });
   } catch (redisErr) {
-    console.warn('[forgotPassword] Redis store failed (non-fatal):', redisErr.message);
+    logger.warn('[forgotPassword] Redis store failed (non-fatal)', { error: redisErr.message });
   }
 
   // Store in DB for backup using findByIdAndUpdate (bypasses schema validation issues)
@@ -323,22 +322,21 @@ const forgotPassword = async (email) => {
       passwordResetToken: hashedToken,
       passwordResetExpires: new Date(Date.now() + 15 * 60 * 1000),
     });
-    console.log(`[forgotPassword] Token saved in DB for ${user.email}`);
+    logger.debug('[forgotPassword] Token saved in DB', { email: user.email });
   } catch (dbErr) {
-    console.warn('[forgotPassword] DB save skipped (non-fatal):', dbErr.message);
+    logger.warn('[forgotPassword] DB save skipped (non-fatal)', { error: dbErr.message });
   }
 
-  // Always log the reset link to console as fallback
+  // Reset link logged at debug level only — contains the plaintext token
   const clientUrl = process.env.CLIENT_URL || 'https://tubeos-eight.vercel.app';
-  console.log(`[forgotPassword] RESET LINK for ${user.email}: ${clientUrl}/reset-password?token=${resetToken}`);
+  logger.debug(`[forgotPassword] RESET LINK for ${user.email}: ${clientUrl}/reset-password?token=${resetToken}`);
 
   // Send reset email
   try {
     await sendPasswordResetEmail(user.email, user.name, resetToken);
-    console.log(`[forgotPassword] Reset email sent to ${user.email}`);
+    logger.info('[forgotPassword] Reset email sent', { email: user.email });
   } catch (emailError) {
-    console.error('[forgotPassword] Failed to send reset email:', emailError.message);
-    console.error('[forgotPassword] Brevo error:', JSON.stringify(emailError.response?.data));
+    logger.error('[forgotPassword] Failed to send reset email', { error: emailError.message, brevoError: emailError.response?.data });
     // Don't throw — token is saved in DB, user can use the logged link above
   }
 
@@ -369,10 +367,10 @@ const resetPassword = async (resetToken, newPassword) => {
   try {
     const redisClient = getRedisClient();
     const raw = await redisClient.get(`pwd_reset:${hashedToken}`);
-    console.log(`[resetPassword] Redis lookup key=pwd_reset:${hashedToken.slice(0,8)}... found=${!!raw}`);
+    logger.debug('[resetPassword] Redis lookup', { keyPrefix: hashedToken.slice(0, 8), found: !!raw });
     if (raw) userId = raw.replace(/^"|"$/g, ''); // strip JSON quotes if present
   } catch (redisErr) {
-    console.error('[resetPassword] Redis get error:', redisErr.message);
+    logger.error('[resetPassword] Redis get error', { error: redisErr.message });
   }
 
   if (!userId) {
@@ -381,7 +379,7 @@ const resetPassword = async (resetToken, newPassword) => {
       passwordResetToken: hashedToken,
       passwordResetExpires: { $gt: Date.now() },
     });
-    console.log(`[resetPassword] DB lookup found=${!!user}`);
+    logger.debug('[resetPassword] DB lookup', { found: !!user });
 
     if (!user) {
       const error = new Error('Reset token is invalid or expired');

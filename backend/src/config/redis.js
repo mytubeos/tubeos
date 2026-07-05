@@ -3,6 +3,7 @@
 
 const Redis = require('ioredis');
 const { config } = require('./env');
+const logger = require('./logger');
 
 let redisClient = null;
 
@@ -16,7 +17,7 @@ const connectRedis = () => {
         return delay;
       },
       reconnectOnError(err) {
-        console.warn('⚠️  Redis reconnect on error:', err.message);
+        logger.warn('Redis reconnect on error', { error: err.message });
         return true;
       },
       lazyConnect: false,
@@ -24,20 +25,20 @@ const connectRedis = () => {
     });
 
     redisClient.on('connect', () => {
-      console.log('✅ Redis Connected');
+      logger.info('Redis Connected');
     });
 
     redisClient.on('error', (err) => {
-      console.error('❌ Redis error:', err.message);
+      logger.error('Redis error', { error: err.message });
     });
 
     redisClient.on('reconnecting', () => {
-      console.warn('🔄 Redis reconnecting...');
+      logger.warn('Redis reconnecting...');
     });
 
     return redisClient;
   } catch (error) {
-    console.error('❌ Redis connection failed:', error.message);
+    logger.error('Redis connection failed', { error: error.message });
     throw error;
   }
 };
@@ -54,7 +55,7 @@ const setCache = async (key, value, ttlSeconds = 3600) => {
   try {
     await redisClient.setex(key, ttlSeconds, JSON.stringify(value));
   } catch (err) {
-    console.error('Redis setCache error:', err.message);
+    logger.error('Redis setCache error', { error: err.message });
   }
 };
 
@@ -64,7 +65,7 @@ const getCache = async (key) => {
     const data = await redisClient.get(key);
     return data ? JSON.parse(data) : null;
   } catch (err) {
-    console.error('Redis getCache error:', err.message);
+    logger.error('Redis getCache error', { error: err.message });
     return null;
   }
 };
@@ -74,7 +75,7 @@ const deleteCache = async (key) => {
   try {
     await redisClient.del(key);
   } catch (err) {
-    console.error('Redis deleteCache error:', err.message);
+    logger.error('Redis deleteCache error', { error: err.message });
   }
 };
 
@@ -83,7 +84,7 @@ const existsCache = async (key) => {
   try {
     return await redisClient.exists(key);
   } catch (err) {
-    console.error('Redis existsCache error:', err.message);
+    logger.error('Redis existsCache error', { error: err.message });
     return 0;
   }
 };

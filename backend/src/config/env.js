@@ -2,6 +2,8 @@
 // Validates all required environment variables at startup
 // App will crash with clear message if any are missing
 
+const logger = require('./logger');
+
 const requiredEnvVars = [
   'MONGODB_URI',
   'JWT_ACCESS_SECRET',
@@ -16,12 +18,11 @@ const requiredEnvVars = [
 const validateEnv = () => {
   const missing = requiredEnvVars.filter((key) => !process.env[key]);
   if (missing.length > 0) {
-    console.error('❌ Missing required environment variables:');
-    missing.forEach((key) => console.error(`   - ${key}`));
-    console.error('\n👉 Copy .env.example to .env and fill in the values');
+    logger.error('Missing required environment variables', { missing });
+    logger.error('Copy .env.example to .env and fill in the values');
     process.exit(1);
   }
-  console.log('✅ Environment variables validated');
+  logger.info('Environment variables validated');
 };
 
 const config = {

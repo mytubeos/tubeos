@@ -2,6 +2,7 @@
 // FIXED: Brevo API integration for OTP, welcome email, password reset
 const axios = require('axios');
 const { config } = require('../config/env');
+const logger = require('../config/logger');
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const EMAIL_FROM = process.env.EMAIL_FROM_ADDRESS || 'noreply@tubeos.in';
@@ -13,7 +14,7 @@ const isBrevoConfigured = () => !!BREVO_API_KEY;
 // ==================== SEND OTP EMAIL ====================
 const sendOTPEmail = async (recipientEmail, recipientName, otp) => {
   if (!isBrevoConfigured()) {
-    console.log('[sendOTPEmail] Brevo not configured, skipping email');
+    logger.warn('[sendOTPEmail] Brevo not configured, skipping email');
     return;
   }
 
@@ -75,10 +76,10 @@ const sendOTPEmail = async (recipientEmail, recipientName, otp) => {
       }
     );
 
-    console.log('[sendOTPEmail] OTP email sent successfully to', recipientEmail);
+    logger.info('[sendOTPEmail] OTP email sent successfully', { email: recipientEmail });
     return response.data;
   } catch (error) {
-    console.error('[sendOTPEmail] Error sending OTP email:', {
+    logger.error('[sendOTPEmail] Error sending OTP email', {
       email: recipientEmail,
       status: error.response?.status,
       message: error.response?.data?.message || error.message,
@@ -90,7 +91,7 @@ const sendOTPEmail = async (recipientEmail, recipientName, otp) => {
 // ==================== SEND PASSWORD RESET EMAIL ====================
 const sendPasswordResetEmail = async (recipientEmail, recipientName, resetToken) => {
   if (!isBrevoConfigured()) {
-    console.log('[sendPasswordResetEmail] Brevo not configured, skipping email');
+    logger.warn('[sendPasswordResetEmail] Brevo not configured, skipping email');
     return;
   }
 
@@ -163,10 +164,10 @@ const sendPasswordResetEmail = async (recipientEmail, recipientName, resetToken)
       }
     );
 
-    console.log('[sendPasswordResetEmail] Password reset email sent successfully to', recipientEmail);
+    logger.info('[sendPasswordResetEmail] Password reset email sent successfully', { email: recipientEmail });
     return response.data;
   } catch (error) {
-    console.error('[sendPasswordResetEmail] Error sending password reset email:', {
+    logger.error('[sendPasswordResetEmail] Error sending password reset email', {
       email: recipientEmail,
       status: error.response?.status,
       message: error.response?.data?.message || error.message,
@@ -178,7 +179,7 @@ const sendPasswordResetEmail = async (recipientEmail, recipientName, resetToken)
 // ==================== SEND WELCOME EMAIL ====================
 const sendWelcomeEmail = async (recipientEmail, recipientName) => {
   if (!isBrevoConfigured()) {
-    console.log('[sendWelcomeEmail] Brevo not configured, skipping email');
+    logger.warn('[sendWelcomeEmail] Brevo not configured, skipping email');
     return;
   }
 
@@ -251,10 +252,10 @@ const sendWelcomeEmail = async (recipientEmail, recipientName) => {
       }
     );
 
-    console.log('[sendWelcomeEmail] Welcome email sent successfully to', recipientEmail);
+    logger.info('[sendWelcomeEmail] Welcome email sent successfully', { email: recipientEmail });
     return response.data;
   } catch (error) {
-    console.error('[sendWelcomeEmail] Error sending welcome email:', {
+    logger.error('[sendWelcomeEmail] Error sending welcome email', {
       email: recipientEmail,
       status: error.response?.status,
       message: error.response?.data?.message || error.message,
@@ -266,7 +267,7 @@ const sendWelcomeEmail = async (recipientEmail, recipientName) => {
 // ==================== SEND WEEKLY REPORT EMAIL ====================
 const sendWeeklyReportEmail = async (user, reportData) => {
   if (!isBrevoConfigured()) {
-    console.log('[sendWeeklyReportEmail] Brevo not configured, skipping');
+    logger.warn('[sendWeeklyReportEmail] Brevo not configured, skipping');
     return;
   }
   if (!user?.email || !reportData) return;
@@ -286,9 +287,9 @@ const sendWeeklyReportEmail = async (user, reportData) => {
     }, {
       headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json' },
     });
-    console.log(`[sendWeeklyReportEmail] sent to ${user.email}`);
+    logger.info('[sendWeeklyReportEmail] sent', { email: user.email });
   } catch (err) {
-    console.error(`[sendWeeklyReportEmail] failed for ${user.email}:`, err.response?.data?.message || err.message);
+    logger.error(`[sendWeeklyReportEmail] failed for ${user.email}`, { error: err.response?.data?.message || err.message });
   }
 };
 

@@ -3,6 +3,7 @@
 // FIX: exchangeCodeForTokens aur refreshAccessToken me proper error handling
 
 const { config } = require('./env');
+const logger = require('./logger');
 
 const YOUTUBE_SCOPES = [
   'https://www.googleapis.com/auth/youtube',
@@ -85,7 +86,7 @@ const exchangeCodeForTokens = async (code) => {
   // FIX: refresh_token nahi aaya — ye tab hota hai jab user ne pehle consent de rakha ho
   // 'prompt: consent' se ye fix hona chahiye, lekin safety ke liye log karo
   if (!data.refresh_token) {
-    console.warn('[youtube.config] Warning: No refresh_token received. User may need to revoke access at myaccount.google.com/permissions and retry.');
+    logger.warn('[youtube.config] No refresh_token received. User may need to revoke access at myaccount.google.com/permissions and retry.');
   }
 
   return data;

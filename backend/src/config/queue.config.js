@@ -1,6 +1,8 @@
 // BullMQ DISABLED — Upstash free plan does not support evalsha (Lua scripts)
 // All queue operations are stubbed to no-ops so the rest of the app works fine.
 
+const logger = require('./logger');
+
 const QUEUE_NAMES = {
   VIDEO_PUBLISH:  'video-publish',
   VIDEO_PROCESS:  'video-process',
@@ -37,12 +39,12 @@ const emailQueue        = makeStubQueue(QUEUE_NAMES.EMAIL);
 const reportQueue       = makeStubQueue(QUEUE_NAMES.REPORT);
 
 const scheduleVideoPublish = async (videoId, channelId, userId, scheduledAt) => {
-  console.warn(`[queue] scheduleVideoPublish stubbed — video ${videoId} will not be auto-published`);
+  logger.warn('scheduleVideoPublish stubbed — video will not be auto-published', { videoId });
   return { id: `stub-${videoId}` };
 };
 
 const cancelScheduledJob = async (videoId) => {
-  console.warn(`[queue] cancelScheduledJob stubbed — ${videoId}`);
+  logger.warn('cancelScheduledJob stubbed', { videoId });
   return false;
 };
 
