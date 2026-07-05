@@ -2,7 +2,7 @@
 // Time Intelligence System
 // Builds 7x24 heatmap + best/worst time detection
 
-const { Heatmap, ChannelAnalytics } = require('../models/analytics.model');
+const { Heatmap } = require('../models/analytics.model');
 const Video = require('../models/video.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
 const Comment = require('../models/comment.model');
@@ -14,8 +14,9 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 
 // ==================== BUILD HEATMAP ====================
 const buildHeatmap = async (userId, channelId) => {
-  const channel = await YoutubeChannel.findOne({ _id: channelId, userId, isActive: true })
-    .select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
+  const channel = await YoutubeChannel.findOne({ _id: channelId, userId, isActive: true }).select(
+    '+oauth.accessToken +oauth.refreshToken +oauth.expiresAt'
+  );
 
   if (!channel) {
     const err = new Error('Channel not found');
@@ -42,9 +43,11 @@ const buildHeatmap = async (userId, channelId) => {
   const hasVideoSignal = videoPattern.dataPoints >= 5;
 
   // Best available hour-shape to spread real daily view totals across 24 hours.
-  const hourShapeGrid = hasCommentSignal ? commentPattern.grid
-    : hasVideoSignal ? videoPattern.grid
-    : null;
+  const hourShapeGrid = hasCommentSignal
+    ? commentPattern.grid
+    : hasVideoSignal
+      ? videoPattern.grid
+      : null;
 
   let grid = null;
   let dataSource = 'default';
@@ -88,8 +91,7 @@ const buildHeatmap = async (userId, channelId) => {
       'Daily totals are real audience view counts from YouTube Analytics; hour-of-day shape uses a general research pattern (post more videos for a personalized hour pattern).',
     video_performance:
       'Built from when your own published videos performed best — connect full analytics access for real daily view totals too.',
-    india_defaults:
-      'No channel data yet — showing general India market research defaults.',
+    india_defaults: 'No channel data yet — showing general India market research defaults.',
   };
   const note = dataSourceNotes[dataSource] || null;
 
@@ -98,12 +100,11 @@ const buildHeatmap = async (userId, channelId) => {
 
   // Extract best + worst slots
   const allSlots = extractAllSlots(normalizedGrid);
-  const bestSlots = allSlots.slice(0, 10);  // Top 10
-  const worstSlots = allSlots.slice(-10);   // Bottom 10
+  const bestSlots = allSlots.slice(0, 10); // Top 10
+  const worstSlots = allSlots.slice(-10); // Bottom 10
 
   // Confidence level
-  const confidence = dataPoints >= 100 ? 'high'
-    : dataPoints >= 30 ? 'medium' : 'low';
+  const confidence = dataPoints >= 100 ? 'high' : dataPoints >= 30 ? 'medium' : 'low';
 
   // Save to DB
   const heatmap = await Heatmap.findOneAndUpdate(
@@ -128,8 +129,8 @@ const buildHeatmap = async (userId, channelId) => {
   );
 
   // Update channel bestTimeData
-  const bestDays = [...new Set(bestSlots.slice(0, 5).map(s => DAY_NAMES[s.day].toLowerCase()))];
-  const bestHours = [...new Set(bestSlots.slice(0, 5).map(s => s.hour))].sort((a, b) => a - b);
+  const bestDays = [...new Set(bestSlots.slice(0, 5).map((s) => DAY_NAMES[s.day].toLowerCase()))];
+  const bestHours = [...new Set(bestSlots.slice(0, 5).map((s) => s.hour))].sort((a, b) => a - b);
 
   await YoutubeChannel.findByIdAndUpdate(channelId, {
     'bestTimeData.lastCalculatedAt': new Date(),
@@ -156,8 +157,7 @@ const buildHeatmap = async (userId, channelId) => {
 const buildHeatmapFromYouTube = async (accessToken, channelId, videoShapeGrid = null) => {
   // YouTube Analytics: real audience view totals per day
   const endDate = new Date().toISOString().split('T')[0];
-  const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
-    .toISOString().split('T')[0];
+  const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   const url = new URL('https://youtubeanalytics.googleapis.com/v2/reports');
   url.searchParams.set('ids', 'channel==MINE');
@@ -176,8 +176,12 @@ const buildHeatmapFromYouTube = async (accessToken, channelId, videoShapeGrid = 
   const rows = data.rows || [];
 
   // Build grid from day-of-week patterns
-  const grid = Array(7).fill(null).map(() => Array(24).fill(0));
-  const counts = Array(7).fill(null).map(() => Array(24).fill(0));
+  const grid = Array(7)
+    .fill(null)
+    .map(() => Array(24).fill(0));
+  const counts = Array(7)
+    .fill(null)
+    .map(() => Array(24).fill(0));
 
   rows.forEach(([dateStr, views]) => {
     const date = new Date(dateStr);
@@ -199,7 +203,9 @@ const buildHeatmapFromYouTube = async (accessToken, channelId, videoShapeGrid = 
   return {
     grid,
     dataPoints: rows.length,
-    hourSource: videoShapeGrid ? 'youtube_analytics+own_video_pattern' : 'youtube_analytics+estimated_pattern',
+    hourSource: videoShapeGrid
+      ? 'youtube_analytics+own_video_pattern'
+      : 'youtube_analytics+estimated_pattern',
   };
 };
 
@@ -220,14 +226,18 @@ const buildHeatmapFromVideoData = async (userId, channelId) => {
     return { grid: getDefaultGrid(), dataSource: 'india_defaults', dataPoints: 0 };
   }
 
-  const grid = Array(7).fill(null).map(() => Array(24).fill(0));
-  const counts = Array(7).fill(null).map(() => Array(24).fill(0));
+  const grid = Array(7)
+    .fill(null)
+    .map(() => Array(24).fill(0));
+  const counts = Array(7)
+    .fill(null)
+    .map(() => Array(24).fill(0));
 
-  videos.forEach(video => {
+  videos.forEach((video) => {
     const publishDate = new Date(video.publishedAt);
     const day = publishDate.getDay();
     const hour = publishDate.getHours();
-    const score = video.performance.views + (video.performance.likes * 10);
+    const score = video.performance.views + video.performance.likes * 10;
 
     grid[day][hour] += score;
     counts[day][hour]++;
@@ -252,16 +262,43 @@ const buildHeatmapFromVideoData = async (userId, channelId) => {
 // Multi-timezone countries use their most-populous zone; good enough for
 // bucketing engagement by hour-of-day.
 const COUNTRY_TZ = {
-  IN: 'Asia/Kolkata', US: 'America/New_York', GB: 'Europe/London', CA: 'America/Toronto',
-  AU: 'Australia/Sydney', PK: 'Asia/Karachi', BD: 'Asia/Dhaka', NP: 'Asia/Kathmandu',
-  LK: 'Asia/Colombo', AE: 'Asia/Dubai', SA: 'Asia/Riyadh', QA: 'Asia/Qatar',
-  ID: 'Asia/Jakarta', PH: 'Asia/Manila', MY: 'Asia/Kuala_Lumpur', SG: 'Asia/Singapore',
-  DE: 'Europe/Berlin', FR: 'Europe/Paris', ES: 'Europe/Madrid', IT: 'Europe/Rome',
-  NL: 'Europe/Amsterdam', PL: 'Europe/Warsaw', BR: 'America/Sao_Paulo', MX: 'America/Mexico_City',
-  AR: 'America/Argentina/Buenos_Aires', CO: 'America/Bogota', NG: 'Africa/Lagos',
-  ZA: 'Africa/Johannesburg', EG: 'Africa/Cairo', KE: 'Africa/Nairobi', TR: 'Europe/Istanbul',
-  RU: 'Europe/Moscow', JP: 'Asia/Tokyo', KR: 'Asia/Seoul', CN: 'Asia/Shanghai',
-  TH: 'Asia/Bangkok', VN: 'Asia/Ho_Chi_Minh',
+  IN: 'Asia/Kolkata',
+  US: 'America/New_York',
+  GB: 'Europe/London',
+  CA: 'America/Toronto',
+  AU: 'Australia/Sydney',
+  PK: 'Asia/Karachi',
+  BD: 'Asia/Dhaka',
+  NP: 'Asia/Kathmandu',
+  LK: 'Asia/Colombo',
+  AE: 'Asia/Dubai',
+  SA: 'Asia/Riyadh',
+  QA: 'Asia/Qatar',
+  ID: 'Asia/Jakarta',
+  PH: 'Asia/Manila',
+  MY: 'Asia/Kuala_Lumpur',
+  SG: 'Asia/Singapore',
+  DE: 'Europe/Berlin',
+  FR: 'Europe/Paris',
+  ES: 'Europe/Madrid',
+  IT: 'Europe/Rome',
+  NL: 'Europe/Amsterdam',
+  PL: 'Europe/Warsaw',
+  BR: 'America/Sao_Paulo',
+  MX: 'America/Mexico_City',
+  AR: 'America/Argentina/Buenos_Aires',
+  CO: 'America/Bogota',
+  NG: 'Africa/Lagos',
+  ZA: 'Africa/Johannesburg',
+  EG: 'Africa/Cairo',
+  KE: 'Africa/Nairobi',
+  TR: 'Europe/Istanbul',
+  RU: 'Europe/Moscow',
+  JP: 'Asia/Tokyo',
+  KR: 'Asia/Seoul',
+  CN: 'Asia/Shanghai',
+  TH: 'Asia/Bangkok',
+  VN: 'Asia/Ho_Chi_Minh',
 };
 const DEFAULT_TZ = 'Asia/Kolkata';
 
@@ -277,7 +314,10 @@ const DAY_INDEX = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 const getDayHourInTZ = (date, timeZone) => {
   try {
     const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone, weekday: 'short', hour: '2-digit', hour12: false,
+      timeZone,
+      weekday: 'short',
+      hour: '2-digit',
+      hour12: false,
     }).formatToParts(date);
     let weekday, hour;
     for (const p of parts) {
@@ -309,7 +349,9 @@ const buildHeatmapFromComments = async (channelId, timeZone) => {
     return { grid: null, dataPoints: 0 };
   }
 
-  const grid = Array(7).fill(null).map(() => Array(24).fill(0));
+  const grid = Array(7)
+    .fill(null)
+    .map(() => Array(24).fill(0));
   const now = Date.now();
   const HALF_LIFE = 90 * 24 * 60 * 60 * 1000;
 
@@ -356,19 +398,17 @@ const getHeatmap = async (userId, channelId) => {
 const getBestTimeSlots = async (userId, channelId, count = 5) => {
   const heatmapData = await getHeatmap(userId, channelId);
 
-  const nextSlots = generateNextSlots(
-    heatmapData.bestSlots || [],
-    count
-  );
+  const nextSlots = generateNextSlots(heatmapData.bestSlots || [], count);
 
   return {
     channelId,
     bestSlots: heatmapData.bestSlots?.slice(0, count) || [],
     nextOptimalSlots: nextSlots,
     confidence: heatmapData.confidence,
-    message: heatmapData.confidence === 'high'
-      ? 'Based on your actual audience activity data'
-      : 'Based on market research — connect more data for personalized insights',
+    message:
+      heatmapData.confidence === 'high'
+        ? 'Based on your actual audience activity data'
+        : 'Based on market research — connect more data for personalized insights',
   };
 };
 
@@ -388,10 +428,14 @@ const getLowTrafficHours = async (userId, channelId) => {
 
 const normalizeGrid = (grid) => {
   let max = 0;
-  grid.forEach(row => row.forEach(val => { if (val > max) max = val; }));
+  grid.forEach((row) =>
+    row.forEach((val) => {
+      if (val > max) max = val;
+    })
+  );
   if (max === 0) return grid;
 
-  return grid.map(row => row.map(val => Math.round((val / max) * 100)));
+  return grid.map((row) => row.map((val) => Math.round((val / max) * 100)));
 };
 
 const extractAllSlots = (grid) => {
@@ -433,13 +477,25 @@ const formatHeatmapResponse = (heatmap) => ({
 
 const getDefaultGrid = () => {
   // India-researched defaults
-  const grid = Array(7).fill(null).map(() => Array(24).fill(10));
+  const grid = Array(7)
+    .fill(null)
+    .map(() => Array(24).fill(10));
   // Boost evening hours (6PM-10PM IST)
-  [0, 5, 6].forEach(d => [18, 19, 20, 21].forEach(h => { grid[d][h] = 90; }));
-  [1, 2, 3, 4].forEach(d => [19, 20, 21].forEach(h => { grid[d][h] = 60; }));
+  [0, 5, 6].forEach((d) =>
+    [18, 19, 20, 21].forEach((h) => {
+      grid[d][h] = 90;
+    })
+  );
+  [1, 2, 3, 4].forEach((d) =>
+    [19, 20, 21].forEach((h) => {
+      grid[d][h] = 60;
+    })
+  );
   // Low traffic (midnight-6AM)
   Array.from({ length: 7 }, (_, d) =>
-    [0, 1, 2, 3, 4, 5].forEach(h => { grid[d][h] = 5; })
+    [0, 1, 2, 3, 4, 5].forEach((h) => {
+      grid[d][h] = 5;
+    })
   );
   return grid;
 };
@@ -474,11 +530,9 @@ const generateNextSlots = (bestSlots, count) => {
     date.setDate(date.getDate() + daysAhead);
     const dayOfWeek = date.getDay();
 
-    const daySlots = bestSlots
-      .filter(s => s.day === dayOfWeek)
-      .slice(0, 2);
+    const daySlots = bestSlots.filter((s) => s.day === dayOfWeek).slice(0, 2);
 
-    daySlots.forEach(slot => {
+    daySlots.forEach((slot) => {
       const slotDate = new Date(date);
       slotDate.setHours(slot.hour, 0, 0, 0);
       if (slotDate > now && slots.length < count) {
@@ -500,20 +554,44 @@ const getWorstDays = (grid) => {
     day: DAY_NAMES[i],
     total: row.reduce((a, b) => a + b, 0),
   }));
-  return dayTotals.sort((a, b) => a.total - b.total).slice(0, 3).map(d => d.day);
+  return dayTotals
+    .sort((a, b) => a.total - b.total)
+    .slice(0, 3)
+    .map((d) => d.day);
 };
 
 // Default fallback curve — used only when there's no real per-channel hour
 // signal (dayShapeRow) to shape the day's real view total with.
 const GENERIC_HOUR_WEIGHTS = [
-  2, 1, 1, 1, 1, 2, 3, 5, 7, 8, 8, 9,    // 12AM-11AM
-  9, 8, 8, 7, 8, 10, 12, 14, 13, 11, 8, 4  // 12PM-11PM
+  2,
+  1,
+  1,
+  1,
+  1,
+  2,
+  3,
+  5,
+  7,
+  8,
+  8,
+  9, // 12AM-11AM
+  9,
+  8,
+  8,
+  7,
+  8,
+  10,
+  12,
+  14,
+  13,
+  11,
+  8,
+  4, // 12PM-11PM
 ];
 
 const distributeViewsByHour = (grid, counts, day, totalViews, dayShapeRow = null) => {
-  const weights = (dayShapeRow && dayShapeRow.some(v => v > 0))
-    ? dayShapeRow
-    : GENERIC_HOUR_WEIGHTS;
+  const weights =
+    dayShapeRow && dayShapeRow.some((v) => v > 0) ? dayShapeRow : GENERIC_HOUR_WEIGHTS;
   const totalWeight = weights.reduce((a, b) => a + b, 0) || 1;
 
   weights.forEach((weight, hour) => {

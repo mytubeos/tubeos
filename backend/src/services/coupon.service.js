@@ -61,10 +61,7 @@ const validateCoupon = async (code, plan) => {
 
 // Increment usedCount after successful payment
 const redeemCoupon = async (code) => {
-  await Coupon.findOneAndUpdate(
-    { code: code.toUpperCase().trim() },
-    { $inc: { usedCount: 1 } }
-  );
+  await Coupon.findOneAndUpdate({ code: code.toUpperCase().trim() }, { $inc: { usedCount: 1 } });
 };
 
 // ==================== ADMIN CRUD ====================
@@ -86,7 +83,17 @@ const listCoupons = async ({ page = 1, limit = 20, type, status, search } = {}) 
 };
 
 const createCoupon = async (data) => {
-  const { code, type, discountType, discountValue, validPlans, maxUses, expiresAt, description, isActive } = data;
+  const {
+    code,
+    type,
+    discountType,
+    discountValue,
+    validPlans,
+    maxUses,
+    expiresAt,
+    description,
+    isActive,
+  } = data;
 
   if (!code || !discountType || !discountValue) {
     const err = new Error('Code, discountType, and discountValue are required');
@@ -124,8 +131,17 @@ const updateCoupon = async (id, data) => {
     throw err;
   }
 
-  const allowed = ['type', 'discountType', 'discountValue', 'validPlans', 'maxUses', 'expiresAt', 'description', 'isActive'];
-  allowed.forEach(key => {
+  const allowed = [
+    'type',
+    'discountType',
+    'discountValue',
+    'validPlans',
+    'maxUses',
+    'expiresAt',
+    'description',
+    'isActive',
+  ];
+  allowed.forEach((key) => {
     if (data[key] !== undefined) coupon[key] = data[key];
   });
 
@@ -160,4 +176,12 @@ const getStats = async () => {
   };
 };
 
-module.exports = { validateCoupon, redeemCoupon, listCoupons, createCoupon, updateCoupon, deleteCoupon, getStats };
+module.exports = {
+  validateCoupon,
+  redeemCoupon,
+  listCoupons,
+  createCoupon,
+  updateCoupon,
+  deleteCoupon,
+  getStats,
+};

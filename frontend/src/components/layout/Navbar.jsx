@@ -1,28 +1,26 @@
 // src/components/layout/Navbar.jsx
 import { useState } from 'react'
-import { Bell, Search, Plus, ChevronDown, RefreshCw } from 'lucide-react'
+import { Bell, Plus, ChevronDown } from 'lucide-react'
 import { useChannelStore } from '../../store/channelStore'
-import { useAuthStore } from '../../store/authStore'
 import { Button } from '../ui/Button'
 import { formatNumber } from '../../utils/formatters'
 import { useNavigate } from 'react-router-dom'
 
 export const Navbar = ({ title }) => {
   const { channels, activeChannel, setActiveChannel } = useChannelStore()
-  const { user } = useAuthStore()
   const [showChannels, setShowChannels] = useState(false)
   const navigate = useNavigate()
 
   return (
-    <header className="h-14 bg-base-800/80 backdrop-blur-sm border-b border-white/8
-                        flex items-center justify-between px-5 sticky top-0 z-30">
-
+    <header
+      className="h-14 bg-base-800/80 backdrop-blur-sm border-b border-white/8
+                        flex items-center justify-between px-5 sticky top-0 z-30"
+    >
       {/* Left — Page title */}
       <h1 className="font-display font-bold text-white text-lg">{title}</h1>
 
       {/* Right — Controls */}
       <div className="flex items-center gap-2">
-
         {/* Channel Switcher */}
         {channels.length > 0 && (
           <div className="relative">
@@ -33,7 +31,10 @@ export const Navbar = ({ title }) => {
             >
               {activeChannel && (
                 <img
-                  src={activeChannel.thumbnail || `https://ui-avatars.com/api/?name=${activeChannel.channelName}&background=4F46E5&color=fff`}
+                  src={
+                    activeChannel.thumbnail ||
+                    `https://ui-avatars.com/api/?name=${activeChannel.channelName}&background=4F46E5&color=fff`
+                  }
                   className="w-5 h-5 rounded-full object-cover"
                   alt=""
                 />
@@ -48,21 +49,31 @@ export const Navbar = ({ title }) => {
             {showChannels && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowChannels(false)} />
-                <div className="absolute right-0 top-11 w-64 bg-base-700 border border-white/10
-                                rounded-xl shadow-2xl z-20 overflow-hidden animate-slide-up">
+                <div
+                  className="absolute right-0 top-11 w-64 bg-base-700 border border-white/10
+                                rounded-xl shadow-2xl z-20 overflow-hidden animate-slide-up"
+                >
                   <div className="p-2 space-y-0.5">
-                    {channels.map(ch => (
+                    {channels.map((ch) => (
                       <button
                         key={ch._id}
-                        onClick={() => { setActiveChannel(ch); setShowChannels(false) }}
+                        onClick={() => {
+                          setActiveChannel(ch)
+                          setShowChannels(false)
+                        }}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
                                     text-left transition-all text-sm
-                                    ${activeChannel?._id === ch._id
-                                      ? 'bg-brand/15 text-brand'
-                                      : 'text-gray-300 hover:bg-white/5'}`}
+                                    ${
+                                      activeChannel?._id === ch._id
+                                        ? 'bg-brand/15 text-brand'
+                                        : 'text-gray-300 hover:bg-white/5'
+                                    }`}
                       >
                         <img
-                          src={ch.thumbnail || `https://ui-avatars.com/api/?name=${ch.channelName}&background=4F46E5&color=fff`}
+                          src={
+                            ch.thumbnail ||
+                            `https://ui-avatars.com/api/?name=${ch.channelName}&background=4F46E5&color=fff`
+                          }
                           className="w-7 h-7 rounded-full object-cover"
                           alt=""
                         />
@@ -82,7 +93,10 @@ export const Navbar = ({ title }) => {
                   </div>
                   <div className="border-t border-white/8 p-2">
                     <button
-                      onClick={() => { navigate('/channels'); setShowChannels(false) }}
+                      onClick={() => {
+                        navigate('/channels')
+                        setShowChannels(false)
+                      }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm
                                  text-gray-400 hover:text-brand rounded-lg hover:bg-brand/5 transition-all"
                     >
@@ -107,11 +121,15 @@ export const Navbar = ({ title }) => {
         </Button>
 
         {/* Notifications */}
-        <button className="relative w-9 h-9 rounded-lg glass flex items-center justify-center
-                           text-gray-400 hover:text-white hover:bg-white/6 transition-all">
+        <button
+          className="relative w-9 h-9 rounded-lg glass flex items-center justify-center
+                           text-gray-400 hover:text-white hover:bg-white/6 transition-all"
+        >
           <Bell size={17} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand rounded-full
-                           ring-1 ring-base-800 animate-pulse" />
+          <span
+            className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand rounded-full
+                           ring-1 ring-base-800 animate-pulse"
+          />
         </button>
       </div>
     </header>

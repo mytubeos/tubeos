@@ -27,7 +27,7 @@ if (!email) {
 
   console.log(`✅ Admin access granted to: ${user.email} (${user.name})`);
   process.exit(0);
-})().catch(err => {
+})().catch((err) => {
   console.error(err.message);
   process.exit(1);
 });

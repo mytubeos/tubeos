@@ -7,21 +7,12 @@ const HOUR_LABELS = Array.from({ length: 24 }, (_, i) => {
   return i < 12 ? `${h}am` : `${h}pm`
 })
 
-const getColor = (score) => {
-  if (score >= 80) return 'bg-emerald opacity-90'
-  if (score >= 60) return 'bg-emerald opacity-60'
-  if (score >= 40) return 'bg-brand opacity-70'
-  if (score >= 20) return 'bg-brand opacity-40'
-  if (score >= 5)  return 'bg-white opacity-5'
-  return 'bg-white opacity-[0.02]'
-}
-
 const getInlineColor = (score) => {
-  if (score >= 80) return `rgba(16,185,129,${0.3 + (score/100)*0.7})`
-  if (score >= 60) return `rgba(16,185,129,${0.2 + (score/100)*0.5})`
-  if (score >= 40) return `rgba(79,70,229,${0.3 + (score/100)*0.5})`
-  if (score >= 20) return `rgba(79,70,229,${0.15 + (score/100)*0.3})`
-  if (score >= 5)  return 'rgba(255,255,255,0.04)'
+  if (score >= 80) return `rgba(16,185,129,${0.3 + (score / 100) * 0.7})`
+  if (score >= 60) return `rgba(16,185,129,${0.2 + (score / 100) * 0.5})`
+  if (score >= 40) return `rgba(79,70,229,${0.3 + (score / 100) * 0.5})`
+  if (score >= 20) return `rgba(79,70,229,${0.15 + (score / 100) * 0.3})`
+  if (score >= 5) return 'rgba(255,255,255,0.04)'
   return 'rgba(255,255,255,0.02)'
 }
 
@@ -29,7 +20,7 @@ export const HeatmapGrid = ({ grid = [], bestSlots = [], className = '' }) => {
   const [tooltip, setTooltip] = useState(null)
 
   const isBestSlot = (day, hour) =>
-    bestSlots.slice(0, 5).some(s => s.day === day && s.hour === hour)
+    bestSlots.slice(0, 5).some((s) => s.day === day && s.hour === hour)
 
   return (
     <div className={`overflow-x-auto ${className}`}>
@@ -56,7 +47,9 @@ export const HeatmapGrid = ({ grid = [], bestSlots = [], className = '' }) => {
                 <div
                   key={hourIdx}
                   className="flex-1 mx-px"
-                  onMouseEnter={() => setTooltip({ day, hour: HOUR_LABELS[hourIdx], score, dayIdx, hourIdx })}
+                  onMouseEnter={() =>
+                    setTooltip({ day, hour: HOUR_LABELS[hourIdx], score, dayIdx, hourIdx })
+                  }
                   onMouseLeave={() => setTooltip(null)}
                 >
                   <div
@@ -81,15 +74,9 @@ export const HeatmapGrid = ({ grid = [], bestSlots = [], className = '' }) => {
             <span className="text-gray-400">
               {tooltip.day} at {tooltip.hour}
             </span>
-            <span className="text-white font-semibold">
-              Score: {tooltip.score}/100
-            </span>
-            {tooltip.score >= 70 && (
-              <span className="text-emerald text-xs">🔥 Peak time</span>
-            )}
-            {tooltip.score <= 15 && (
-              <span className="text-rose text-xs">😴 Low traffic</span>
-            )}
+            <span className="text-white font-semibold">Score: {tooltip.score}/100</span>
+            {tooltip.score >= 70 && <span className="text-emerald text-xs">🔥 Peak time</span>}
+            {tooltip.score <= 15 && <span className="text-rose text-xs">😴 Low traffic</span>}
           </div>
         )}
 
@@ -108,7 +95,10 @@ export const HeatmapGrid = ({ grid = [], bestSlots = [], className = '' }) => {
             </div>
           ))}
           <div className="flex items-center gap-1.5 ml-2">
-            <div className="w-4 h-3 rounded-sm ring-1 ring-emerald/60" style={{ background: 'rgba(16,185,129,0.9)' }} />
+            <div
+              className="w-4 h-3 rounded-sm ring-1 ring-emerald/60"
+              style={{ background: 'rgba(16,185,129,0.9)' }}
+            />
             <span className="text-2xs text-emerald">Best slots</span>
           </div>
         </div>

@@ -1,9 +1,15 @@
 // src/pages/Landing.jsx
 import { useNavigate } from 'react-router-dom'
 import {
-  Zap, BarChart3, Calendar, MessageCircle,
-  Sparkles, TrendingUp, Youtube, ArrowRight,
-  Check, Star, Clock, Shield, ChevronRight,
+  Zap,
+  BarChart3,
+  Calendar,
+  MessageCircle,
+  Sparkles,
+  TrendingUp,
+  ArrowRight,
+  Check,
+  Clock,
 } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 
@@ -113,7 +119,6 @@ export const Landing = () => {
 
   return (
     <div className="min-h-screen bg-base-900 overflow-x-hidden">
-
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-base-900/80 backdrop-blur-sm border-b border-white/5">
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
@@ -137,24 +142,33 @@ export const Landing = () => {
       {/* Hero */}
       <section className="relative pt-32 pb-20 px-5 overflow-hidden">
         {/* Background glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px]
-                        bg-brand/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-20 right-0 w-96 h-96 bg-cyan/8 rounded-full
-                        blur-3xl pointer-events-none" />
+        <div
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px]
+                        bg-brand/15 rounded-full blur-3xl pointer-events-none"
+        />
+        <div
+          className="absolute top-20 right-0 w-96 h-96 bg-cyan/8 rounded-full
+                        blur-3xl pointer-events-none"
+        />
 
         <div className="relative max-w-5xl mx-auto text-center">
           {/* Founders badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 glass rounded-full
-                          border border-brand/25 mb-6 animate-fade-in">
+          <div
+            className="inline-flex items-center gap-2 px-4 py-2 glass rounded-full
+                          border border-brand/25 mb-6 animate-fade-in"
+          >
             <span className="w-2 h-2 rounded-full bg-emerald animate-pulse" />
             <span className="text-sm text-gray-300">
-              Founders offer: <span className="text-brand font-semibold">₹199/mo</span> locked forever
+              Founders offer: <span className="text-brand font-semibold">₹199/mo</span> locked
+              forever
             </span>
             <span className="text-xs text-gray-500">88 spots left</span>
           </div>
 
-          <h1 className="font-display font-bold text-5xl sm:text-6xl lg:text-7xl text-white
-                          leading-none tracking-tight mb-6 animate-slide-up">
+          <h1
+            className="font-display font-bold text-5xl sm:text-6xl lg:text-7xl text-white
+                          leading-none tracking-tight mb-6 animate-slide-up"
+          >
             The AI brain for
             <br />
             <span className="bg-clip-text text-transparent bg-brand-gradient">
@@ -162,15 +176,23 @@ export const Landing = () => {
             </span>
           </h1>
 
-          <p className="text-gray-400 text-lg sm:text-xl max-w-2xl mx-auto mb-8 animate-slide-up"
-            style={{ animationDelay: '0.1s' }}>
-            Upload, schedule, analyze, and automate your channel growth.
-            One platform. Everything AI-powered.
+          <p
+            className="text-gray-400 text-lg sm:text-xl max-w-2xl mx-auto mb-8 animate-slide-up"
+            style={{ animationDelay: '0.1s' }}
+          >
+            Upload, schedule, analyze, and automate your channel growth. One platform. Everything
+            AI-powered.
           </p>
 
-          <div className="flex items-center justify-center gap-3 flex-wrap animate-slide-up"
-            style={{ animationDelay: '0.2s' }}>
-            <Button size="xl" onClick={() => navigate('/signup')} iconRight={<ArrowRight size={18} />}>
+          <div
+            className="flex items-center justify-center gap-3 flex-wrap animate-slide-up"
+            style={{ animationDelay: '0.2s' }}
+          >
+            <Button
+              size="xl"
+              onClick={() => navigate('/signup')}
+              iconRight={<ArrowRight size={18} />}
+            >
               Start for Free
             </Button>
             <Button size="xl" variant="ghost" onClick={() => navigate('/login')}>
@@ -178,9 +200,7 @@ export const Landing = () => {
             </Button>
           </div>
 
-          <p className="text-sm text-gray-600 mt-4">
-            No credit card required · Free plan forever
-          </p>
+          <p className="text-sm text-gray-600 mt-4">No credit card required · Free plan forever</p>
         </div>
 
         {/* Hero stats */}
@@ -212,10 +232,14 @@ export const Landing = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {FEATURES.map(({ icon: Icon, color, title, desc }) => (
-              <div key={title}
-                className="glass p-6 rounded-2xl hover:border-white/15 transition-all group">
-                <div className={`w-11 h-11 rounded-xl bg-${color}/10 flex items-center justify-center
-                                 mb-4 transition-transform duration-300 group-hover:scale-110`}>
+              <div
+                key={title}
+                className="glass p-6 rounded-2xl hover:border-white/15 transition-all group"
+              >
+                <div
+                  className={`w-11 h-11 rounded-xl bg-${color}/10 flex items-center justify-center
+                                 mb-4 transition-transform duration-300 group-hover:scale-110`}
+                >
                   <Icon size={21} className={`text-${color}`} />
                 </div>
                 <h3 className="font-display font-semibold text-white text-lg mb-2">{title}</h3>
@@ -234,9 +258,7 @@ export const Landing = () => {
             <h2 className="font-display font-bold text-white text-4xl mb-4">
               Simple, transparent pricing
             </h2>
-            <p className="text-gray-500">
-              Lock in founders pricing before it goes up forever.
-            </p>
+            <p className="text-gray-500">Lock in founders pricing before it goes up forever.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
@@ -244,23 +266,29 @@ export const Landing = () => {
               <div
                 key={plan.name}
                 className={`relative p-6 rounded-2xl transition-all
-                            ${plan.comingSoon
-                              ? 'glass opacity-70 border border-white/8'
-                              : plan.highlighted
-                                ? 'bg-brand/10 border-2 border-brand/40 shadow-brand'
-                                : 'glass'}`}
+                            ${
+                              plan.comingSoon
+                                ? 'glass opacity-70 border border-white/8'
+                                : plan.highlighted
+                                  ? 'bg-brand/10 border-2 border-brand/40 shadow-brand'
+                                  : 'glass'
+                            }`}
               >
                 {plan.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2
-                                  bg-brand text-white text-xs font-bold px-3 py-1 rounded-full">
+                  <div
+                    className="absolute -top-3 left-1/2 -translate-x-1/2
+                                  bg-brand text-white text-xs font-bold px-3 py-1 rounded-full"
+                  >
                     {plan.badge}
                   </div>
                 )}
 
                 {plan.comingSoon && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2
+                  <div
+                    className="absolute -top-3 left-1/2 -translate-x-1/2
                                   bg-gray-700 text-gray-300 text-xs font-bold px-3 py-1 rounded-full
-                                  border border-white/10 whitespace-nowrap">
+                                  border border-white/10 whitespace-nowrap"
+                  >
                     Coming Soon
                   </div>
                 )}
@@ -268,24 +296,33 @@ export const Landing = () => {
                 <div className="mb-5">
                   <p className="font-display font-bold text-white text-xl mb-1">{plan.name}</p>
                   <div className="flex items-end gap-1">
-                    <span className={`font-display font-bold text-4xl
-                                     ${plan.comingSoon ? 'text-gray-500' : 'text-white'}`}>
+                    <span
+                      className={`font-display font-bold text-4xl
+                                     ${plan.comingSoon ? 'text-gray-500' : 'text-white'}`}
+                    >
                       {plan.price}
                     </span>
                     <span className="text-gray-500 text-sm mb-1">{plan.period}</span>
                   </div>
-                  {plan.note && (
-                    <p className="text-2xs text-gray-600 mt-1">{plan.note}</p>
-                  )}
+                  {plan.note && <p className="text-2xs text-gray-600 mt-1">{plan.note}</p>}
                 </div>
 
                 <div className="space-y-2.5 mb-6">
-                  {plan.features.map(f => (
+                  {plan.features.map((f) => (
                     <div key={f} className="flex items-start gap-2.5">
-                      <Check size={14}
-                        className={plan.comingSoon ? 'text-gray-600 shrink-0 mt-0.5' : 'text-emerald shrink-0 mt-0.5'}
+                      <Check
+                        size={14}
+                        className={
+                          plan.comingSoon
+                            ? 'text-gray-600 shrink-0 mt-0.5'
+                            : 'text-emerald shrink-0 mt-0.5'
+                        }
                       />
-                      <span className={`text-sm ${plan.comingSoon ? 'text-gray-600' : 'text-gray-300'}`}>{f}</span>
+                      <span
+                        className={`text-sm ${plan.comingSoon ? 'text-gray-600' : 'text-gray-300'}`}
+                      >
+                        {f}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -317,7 +354,11 @@ export const Landing = () => {
           <p className="text-gray-500 mb-8">
             Join hundreds of creators using TubeOS to save 6 hours a day.
           </p>
-          <Button size="xl" onClick={() => navigate('/signup')} iconRight={<ArrowRight size={18} />}>
+          <Button
+            size="xl"
+            onClick={() => navigate('/signup')}
+            iconRight={<ArrowRight size={18} />}
+          >
             Start for Free — No Card Needed
           </Button>
         </div>
@@ -331,9 +372,7 @@ export const Landing = () => {
           </div>
           <span className="font-display font-bold text-white">TubeOS</span>
         </div>
-        <p className="text-gray-600 text-sm">
-          © 2026 TubeOS. Built for YouTube creators. 🇮🇳
-        </p>
+        <p className="text-gray-600 text-sm">© 2026 TubeOS. Built for YouTube creators. 🇮🇳</p>
       </footer>
     </div>
   )

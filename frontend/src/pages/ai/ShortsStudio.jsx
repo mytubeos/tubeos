@@ -45,7 +45,10 @@ export const ShortsStudio = () => {
   const [repurposing, setRepurposing] = useState(false)
 
   const generateScript = async () => {
-    if (!topic) { toast.error('Enter a topic'); return }
+    if (!topic) {
+      toast.error('Enter a topic')
+      return
+    }
     setLoading(true)
     try {
       const res = await aiApi.generateShortsScript({ topic, style, duration })
@@ -83,7 +86,10 @@ export const ShortsStudio = () => {
   }
 
   const handleRepurpose = async () => {
-    if (!selectedVideo) { toast.error('Select a video first'); return }
+    if (!selectedVideo) {
+      toast.error('Select a video first')
+      return
+    }
     setRepurposing(true)
     try {
       const res = await aiApi.repurposeToShorts(selectedVideo._id)
@@ -98,7 +104,6 @@ export const ShortsStudio = () => {
 
   return (
     <div className="space-y-5">
-
       {/* Tabs */}
       <div className="flex items-center glass rounded-xl p-1 w-fit">
         <button
@@ -109,43 +114,53 @@ export const ShortsStudio = () => {
           <Zap size={15} /> Write Script
         </button>
         <button
-          onClick={() => { setActiveTab('repurpose'); loadPublishedVideos() }}
+          onClick={() => {
+            setActiveTab('repurpose')
+            loadPublishedVideos()
+          }}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
                       ${activeTab === 'repurpose' ? 'bg-brand text-white' : 'text-gray-400 hover:text-white'}`}
         >
           <Scissors size={15} /> Repurpose Video
           {!hasPlan('pro', 'agency') && (
-            <Badge variant="amber" size="xs">PRO</Badge>
+            <Badge variant="amber" size="xs">
+              PRO
+            </Badge>
           )}
         </button>
       </div>
 
       {activeTab === 'script' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
           {/* Input */}
           <Card>
-            <CardHeader title="Shorts Script Generator" subtitle="60-second scripts that hook viewers" icon={Zap} />
+            <CardHeader
+              title="Shorts Script Generator"
+              subtitle="60-second scripts that hook viewers"
+              icon={Zap}
+            />
             <div className="space-y-4">
               <Input
                 label="Video Topic"
                 placeholder="e.g. 3 ways to get 1000 subscribers fast"
                 value={topic}
-                onChange={e => setTopic(e.target.value)}
+                onChange={(e) => setTopic(e.target.value)}
               />
 
               {/* Style selector */}
               <div>
                 <label className="text-sm font-medium text-gray-300 mb-2 block">Style</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {STYLES.map(s => (
+                  {STYLES.map((s) => (
                     <button
                       key={s.value}
                       onClick={() => setStyle(s.value)}
                       className={`p-3 rounded-xl text-left transition-all
-                                  ${style === s.value
-                                    ? 'bg-brand/15 border border-brand/30'
-                                    : 'glass hover:border-white/15'}`}
+                                  ${
+                                    style === s.value
+                                      ? 'bg-brand/15 border border-brand/30'
+                                      : 'glass hover:border-white/15'
+                                  }`}
                     >
                       <p className="text-sm font-medium text-white">{s.label}</p>
                       <p className="text-xs text-gray-500 mt-0.5">{s.desc}</p>
@@ -158,14 +173,16 @@ export const ShortsStudio = () => {
               <div>
                 <label className="text-sm font-medium text-gray-300 mb-2 block">Duration</label>
                 <div className="flex items-center glass rounded-xl p-1 w-fit">
-                  {DURATIONS.map(d => (
+                  {DURATIONS.map((d) => (
                     <button
                       key={d.value}
                       onClick={() => setDuration(d.value)}
                       className={`px-5 py-2 rounded-lg text-sm font-medium transition-all
-                                  ${duration === d.value
-                                    ? 'bg-brand text-white'
-                                    : 'text-gray-400 hover:text-white'}`}
+                                  ${
+                                    duration === d.value
+                                      ? 'bg-brand text-white'
+                                      : 'text-gray-400 hover:text-white'
+                                  }`}
                     >
                       {d.label}
                     </button>
@@ -184,8 +201,10 @@ export const ShortsStudio = () => {
             <div className="flex items-center justify-between mb-4">
               <CardHeader title="Your Script" icon={Video} />
               {script && (
-                <button onClick={copyScript}
-                  className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-brand transition-colors">
+                <button
+                  onClick={copyScript}
+                  className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-brand transition-colors"
+                >
                   {copied ? <Check size={12} className="text-emerald" /> : <Copy size={12} />}
                   {copied ? 'Copied!' : 'Copy Script'}
                 </button>
@@ -200,9 +219,15 @@ export const ShortsStudio = () => {
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <Badge variant="cyan" size="sm">⏱ {script.estimatedDuration}s</Badge>
-                  <Badge variant="brand" size="sm">📝 {script.wordCount} words</Badge>
-                  <Badge variant="gray" size="sm">🎨 {script.style}</Badge>
+                  <Badge variant="cyan" size="sm">
+                    ⏱ {script.estimatedDuration}s
+                  </Badge>
+                  <Badge variant="brand" size="sm">
+                    📝 {script.wordCount} words
+                  </Badge>
+                  <Badge variant="gray" size="sm">
+                    🎨 {script.style}
+                  </Badge>
                 </div>
 
                 <div className="p-4 bg-base-600 rounded-xl border border-white/8">
@@ -227,46 +252,61 @@ export const ShortsStudio = () => {
         </div>
       )}
 
-      {activeTab === 'repurpose' && (
-        !hasPlan('pro', 'agency') ? (
+      {activeTab === 'repurpose' &&
+        (!hasPlan('pro', 'agency') ? (
           <div className="text-center py-16 glass rounded-2xl">
             <div className="w-16 h-16 bg-amber/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Scissors size={28} className="text-amber" />
             </div>
             <h3 className="font-display font-bold text-white text-xl mb-2">PRO Feature</h3>
             <p className="text-gray-500 text-sm max-w-sm mx-auto mb-6">
-              Repurpose your long videos into 3 Shorts ideas automatically. Available on PRO plan and above.
+              Repurpose your long videos into 3 Shorts ideas automatically. Available on PRO plan
+              and above.
             </p>
-            <Button onClick={() => window.location.href = '/settings'}>
-              Upgrade to PRO
-            </Button>
+            <Button onClick={() => (window.location.href = '/settings')}>Upgrade to PRO</Button>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <Card>
-              <CardHeader title="Repurpose Long Video" subtitle="Extract 3 Shorts from any video" icon={Scissors} />
+              <CardHeader
+                title="Repurpose Long Video"
+                subtitle="Extract 3 Shorts from any video"
+                icon={Scissors}
+              />
 
               {loadingVideos ? (
                 <div className="space-y-2">
-                  {Array(4).fill(0).map((_, i) => <div key={i} className="shimmer h-14 rounded-xl" />)}
+                  {Array(4)
+                    .fill(0)
+                    .map((_, i) => (
+                      <div key={i} className="shimmer h-14 rounded-xl" />
+                    ))}
                 </div>
               ) : videos.length === 0 ? (
                 <p className="text-gray-500 text-sm text-center py-8">No published videos found</p>
               ) : (
                 <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {videos.map(v => (
+                  {videos.map((v) => (
                     <button
                       key={v._id}
                       onClick={() => setSelectedVideo(v)}
                       className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all
-                                  ${selectedVideo?._id === v._id
-                                    ? 'bg-brand/15 border border-brand/30'
-                                    : 'glass hover:border-white/15'}`}
+                                  ${
+                                    selectedVideo?._id === v._id
+                                      ? 'bg-brand/15 border border-brand/30'
+                                      : 'glass hover:border-white/15'
+                                  }`}
                     >
                       <div className="w-14 h-9 rounded-lg overflow-hidden bg-base-600 shrink-0">
-                        {v.thumbnail?.url
-                          ? <img src={v.thumbnail.url} className="w-full h-full object-cover" alt="" />
-                          : <div className="w-full h-full bg-brand/20" />}
+                        {v.thumbnail?.url ? (
+                          <img
+                            src={v.thumbnail.url}
+                            className="w-full h-full object-cover"
+                            alt=""
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-brand/20" />
+                        )}
                       </div>
                       <p className="text-sm text-white truncate">{v.title}</p>
                     </button>
@@ -297,8 +337,10 @@ export const ShortsStudio = () => {
                   <Card key={i}>
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-brand/15 text-brand text-sm
-                                        flex items-center justify-center font-bold">
+                        <div
+                          className="w-7 h-7 rounded-lg bg-brand/15 text-brand text-sm
+                                        flex items-center justify-center font-bold"
+                        >
                           {i + 1}
                         </div>
                         <p className="text-sm font-semibold text-white">{idea.title}</p>
@@ -318,8 +360,7 @@ export const ShortsStudio = () => {
               )}
             </div>
           </div>
-        )
-      )}
+        ))}
     </div>
   )
 }

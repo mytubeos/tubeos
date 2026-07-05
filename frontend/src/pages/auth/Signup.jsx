@@ -1,113 +1,113 @@
 // src/pages/auth/Signup.jsx
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuthStore } from '../../store/authStore';
-import authApi from '../../api/auth.api';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Toast } from '../../components/ui/Toast';
-import { Eye, EyeOff } from 'lucide-react';
+import { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import { useAuthStore } from '../../store/authStore'
+import authApi from '../../api/auth.api'
+import { Button } from '../../components/ui/Button'
+import { Input } from '../../components/ui/Input'
+import { Toast } from '../../components/ui/Toast'
+import { Eye, EyeOff } from 'lucide-react'
 
 export const Signup = () => {
-  const navigate = useNavigate();
-  const { register, verifyEmail, isLoading: loading } = useAuthStore();
+  const navigate = useNavigate()
+  const { register, verifyEmail, isLoading: loading } = useAuthStore()
 
-  const [step, setStep] = useState('signup');
+  const [step, setStep] = useState('signup')
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
     referralCode: '',
-  });
-  const [otpData, setOtpData] = useState({ userId: '', otp: '' });
-  const [localError, setLocalError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
-  const [resending, setResending] = useState(false);
-  const [showPwd, setShowPwd] = useState(false);
+  })
+  const [otpData, setOtpData] = useState({ userId: '', otp: '' })
+  const [localError, setLocalError] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
+  const [resending, setResending] = useState(false)
+  const [showPwd, setShowPwd] = useState(false)
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    setLocalError('');
-  };
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+    setLocalError('')
+  }
 
   const validateSignupForm = () => {
     if (!formData.name.trim() || formData.name.length < 2) {
-      setLocalError('Name must be at least 2 characters');
-      return false;
+      setLocalError('Name must be at least 2 characters')
+      return false
     }
     if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-      setLocalError('Invalid email format');
-      return false;
+      setLocalError('Invalid email format')
+      return false
     }
     if (formData.password.length < 8) {
-      setLocalError('Password must be at least 8 characters');
-      return false;
+      setLocalError('Password must be at least 8 characters')
+      return false
     }
     if (formData.password !== formData.confirmPassword) {
-      setLocalError('Passwords do not match');
-      return false;
+      setLocalError('Passwords do not match')
+      return false
     }
-    return true;
-  };
+    return true
+  }
 
   const handleSignupSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateSignupForm()) return;
+    e.preventDefault()
+    if (!validateSignupForm()) return
 
     const result = await register(
       formData.name,
       formData.email,
       formData.password,
       formData.referralCode || null
-    );
+    )
 
     if (result.success) {
-      setOtpData({ userId: result.userId, otp: '' });
-      setStep('otp');
-      setSuccessMsg('OTP sent to your email. Please enter it below.');
+      setOtpData({ userId: result.userId, otp: '' })
+      setStep('otp')
+      setSuccessMsg('OTP sent to your email. Please enter it below.')
     } else {
-      setLocalError(result.message || 'Registration failed');
+      setLocalError(result.message || 'Registration failed')
     }
-  };
+  }
 
   const handleResendOTP = async () => {
-    setResending(true);
-    setLocalError('');
-    setSuccessMsg('');
+    setResending(true)
+    setLocalError('')
+    setSuccessMsg('')
     try {
-      await authApi.resendOTP(formData.email);
-      setSuccessMsg('New OTP sent! Check your email or spam folder.');
+      await authApi.resendOTP(formData.email)
+      setSuccessMsg('New OTP sent! Check your email or spam folder.')
     } catch (err) {
-      setLocalError(err.response?.data?.message || 'Failed to resend OTP');
+      setLocalError(err.response?.data?.message || 'Failed to resend OTP')
     } finally {
-      setResending(false);
+      setResending(false)
     }
-  };
+  }
 
   const handleOtpChange = (e) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-    setOtpData((prev) => ({ ...prev, otp: value }));
-    setLocalError('');
-  };
+    const value = e.target.value.replace(/\D/g, '').slice(0, 6)
+    setOtpData((prev) => ({ ...prev, otp: value }))
+    setLocalError('')
+  }
 
   const handleOtpSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
     if (otpData.otp.length !== 6) {
-      setLocalError('OTP must be 6 digits');
-      return;
+      setLocalError('OTP must be 6 digits')
+      return
     }
 
-    const result = await verifyEmail(otpData.userId, otpData.otp);
+    const result = await verifyEmail(otpData.userId, otpData.otp)
 
     if (result.success) {
-      setSuccessMsg('Email verified! Now sign in with your password.');
-      setTimeout(() => navigate('/login?verified=1'), 1500);
+      setSuccessMsg('Email verified! Now sign in with your password.')
+      setTimeout(() => navigate('/login?verified=1'), 1500)
     } else {
-      setLocalError(result.message || 'OTP verification failed');
+      setLocalError(result.message || 'OTP verification failed')
     }
-  };
+  }
 
   // ==================== SIGNUP FORM ====================
   if (step === 'signup') {
@@ -125,30 +125,75 @@ export const Signup = () => {
           >
             <div className="mb-4">
               <label className="block text-sm font-medium text-slate-200 mb-2">Full Name</label>
-              <Input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="John Doe" disabled={loading} />
+              <Input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="John Doe"
+                disabled={loading}
+              />
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-slate-200 mb-2">Email Address</label>
-              <Input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="john@example.com" disabled={loading} />
+              <Input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="john@example.com"
+                disabled={loading}
+              />
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-200 mb-2">Password (min 8 characters)</label>
+              <label className="block text-sm font-medium text-slate-200 mb-2">
+                Password (min 8 characters)
+              </label>
               <div className="relative">
-                <Input type={showPwd ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} placeholder="••••••••" disabled={loading} />
-                <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+                <Input
+                  type={showPwd ? 'text' : 'password'}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                >
                   {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-200 mb-2">Confirm Password</label>
+              <label className="block text-sm font-medium text-slate-200 mb-2">
+                Confirm Password
+              </label>
               <div className="relative">
-                <Input type={showPwd ? 'text' : 'password'} name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="••••••••" disabled={loading} />
+                <Input
+                  type={showPwd ? 'text' : 'password'}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  disabled={loading}
+                />
               </div>
             </div>
             <div className="mb-6">
-              <label className="block text-sm font-medium text-slate-200 mb-2">Referral Code (Optional)</label>
-              <Input type="text" name="referralCode" value={formData.referralCode} onChange={handleChange} placeholder="Enter referral code" disabled={loading} />
+              <label className="block text-sm font-medium text-slate-200 mb-2">
+                Referral Code (Optional)
+              </label>
+              <Input
+                type="text"
+                name="referralCode"
+                value={formData.referralCode}
+                onChange={handleChange}
+                placeholder="Enter referral code"
+                disabled={loading}
+              />
             </div>
 
             {localError && <Toast type="error" message={localError} className="mb-4" />}
@@ -159,18 +204,21 @@ export const Signup = () => {
 
             <p className="text-center text-slate-400">
               Already have an account?{' '}
-              <Link to="/login" className="text-purple-400 hover:text-purple-300">Sign in</Link>
+              <Link to="/login" className="text-purple-400 hover:text-purple-300">
+                Sign in
+              </Link>
             </p>
           </form>
 
           <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
             <p className="text-sm text-blue-200">
-              An OTP will be sent to your email for verification. Check your spam folder if you don't see it.
+              An OTP will be sent to your email for verification. Check your spam folder if you
+              don't see it.
             </p>
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   // ==================== OTP VERIFICATION FORM ====================
@@ -205,7 +253,11 @@ export const Signup = () => {
           {successMsg && <Toast type="success" message={successMsg} className="mb-4" />}
           {localError && <Toast type="error" message={localError} className="mb-4" />}
 
-          <Button type="submit" disabled={loading || otpData.otp.length !== 6} className="w-full mb-4">
+          <Button
+            type="submit"
+            disabled={loading || otpData.otp.length !== 6}
+            className="w-full mb-4"
+          >
             {loading ? 'Verifying...' : 'Verify Email'}
           </Button>
 
@@ -242,5 +294,5 @@ export const Signup = () => {
         </div>
       </div>
     </div>
-  );
+  )
 }

@@ -1,13 +1,12 @@
 // src/pages/analytics/Heatmap.jsx
 import { useState, useEffect } from 'react'
-import { Flame, RefreshCw, Clock, AlertTriangle, Zap, Calendar } from 'lucide-react'
+import { Flame, RefreshCw, Clock, AlertTriangle, Zap } from 'lucide-react'
 import { useChannelStore } from '../../store/channelStore'
 import { analyticsApi } from '../../api/analytics.api'
 import { HeatmapGrid } from '../../components/charts/HeatmapGrid'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
-import { scheduleApi } from '../../api/schedule.api'
 import { formatDate } from '../../utils/formatters'
 import toast from 'react-hot-toast'
 
@@ -42,7 +41,9 @@ export const Heatmap = () => {
     }
   }
 
-  useEffect(() => { fetchData() }, [channelId])
+  useEffect(() => {
+    fetchData()
+  }, [channelId])
 
   const handleRebuild = async () => {
     if (!channelId) return
@@ -69,11 +70,12 @@ export const Heatmap = () => {
 
   return (
     <div className="space-y-6">
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-gray-500 text-sm">Audience activity analysis for {activeChannel.channelName}</p>
+          <p className="text-gray-500 text-sm">
+            Audience activity analysis for {activeChannel.channelName}
+          </p>
         </div>
         <Button
           variant="ghost"
@@ -88,25 +90,35 @@ export const Heatmap = () => {
 
       {/* Confidence badge */}
       {heatmap && (
-        <div className={`flex items-center gap-3 p-4 rounded-xl border
-                         ${heatmap.confidence === 'high'
-                           ? 'bg-emerald/5 border-emerald/20'
-                           : heatmap.confidence === 'medium'
-                           ? 'bg-amber/5 border-amber/20'
-                           : 'bg-white/5 border-white/10'}`}>
-          <Zap size={18} className={
-            heatmap.confidence === 'high' ? 'text-emerald'
-            : heatmap.confidence === 'medium' ? 'text-amber'
-            : 'text-gray-400'
-          } />
+        <div
+          className={`flex items-center gap-3 p-4 rounded-xl border
+                         ${
+                           heatmap.confidence === 'high'
+                             ? 'bg-emerald/5 border-emerald/20'
+                             : heatmap.confidence === 'medium'
+                               ? 'bg-amber/5 border-amber/20'
+                               : 'bg-white/5 border-white/10'
+                         }`}
+        >
+          <Zap
+            size={18}
+            className={
+              heatmap.confidence === 'high'
+                ? 'text-emerald'
+                : heatmap.confidence === 'medium'
+                  ? 'text-amber'
+                  : 'text-gray-400'
+            }
+          />
           <div>
             <p className="text-sm font-medium text-white capitalize">
               {heatmap.confidence} confidence · {heatmap.dataPoints} data points
             </p>
             <p className="text-xs text-gray-500">
-              {heatmap.note || (heatmap.confidence === 'low'
-                ? 'Sync more analytics data for personalized insights'
-                : `Based on ${heatmap.basedOnDays} days of audience data`)}
+              {heatmap.note ||
+                (heatmap.confidence === 'low'
+                  ? 'Sync more analytics data for personalized insights'
+                  : `Based on ${heatmap.basedOnDays} days of audience data`)}
             </p>
           </div>
           {heatmap.calculatedAt && (
@@ -128,22 +140,27 @@ export const Heatmap = () => {
         {loading ? (
           <div className="shimmer h-48 rounded-xl" />
         ) : (
-          <HeatmapGrid
-            grid={heatmap?.grid || []}
-            bestSlots={heatmap?.bestSlots || []}
-          />
+          <HeatmapGrid grid={heatmap?.grid || []} bestSlots={heatmap?.bestSlots || []} />
         )}
       </Card>
 
       {/* Best time slots + Low traffic */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
         {/* Best slots */}
         <Card>
-          <CardHeader title="Best Times to Post" subtitle="Highest audience activity" icon={Clock} iconColor="emerald" />
+          <CardHeader
+            title="Best Times to Post"
+            subtitle="Highest audience activity"
+            icon={Clock}
+            iconColor="emerald"
+          />
           {loading ? (
             <div className="space-y-3">
-              {Array(5).fill(0).map((_, i) => <div key={i} className="shimmer h-14 rounded-xl" />)}
+              {Array(5)
+                .fill(0)
+                .map((_, i) => (
+                  <div key={i} className="shimmer h-14 rounded-xl" />
+                ))}
             </div>
           ) : (
             <div className="space-y-2">
@@ -151,19 +168,27 @@ export const Heatmap = () => {
                 <div
                   key={i}
                   className={`flex items-center justify-between p-3 rounded-xl transition-all
-                              ${i === 0
-                                ? 'bg-emerald/10 border border-emerald/25'
-                                : 'glass hover:bg-white/[0.06]'}`}
+                              ${
+                                i === 0
+                                  ? 'bg-emerald/10 border border-emerald/25'
+                                  : 'glass hover:bg-white/[0.06]'
+                              }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm
-                                    ${i === 0 ? 'bg-emerald/20' : 'bg-white/5'}`}>
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm
+                                    ${i === 0 ? 'bg-emerald/20' : 'bg-white/5'}`}
+                    >
                       {i === 0 ? '⚡' : `#${i + 1}`}
                     </div>
                     <div>
-                      <p className={`text-sm font-medium ${i === 0 ? 'text-emerald' : 'text-white'}`}>
+                      <p
+                        className={`text-sm font-medium ${i === 0 ? 'text-emerald' : 'text-white'}`}
+                      >
                         {new Date(slot.datetime).toLocaleDateString('en-IN', {
-                          weekday: 'long', month: 'short', day: 'numeric'
+                          weekday: 'long',
+                          month: 'short',
+                          day: 'numeric',
                         })}
                       </p>
                       <p className="text-xs text-gray-500">{slot.time}</p>
@@ -177,7 +202,7 @@ export const Heatmap = () => {
                 </div>
               ))}
 
-              {(!bestSlots?.nextOptimalSlots?.length) && (
+              {!bestSlots?.nextOptimalSlots?.length && (
                 <p className="text-center text-gray-500 text-sm py-4">
                   Sync analytics to get personalized recommendations
                 </p>
@@ -196,7 +221,11 @@ export const Heatmap = () => {
           />
           {loading ? (
             <div className="space-y-3">
-              {Array(4).fill(0).map((_, i) => <div key={i} className="shimmer h-12 rounded-xl" />)}
+              {Array(4)
+                .fill(0)
+                .map((_, i) => (
+                  <div key={i} className="shimmer h-12 rounded-xl" />
+                ))}
             </div>
           ) : (
             <div className="space-y-2">
@@ -213,7 +242,9 @@ export const Heatmap = () => {
                       <p className="text-xs text-gray-600">Activity score: {slot.score}/100</p>
                     </div>
                   </div>
-                  <Badge variant="rose" size="xs">Avoid</Badge>
+                  <Badge variant="rose" size="xs">
+                    Avoid
+                  </Badge>
                 </div>
               ))}
 
@@ -221,8 +252,10 @@ export const Heatmap = () => {
                 <div className="mt-3 p-3 bg-rose/5 border border-rose/15 rounded-xl">
                   <p className="text-xs text-gray-400 mb-1.5">Worst days overall:</p>
                   <div className="flex flex-wrap gap-2">
-                    {lowTraffic.avoidDays.map(d => (
-                      <Badge key={d} variant="rose" size="xs">{d}</Badge>
+                    {lowTraffic.avoidDays.map((d) => (
+                      <Badge key={d} variant="rose" size="xs">
+                        {d}
+                      </Badge>
                     ))}
                   </div>
                 </div>

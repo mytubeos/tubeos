@@ -37,17 +37,25 @@ export const CommentCard = ({
           <div
             className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 mt-0.5
                          transition-all cursor-pointer
-                         ${selected
-                           ? 'bg-brand border-brand'
-                           : 'border-white/20 hover:border-brand/50'}`}
-            onClick={(e) => { e.stopPropagation(); onSelect?.() }}
+                         ${
+                           selected
+                             ? 'bg-brand border-brand'
+                             : 'border-white/20 hover:border-brand/50'
+                         }`}
+            onClick={(e) => {
+              e.stopPropagation()
+              onSelect?.()
+            }}
           >
             {selected && <Check size={11} className="text-white" />}
           </div>
 
           {/* Avatar */}
           <img
-            src={comment.authorProfileImage || `https://ui-avatars.com/api/?name=${comment.authorName}&background=141422&color=9CA3AF&size=32`}
+            src={
+              comment.authorProfileImage ||
+              `https://ui-avatars.com/api/?name=${comment.authorName}&background=141422&color=9CA3AF&size=32`
+            }
             alt={comment.authorName}
             className="w-8 h-8 rounded-full object-cover shrink-0"
           />
@@ -58,7 +66,9 @@ export const CommentCard = ({
               <span className="text-sm font-medium text-white truncate">{comment.authorName}</span>
               <SentimentBadge sentiment={comment.sentiment?.label} />
               {comment.status === 'replied' && (
-                <span className="text-2xs text-emerald bg-emerald/10 px-1.5 py-0.5 rounded-md">Replied</span>
+                <span className="text-2xs text-emerald bg-emerald/10 px-1.5 py-0.5 rounded-md">
+                  Replied
+                </span>
               )}
             </div>
             <p className="text-sm text-gray-400 leading-relaxed">
@@ -84,7 +94,6 @@ export const CommentCard = ({
       {/* AI Reply section — only when expanded */}
       {expanded && (
         <div className="px-3 pb-3 space-y-2 border-t border-white/5 pt-3">
-
           {/* Existing AI reply */}
           {comment.aiReply?.text && (
             <div className="bg-brand/10 border border-brand/20 rounded-xl p-3">
@@ -95,9 +104,7 @@ export const CommentCard = ({
                   <span className="text-2xs text-gray-500">(edited)</span>
                 )}
               </div>
-              <p className="text-sm text-gray-300 leading-relaxed mb-3">
-                {comment.aiReply.text}
-              </p>
+              <p className="text-sm text-gray-300 leading-relaxed mb-3">{comment.aiReply.text}</p>
               <div className="flex items-center gap-2">
                 {comment.status !== 'replied' && (
                   <button

@@ -1,6 +1,7 @@
 // src/middlewares/admin.middleware.js
 const User = require('../models/user.model');
 const { errorResponse } = require('../utils/response.utils');
+const logger = require('../config/logger');
 
 const adminProtect = async (req, res, next) => {
   try {
@@ -13,6 +14,7 @@ const adminProtect = async (req, res, next) => {
 
     next();
   } catch (err) {
+    logger.error('[admin.middleware] Authorization error', { error: err.message });
     return errorResponse(res, 500, 'Authorization error');
   }
 };

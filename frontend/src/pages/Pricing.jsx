@@ -8,59 +8,81 @@ import paymentAPI from '../api/payment.api'
 import { useAuthStore } from '../store/authStore'
 import { useRazorpay } from '../hooks/useRazorpay'
 
-
-
 const FEATURES_TABLE = [
-  { category: 'Analytics', features: [
-    { name: 'Basic views & likes graph', free: true, creator: true, pro: true, agency: true },
-    { name: 'Day-wise performance', free: false, creator: true, pro: true, agency: true },
-    { name: 'Per video breakdown', free: false, creator: true, pro: true, agency: true },
-    { name: 'Traffic sources', free: false, creator: true, pro: true, agency: true },
-    { name: 'Real-time traffic', free: false, creator: false, pro: true, agency: true },
-  ]},
-  { category: 'Time Intelligence', features: [
-    { name: '7×24 Heatmap', free: false, creator: true, pro: true, agency: true },
-    { name: 'Best time to post', free: false, creator: true, pro: true, agency: true },
-    { name: 'Low traffic detection', free: false, creator: true, pro: true, agency: true },
-  ]},
-  { category: 'Scheduling', features: [
-    { name: 'Manual scheduling', free: false, creator: true, pro: true, agency: true },
-    { name: 'AI time suggestions', free: false, creator: true, pro: true, agency: true },
-    { name: 'Bulk scheduling', free: false, creator: false, pro: true, agency: true },
-    { name: 'Auto-post mode', free: false, creator: true, pro: true, agency: true },
-  ]},
-  { category: 'AI Features', features: [
-    { name: 'AI comment replies/mo', free: '0', creator: '500', pro: '1200', agency: '∞' },
-    { name: 'Bulk AI replies', free: false, creator: false, pro: true, agency: true },
-    { name: 'Auto-reply mode', free: false, creator: false, pro: true, agency: true },
-    { name: 'Titles + Descriptions', free: false, creator: '20/mo', pro: '50/mo', agency: '∞' },
-    { name: 'Video Scripts', free: false, creator: '30/mo', pro: '60/mo', agency: '∞' },
-    { name: 'Thumbnail Ideas', free: false, creator: '50/mo', pro: '100/mo', agency: '∞' },
-    { name: 'Content Niche Ideas', free: false, creator: false, pro: true, agency: true },
-  ]},
-  { category: 'Reports', features: [
-    { name: 'Daily reports', free: false, creator: '30/mo', pro: '30/mo', agency: '∞' },
-    { name: 'Weekly reports', free: false, creator: '4/mo', pro: '4/mo', agency: '∞' },
-    { name: 'White label reports', free: false, creator: false, pro: false, agency: true },
-  ]},
-  { category: 'Growth', features: [
-    { name: 'Growth prediction', free: false, creator: true, pro: true, agency: true },
-    { name: 'Performance suggestions', free: false, creator: true, pro: true, agency: true },
-    { name: 'Competitor tracker', free: false, creator: false, pro: '3 channels', agency: true },
-    { name: 'Trend scanner', free: false, creator: false, pro: true, agency: true },
-  ]},
-  { category: 'Shorts + Live', features: [
-    { name: 'Shorts analytics', free: false, creator: true, pro: true, agency: true },
-    { name: 'Shorts script', free: false, creator: true, pro: true, agency: true },
-    { name: 'Long video → Shorts', free: false, creator: false, pro: true, agency: true },
-    { name: 'Live stream intelligence', free: false, creator: false, pro: true, agency: true },
-  ]},
-  { category: 'Platform', features: [
-    { name: 'Channels', free: '1', creator: '1', pro: '3', agency: '25' },
-    { name: 'Video uploads/month', free: '0', creator: '5', pro: '20', agency: '∞' },
-    { name: 'Team seats', free: '1', creator: '1', pro: '3', agency: '10' },
-    { name: 'API access', free: false, creator: false, pro: 'Basic', agency: 'Full' },
-  ]},
+  {
+    category: 'Analytics',
+    features: [
+      { name: 'Basic views & likes graph', free: true, creator: true, pro: true, agency: true },
+      { name: 'Day-wise performance', free: false, creator: true, pro: true, agency: true },
+      { name: 'Per video breakdown', free: false, creator: true, pro: true, agency: true },
+      { name: 'Traffic sources', free: false, creator: true, pro: true, agency: true },
+      { name: 'Real-time traffic', free: false, creator: false, pro: true, agency: true },
+    ],
+  },
+  {
+    category: 'Time Intelligence',
+    features: [
+      { name: '7×24 Heatmap', free: false, creator: true, pro: true, agency: true },
+      { name: 'Best time to post', free: false, creator: true, pro: true, agency: true },
+      { name: 'Low traffic detection', free: false, creator: true, pro: true, agency: true },
+    ],
+  },
+  {
+    category: 'Scheduling',
+    features: [
+      { name: 'Manual scheduling', free: false, creator: true, pro: true, agency: true },
+      { name: 'AI time suggestions', free: false, creator: true, pro: true, agency: true },
+      { name: 'Bulk scheduling', free: false, creator: false, pro: true, agency: true },
+      { name: 'Auto-post mode', free: false, creator: true, pro: true, agency: true },
+    ],
+  },
+  {
+    category: 'AI Features',
+    features: [
+      { name: 'AI comment replies/mo', free: '0', creator: '500', pro: '1200', agency: '∞' },
+      { name: 'Bulk AI replies', free: false, creator: false, pro: true, agency: true },
+      { name: 'Auto-reply mode', free: false, creator: false, pro: true, agency: true },
+      { name: 'Titles + Descriptions', free: false, creator: '20/mo', pro: '50/mo', agency: '∞' },
+      { name: 'Video Scripts', free: false, creator: '30/mo', pro: '60/mo', agency: '∞' },
+      { name: 'Thumbnail Ideas', free: false, creator: '50/mo', pro: '100/mo', agency: '∞' },
+      { name: 'Content Niche Ideas', free: false, creator: false, pro: true, agency: true },
+    ],
+  },
+  {
+    category: 'Reports',
+    features: [
+      { name: 'Daily reports', free: false, creator: '30/mo', pro: '30/mo', agency: '∞' },
+      { name: 'Weekly reports', free: false, creator: '4/mo', pro: '4/mo', agency: '∞' },
+      { name: 'White label reports', free: false, creator: false, pro: false, agency: true },
+    ],
+  },
+  {
+    category: 'Growth',
+    features: [
+      { name: 'Growth prediction', free: false, creator: true, pro: true, agency: true },
+      { name: 'Performance suggestions', free: false, creator: true, pro: true, agency: true },
+      { name: 'Competitor tracker', free: false, creator: false, pro: '3 channels', agency: true },
+      { name: 'Trend scanner', free: false, creator: false, pro: true, agency: true },
+    ],
+  },
+  {
+    category: 'Shorts + Live',
+    features: [
+      { name: 'Shorts analytics', free: false, creator: true, pro: true, agency: true },
+      { name: 'Shorts script', free: false, creator: true, pro: true, agency: true },
+      { name: 'Long video → Shorts', free: false, creator: false, pro: true, agency: true },
+      { name: 'Live stream intelligence', free: false, creator: false, pro: true, agency: true },
+    ],
+  },
+  {
+    category: 'Platform',
+    features: [
+      { name: 'Channels', free: '1', creator: '1', pro: '3', agency: '25' },
+      { name: 'Video uploads/month', free: '0', creator: '5', pro: '20', agency: '∞' },
+      { name: 'Team seats', free: '1', creator: '1', pro: '3', agency: '10' },
+      { name: 'API access', free: false, creator: false, pro: 'Basic', agency: 'Full' },
+    ],
+  },
 ]
 
 const CellValue = ({ value }) => {
@@ -70,22 +92,11 @@ const CellValue = ({ value }) => {
 }
 
 const PLAN_PRICES = {
-  free:    { price: '₹0',    note: 'Free forever' },
-  creator: { price: '₹199',  note: '→ ₹399/mo' },
-  pro:     { price: '₹499',  note: '→ ₹899/mo' },
-  agency:  { price: '₹2999', note: '→ ₹5999/mo' },
+  free: { price: '₹0', note: 'Free forever' },
+  creator: { price: '₹199', note: '→ ₹399/mo' },
+  pro: { price: '₹499', note: '→ ₹899/mo' },
+  agency: { price: '₹2999', note: '→ ₹5999/mo' },
 }
-
-const loadRazorpayScript = () =>
-  new Promise((resolve) => {
-    if (document.getElementById('razorpay-script')) return resolve(true)
-    const script = document.createElement('script')
-    script.id = 'razorpay-script'
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
-    script.onload = () => resolve(true)
-    script.onerror = () => resolve(false)
-    document.body.appendChild(script)
-  })
 
 export const Pricing = () => {
   const navigate = useNavigate()
@@ -94,17 +105,20 @@ export const Pricing = () => {
     onSuccess: () => navigate('/dashboard'),
   })
   const [couponState, setCouponState] = useState({
-    activePlan: null,   // which plan's coupon box is open
+    activePlan: null, // which plan's coupon box is open
     code: '',
     validating: false,
-    result: null,       // { originalPrice, discountedPrice, discountValue, discountType }
+    result: null, // { originalPrice, discountedPrice, discountValue, discountType }
   })
 
   const plans = ['free', 'creator', 'pro', 'agency']
   const planColors = { free: 'gray', creator: 'brand', pro: 'cyan', agency: 'rose' }
 
   const openCouponBox = (plan) => {
-    if (!isAuthenticated) { navigate('/login'); return }
+    if (!isAuthenticated) {
+      navigate('/login')
+      return
+    }
     setCouponState({ activePlan: plan, code: '', validating: false, result: null })
   }
 
@@ -113,29 +127,34 @@ export const Pricing = () => {
 
   const validateCoupon = async (plan) => {
     if (!couponState.code.trim()) return
-    setCouponState(s => ({ ...s, validating: true, result: null }))
+    setCouponState((s) => ({ ...s, validating: true, result: null }))
     try {
       const res = await paymentAPI.validateCoupon(couponState.code.trim(), plan)
-      setCouponState(s => ({ ...s, validating: false, result: res.data.data }))
+      setCouponState((s) => ({ ...s, validating: false, result: res.data.data }))
     } catch (err) {
       toast.error(err.response?.data?.message || 'Invalid coupon')
-      setCouponState(s => ({ ...s, validating: false, result: null }))
+      setCouponState((s) => ({ ...s, validating: false, result: null }))
     }
   }
 
   const handlePlanClick = (plan, couponCode = null) => {
-    if (plan === 'free') { navigate('/signup'); return }
+    if (plan === 'free') {
+      navigate('/signup')
+      return
+    }
     if (!isAuthenticated) {
       navigate('/login', { state: { redirectTo: '/pricing', selectedPlan: plan } })
       return
     }
-    if (user?.plan === plan) { toast('Aap already is plan pe ho.'); return }
+    if (user?.plan === plan) {
+      toast('Aap already is plan pe ho.')
+      return
+    }
     startCheckout(plan, couponCode)
   }
 
   return (
     <div className="min-h-screen bg-base-900">
-
       {/* Nav */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-base-900/80 backdrop-blur-sm border-b border-white/5">
         <div className="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between">
@@ -151,13 +170,14 @@ export const Pricing = () => {
               <span className="font-display font-bold text-white">TubeOS</span>
             </div>
           </button>
-          <Button size="sm" onClick={() => navigate('/signup')}>Get Started</Button>
+          <Button size="sm" onClick={() => navigate('/signup')}>
+            Get Started
+          </Button>
         </div>
       </nav>
 
       <div className="pt-28 pb-20 px-5">
         <div className="max-w-7xl mx-auto">
-
           {/* Header */}
           <div className="text-center mb-12">
             <h1 className="font-display font-bold text-white text-5xl mb-4">Pricing</h1>
@@ -173,10 +193,12 @@ export const Pricing = () => {
           </div>
 
           {/* Plan headers */}
-          <div className="grid grid-cols-5 gap-4 mb-2 sticky top-16 z-10
-                          bg-base-900/95 backdrop-blur-sm py-4 -mx-5 px-5">
+          <div
+            className="grid grid-cols-5 gap-4 mb-2 sticky top-16 z-10
+                          bg-base-900/95 backdrop-blur-sm py-4 -mx-5 px-5"
+          >
             <div /> {/* Feature column */}
-            {plans.map(plan => (
+            {plans.map((plan) => (
               <div
                 key={plan}
                 className={`p-4 rounded-xl text-center
@@ -194,7 +216,12 @@ export const Pricing = () => {
                     Current Plan
                   </div>
                 ) : plan === 'free' ? (
-                  <Button size="xs" variant="ghost" className="mt-3 w-full" onClick={() => navigate('/signup')}>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    className="mt-3 w-full"
+                    onClick={() => navigate('/signup')}
+                  >
                     Get Free
                   </Button>
                 ) : (
@@ -207,8 +234,14 @@ export const Pricing = () => {
                             className="input-field h-7 text-xs px-2 flex-1 uppercase"
                             placeholder="COUPON CODE"
                             value={couponState.code}
-                            onChange={e => setCouponState(s => ({ ...s, code: e.target.value.toUpperCase(), result: null }))}
-                            onKeyDown={e => e.key === 'Enter' && validateCoupon(plan)}
+                            onChange={(e) =>
+                              setCouponState((s) => ({
+                                ...s,
+                                code: e.target.value.toUpperCase(),
+                                result: null,
+                              }))
+                            }
+                            onKeyDown={(e) => e.key === 'Enter' && validateCoupon(plan)}
                           />
                           <button
                             onClick={() => validateCoupon(plan)}
@@ -216,7 +249,11 @@ export const Pricing = () => {
                             className="px-2 h-7 bg-brand/20 border border-brand/30 rounded-lg text-brand text-xs
                                        hover:bg-brand/30 transition-colors disabled:opacity-50"
                           >
-                            {couponState.validating ? <Loader2 size={11} className="animate-spin" /> : 'Apply'}
+                            {couponState.validating ? (
+                              <Loader2 size={11} className="animate-spin" />
+                            ) : (
+                              'Apply'
+                            )}
                           </button>
                           <button
                             onClick={closeCouponBox}
@@ -230,7 +267,8 @@ export const Pricing = () => {
                           <div className="flex items-center gap-1.5 px-2 py-1.5 bg-emerald/10 border border-emerald/20 rounded-lg">
                             <Check size={11} className="text-emerald shrink-0" />
                             <span className="text-2xs text-emerald">
-                              ₹{couponState.result.originalPrice} → ₹{couponState.result.discountedPrice}
+                              ₹{couponState.result.originalPrice} → ₹
+                              {couponState.result.discountedPrice}
                             </span>
                           </div>
                         )}
@@ -245,10 +283,11 @@ export const Pricing = () => {
                             handlePlanClick(plan, couponState.code || null)
                           }}
                         >
-                          {loadingPlan === plan
-                            ? <Loader2 size={14} className="animate-spin mx-auto" />
-                            : 'Upgrade'
-                          }
+                          {loadingPlan === plan ? (
+                            <Loader2 size={14} className="animate-spin mx-auto" />
+                          ) : (
+                            'Upgrade'
+                          )}
                         </Button>
                       </div>
                     ) : (
@@ -260,10 +299,11 @@ export const Pricing = () => {
                           disabled={loadingPlan === plan}
                           onClick={() => handlePlanClick(plan)}
                         >
-                          {loadingPlan === plan
-                            ? <Loader2 size={14} className="animate-spin mx-auto" />
-                            : 'Upgrade'
-                          }
+                          {loadingPlan === plan ? (
+                            <Loader2 size={14} className="animate-spin mx-auto" />
+                          ) : (
+                            'Upgrade'
+                          )}
                         </Button>
                         <button
                           onClick={() => openCouponBox(plan)}
@@ -301,10 +341,18 @@ export const Pricing = () => {
                     <div className="flex items-center">
                       <span className="text-sm text-gray-400">{name}</span>
                     </div>
-                    <div className="flex items-center justify-center"><CellValue value={free} /></div>
-                    <div className="flex items-center justify-center"><CellValue value={creator} /></div>
-                    <div className="flex items-center justify-center"><CellValue value={pro} /></div>
-                    <div className="flex items-center justify-center"><CellValue value={agency} /></div>
+                    <div className="flex items-center justify-center">
+                      <CellValue value={free} />
+                    </div>
+                    <div className="flex items-center justify-center">
+                      <CellValue value={creator} />
+                    </div>
+                    <div className="flex items-center justify-center">
+                      <CellValue value={pro} />
+                    </div>
+                    <div className="flex items-center justify-center">
+                      <CellValue value={agency} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -313,7 +361,9 @@ export const Pricing = () => {
 
           {/* Bottom CTA */}
           <div className="text-center mt-16 pt-8 border-t border-white/8">
-            <p className="text-gray-400 mb-4">All plans include a 14-day free trial. No credit card required.</p>
+            <p className="text-gray-400 mb-4">
+              All plans include a 14-day free trial. No credit card required.
+            </p>
             <Button size="lg" onClick={() => navigate('/signup')}>
               Start Free Today
             </Button>

@@ -1,8 +1,13 @@
 // src/components/charts/BarChart.jsx
 import {
-  BarChart as ReBarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell,
+  BarChart as ReBarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
 } from 'recharts'
 import { formatNumber } from '../../utils/formatters'
 
@@ -22,9 +27,13 @@ const CustomTooltip = ({ active, payload, label }) => {
 }
 
 export const BarChart = ({
-  data = [], dataKey = 'value', xKey = 'label',
-  color = '#4F46E5', height = 200,
-  highlightIndex = -1, horizontal = false,
+  data = [],
+  dataKey = 'value',
+  xKey = 'label',
+  color = '#4F46E5',
+  height = 200,
+  highlightIndex = -1,
+  horizontal = false,
   radius = 6,
 }) => (
   <ResponsiveContainer width="100%" height={height}>
@@ -43,13 +52,36 @@ export const BarChart = ({
 
       {horizontal ? (
         <>
-          <XAxis type="number" tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatNumber} />
-          <YAxis type="category" dataKey={xKey} tick={{ fill: '#9CA3AF', fontSize: 12 }} axisLine={false} tickLine={false} width={55} />
+          <XAxis
+            type="number"
+            tick={{ fill: '#6B7280', fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+            tickFormatter={formatNumber}
+          />
+          <YAxis
+            type="category"
+            dataKey={xKey}
+            tick={{ fill: '#9CA3AF', fontSize: 12 }}
+            axisLine={false}
+            tickLine={false}
+            width={55}
+          />
         </>
       ) : (
         <>
-          <XAxis dataKey={xKey} tick={{ fill: '#9CA3AF', fontSize: 12 }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatNumber} />
+          <XAxis
+            dataKey={xKey}
+            tick={{ fill: '#9CA3AF', fontSize: 12 }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis
+            tick={{ fill: '#6B7280', fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+            tickFormatter={formatNumber}
+          />
         </>
       )}
 
@@ -70,14 +102,24 @@ export const BarChart = ({
 
 // Day of week performance bar chart
 export const DayWiseBar = ({ data = [], height = 200 }) => {
-  const max = Math.max(...data.map(d => d.avgViews || 0))
+  const max = Math.max(...data.map((d) => d.avgViews || 0))
 
   return (
     <ResponsiveContainer width="100%" height={height}>
       <ReBarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barSize={28}>
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-        <XAxis dataKey="dayShort" tick={{ fill: '#9CA3AF', fontSize: 12 }} axisLine={false} tickLine={false} />
-        <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatNumber} />
+        <XAxis
+          dataKey="dayShort"
+          tick={{ fill: '#9CA3AF', fontSize: 12 }}
+          axisLine={false}
+          tickLine={false}
+        />
+        <YAxis
+          tick={{ fill: '#6B7280', fontSize: 11 }}
+          axisLine={false}
+          tickLine={false}
+          tickFormatter={formatNumber}
+        />
         <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
         <Bar dataKey="avgViews" radius={[6, 6, 0, 0]}>
           {data.map((entry, idx) => (

@@ -85,13 +85,13 @@ const videoSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: [
-        'draft',         // Saved, not scheduled
-        'scheduled',     // Waiting to publish
-        'uploading',     // Currently uploading to YouTube
-        'processing',    // YouTube processing the video
-        'published',     // Live on YouTube
-        'failed',        // Upload/publish failed
-        'cancelled',     // Cancelled by user
+        'draft', // Saved, not scheduled
+        'scheduled', // Waiting to publish
+        'uploading', // Currently uploading to YouTube
+        'processing', // YouTube processing the video
+        'published', // Live on YouTube
+        'failed', // Upload/publish failed
+        'cancelled', // Cancelled by user
       ],
       default: 'draft',
       index: true,

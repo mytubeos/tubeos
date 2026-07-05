@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Youtube, RefreshCw, Trash2, Plus, WifiOff, Star, Zap, BarChart2 } from 'lucide-react'
+import { Youtube, RefreshCw, Trash2, Plus, WifiOff, Star, BarChart2 } from 'lucide-react'
 import { useChannel } from '../../hooks/useChannel'
 import { useAuthStore } from '../../store/authStore'
 
@@ -26,13 +26,12 @@ export const Channels = () => {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const planLimits  = { free: 1, creator: 1, pro: 3, agency: 25 }
+  const planLimits = { free: 1, creator: 1, pro: 3, agency: 25 }
   const channelLimit = planLimits[user?.plan] || 1
-  const canAdd       = channels.length < channelLimit
+  const canAdd = channels.length < channelLimit
 
   return (
     <div className="p-5 max-w-3xl mx-auto">
-
       {/* ── Header ── */}
       <div className="flex items-start justify-between mb-5">
         <div>
@@ -58,9 +57,11 @@ export const Channels = () => {
       {!canAdd && (
         <div className="mb-4 px-4 py-3 rounded-xl border border-amber-500/20 bg-amber-500/5">
           <p className="text-[11px] text-amber-400">
-            <span className="font-medium">Channel limit reached.</span>{' '}
-            Your {user?.plan} plan allows {channelLimit} channel(s).{' '}
-            <a href="/pricing" className="underline hover:text-amber-300">Upgrade →</a>
+            <span className="font-medium">Channel limit reached.</span> Your {user?.plan} plan
+            allows {channelLimit} channel(s).{' '}
+            <a href="/pricing" className="underline hover:text-amber-300">
+              Upgrade →
+            </a>
           </p>
         </div>
       )}
@@ -116,9 +117,9 @@ export const Channels = () => {
       <div className="rounded-xl border border-white/7 bg-white/[0.02] px-4 py-3">
         <p className="text-[11px] text-white/30 leading-relaxed">
           <span className="text-white/50 font-medium">How it works: </span>
-          Clicking "Connect Channel" opens a Google OAuth popup. After you grant access,
-          the popup closes and your channel appears here automatically.
-          Your credentials are stored securely and never shared.
+          Clicking "Connect Channel" opens a Google OAuth popup. After you grant access, the popup
+          closes and your channel appears here automatically. Your credentials are stored securely
+          and never shared.
         </p>
       </div>
     </div>
@@ -126,15 +127,23 @@ export const Channels = () => {
 }
 
 /* ── Single channel card ── */
-function ChannelCard({ channel, onSync, onDisconnect, onSetPrimary, onReconnect, onUpgradeAnalytics }) {
+function ChannelCard({
+  channel,
+  onSync,
+  onDisconnect,
+  onSetPrimary,
+  onReconnect,
+  onUpgradeAnalytics,
+}) {
   const isConnected = channel.connectionStatus === 'connected'
-  const needsReconnect = channel.connectionStatus === 'token_expired' || channel.connectionStatus === 'reconnect_required'
+  const needsReconnect =
+    channel.connectionStatus === 'token_expired' ||
+    channel.connectionStatus === 'reconnect_required'
   // Show button when: never synced (null) OR last sync fell back to basic mode
   const needsAnalytics = isConnected && channel.analyticsMode !== 'full'
 
   return (
     <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl border border-white/7 bg-white/[0.03] hover:bg-white/[0.045] transition-colors">
-
       {/* Avatar */}
       <div className="relative flex-shrink-0">
         {channel.thumbnail ? (
@@ -149,9 +158,11 @@ function ChannelCard({ channel, onSync, onDisconnect, onSetPrimary, onReconnect,
           </div>
         )}
         {/* Status dot */}
-        <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#0f0f14] ${
-          isConnected ? 'bg-emerald-400' : 'bg-amber-400'
-        }`} />
+        <span
+          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#0f0f14] ${
+            isConnected ? 'bg-emerald-400' : 'bg-amber-400'
+          }`}
+        />
       </div>
 
       {/* Info */}
@@ -165,12 +176,18 @@ function ChannelCard({ channel, onSync, onDisconnect, onSetPrimary, onReconnect,
             </span>
           )}
 
-          <span className={`px-[7px] py-[2px] rounded-full text-[10px] border ${
-            isConnected
-              ? 'bg-emerald-500/12 text-emerald-400 border-emerald-500/20'
-              : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-          }`}>
-            {isConnected ? 'Connected' : needsReconnect ? 'Reconnect needed' : channel.connectionStatus}
+          <span
+            className={`px-[7px] py-[2px] rounded-full text-[10px] border ${
+              isConnected
+                ? 'bg-emerald-500/12 text-emerald-400 border-emerald-500/20'
+                : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+            }`}
+          >
+            {isConnected
+              ? 'Connected'
+              : needsReconnect
+                ? 'Reconnect needed'
+                : channel.connectionStatus}
           </span>
         </div>
 

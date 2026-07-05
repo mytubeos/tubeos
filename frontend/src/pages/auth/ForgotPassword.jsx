@@ -1,48 +1,48 @@
 // src/pages/auth/ForgotPassword.jsx
 // Forgot password page - request password reset link
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import useAuth from '../../hooks/useAuth';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Toast } from '../../components/ui/Toast';
+import { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import useAuth from '../../hooks/useAuth'
+import { Button } from '../../components/ui/Button'
+import { Input } from '../../components/ui/Input'
+import { Toast } from '../../components/ui/Toast'
 
 export const ForgotPassword = () => {
-  const navigate = useNavigate();
-  const { forgotPassword, loading } = useAuth();
+  const navigate = useNavigate()
+  const { forgotPassword, loading } = useAuth()
 
-  const [email, setEmail] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [localError, setLocalError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const [email, setEmail] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+  const [localError, setLocalError] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
 
   // Validate email
   const validateEmail = () => {
     if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-      setLocalError('Invalid email format');
-      return false;
+      setLocalError('Invalid email format')
+      return false
     }
-    return true;
-  };
+    return true
+  }
 
   // Handle form submission
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateEmail()) return;
+    e.preventDefault()
+    if (!validateEmail()) return
 
-    const result = await forgotPassword(email);
+    const result = await forgotPassword(email)
 
     if (result.success) {
-      setSuccessMsg(result.message);
-      setSubmitted(true);
-      setLocalError('');
+      setSuccessMsg(result.message)
+      setSubmitted(true)
+      setLocalError('')
 
       // Redirect to login after 3 seconds
       setTimeout(() => {
-        navigate('/login');
-      }, 3000);
+        navigate('/login')
+      }, 3000)
     }
-  };
+  }
 
   // ==================== SUBMITTED STATE ====================
   if (submitted) {
@@ -68,7 +68,8 @@ export const ForgotPassword = () => {
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">Check Your Email</h1>
             <p className="text-slate-400">
-              We've sent a password reset link to <span className="font-medium text-slate-200">{email}</span>
+              We've sent a password reset link to{' '}
+              <span className="font-medium text-slate-200">{email}</span>
             </p>
           </div>
 
@@ -108,11 +109,7 @@ export const ForgotPassword = () => {
             </div>
 
             {/* Success Message */}
-            <Toast
-              type="success"
-              message={successMsg}
-              className="mb-6"
-            />
+            <Toast type="success" message={successMsg} className="mb-6" />
 
             {/* Back to Login */}
             <Link
@@ -142,7 +139,7 @@ export const ForgotPassword = () => {
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   // ==================== FORM STATE ====================
@@ -164,15 +161,13 @@ export const ForgotPassword = () => {
         >
           {/* Email Input */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-slate-200 mb-2">
-              Email Address
-            </label>
+            <label className="block text-sm font-medium text-slate-200 mb-2">Email Address</label>
             <Input
               type="email"
               value={email}
               onChange={(e) => {
-                setEmail(e.target.value);
-                setLocalError('');
+                setEmail(e.target.value)
+                setLocalError('')
               }}
               placeholder="john@example.com"
               disabled={loading}
@@ -180,20 +175,10 @@ export const ForgotPassword = () => {
           </div>
 
           {/* Error Message */}
-          {localError && (
-            <Toast
-              type="error"
-              message={localError}
-              className="mb-4"
-            />
-          )}
+          {localError && <Toast type="error" message={localError} className="mb-4" />}
 
           {/* Submit Button */}
-          <Button
-            type="submit"
-            disabled={loading || !email}
-            className="w-full mb-4"
-          >
+          <Button type="submit" disabled={loading || !email} className="w-full mb-4">
             {loading ? 'Sending...' : 'Send Reset Link'}
           </Button>
 
@@ -214,5 +199,5 @@ export const ForgotPassword = () => {
         </div>
       </div>
     </div>
-  );
-          }
+  )
+}

@@ -1,9 +1,17 @@
 // src/components/ui/Input.jsx
 export const Input = ({
-  label, name, type = 'text', placeholder,
-  value, onChange, error, hint,
-  icon: Icon, required = false,
-  className = '', disabled = false,
+  label,
+  name,
+  type = 'text',
+  placeholder,
+  value,
+  onChange,
+  error,
+  hint,
+  icon: Icon,
+  required = false,
+  className = '',
+  disabled = false,
   ...props
 }) => (
   <div className={`flex flex-col gap-1.5 ${className}`}>
@@ -40,12 +48,21 @@ export const Input = ({
 )
 
 export const Textarea = ({
-  label, name, placeholder, value, onChange,
-  error, rows = 4, className = '', ...props
+  label,
+  name,
+  placeholder,
+  value,
+  onChange,
+  error,
+  rows = 4,
+  className = '',
+  ...props
 }) => (
   <div className={`flex flex-col gap-1.5 ${className}`}>
     {label && (
-      <label htmlFor={name} className="text-sm font-medium text-gray-300">{label}</label>
+      <label htmlFor={name} className="text-sm font-medium text-gray-300">
+        {label}
+      </label>
     )}
     <textarea
       id={name}
@@ -62,12 +79,20 @@ export const Textarea = ({
 )
 
 export const Select = ({
-  label, name, value, onChange,
-  options = [], error, className = '', ...props
+  label,
+  name,
+  value,
+  onChange,
+  options = [],
+  error,
+  className = '',
+  ...props
 }) => (
   <div className={`flex flex-col gap-1.5 ${className}`}>
     {label && (
-      <label htmlFor={name} className="text-sm font-medium text-gray-300">{label}</label>
+      <label htmlFor={name} className="text-sm font-medium text-gray-300">
+        {label}
+      </label>
     )}
     <select
       id={name}
@@ -77,7 +102,7 @@ export const Select = ({
       className="input-field bg-base-600 appearance-none cursor-pointer"
       {...props}
     >
-      {options.map(opt => (
+      {options.map((opt) => (
         <option key={opt.value} value={opt.value} className="bg-base-500">
           {opt.label}
         </option>

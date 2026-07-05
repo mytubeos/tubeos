@@ -8,9 +8,9 @@ const { recordEarningFromPayment } = require('./referral.service');
 const logger = require('../config/logger');
 
 const PLAN_PRICES = {
-  creator: { amount: 19900, label: 'Creator Plan' },  // paise (₹199)
-  pro:     { amount: 49900, label: 'Pro Plan' },       // ₹499
-  agency:  { amount: 299900, label: 'Agency Plan' },   // ₹2999
+  creator: { amount: 19900, label: 'Creator Plan' }, // paise (₹199)
+  pro: { amount: 49900, label: 'Pro Plan' }, // ₹499
+  agency: { amount: 299900, label: 'Agency Plan' }, // ₹2999
 };
 
 const getRazorpayInstance = () => {
@@ -78,7 +78,10 @@ const createOrder = async (userId, plan, couponCode = null) => {
 };
 
 // Verify payment signature and activate plan
-const verifyPayment = async (userId, { razorpayOrderId, razorpayPaymentId, razorpaySignature, plan, couponCode }) => {
+const verifyPayment = async (
+  userId,
+  { razorpayOrderId, razorpayPaymentId, razorpaySignature, plan, couponCode }
+) => {
   const body = `${razorpayOrderId}|${razorpayPaymentId}`;
   const expectedSignature = crypto
     .createHmac('sha256', config.razorpay.keySecret)
@@ -120,8 +123,8 @@ const verifyPayment = async (userId, { razorpayOrderId, razorpayPaymentId, razor
   // Credit referrer (if user was referred). Non-fatal if it fails.
   try {
     await recordEarningFromPayment({
-      referredUserId:   userId,
-      paidAmountPaise:  PLAN_PRICES[plan].amount,
+      referredUserId: userId,
+      paidAmountPaise: PLAN_PRICES[plan].amount,
       plan,
       razorpayPaymentId,
     });
@@ -170,8 +173,8 @@ const handleWebhook = async (rawBody, signature) => {
 
       try {
         await recordEarningFromPayment({
-          referredUserId:   userId,
-          paidAmountPaise:  PLAN_PRICES[plan].amount,
+          referredUserId: userId,
+          paidAmountPaise: PLAN_PRICES[plan].amount,
           plan,
           razorpayPaymentId: event.payload.payment.entity.id,
         });

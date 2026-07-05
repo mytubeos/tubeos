@@ -56,7 +56,11 @@ const globalErrorHandler = (err, req, res, next) => {
   if (process.env.NODE_ENV === 'development') {
     logger.error('Error', { message: err.message, stack: err.stack, statusCode });
   } else if (statusCode === 500) {
-    logger.error('Server Error', { message: err.message, path: req.originalUrl, method: req.method });
+    logger.error('Server Error', {
+      message: err.message,
+      path: req.originalUrl,
+      method: req.method,
+    });
   }
 
   // Only real server errors go to Sentry — 4xx (bad input, auth, not found)

@@ -54,20 +54,21 @@ export default {
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'brand-gradient': 'linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%)',
-        'card-gradient': 'linear-gradient(135deg, rgba(79,70,229,0.1) 0%, rgba(6,182,212,0.05) 100%)',
+        'card-gradient':
+          'linear-gradient(135deg, rgba(79,70,229,0.1) 0%, rgba(6,182,212,0.05) 100%)',
       },
       boxShadow: {
-        'brand': '0 0 30px rgba(79,70,229,0.3)',
-        'cyan': '0 0 30px rgba(6,182,212,0.3)',
-        'card': '0 4px 24px rgba(0,0,0,0.4)',
-        'glow': '0 0 60px rgba(79,70,229,0.15)',
+        brand: '0 0 30px rgba(79,70,229,0.3)',
+        cyan: '0 0 30px rgba(6,182,212,0.3)',
+        card: '0 4px 24px rgba(0,0,0,0.4)',
+        glow: '0 0 60px rgba(79,70,229,0.15)',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease forwards',
         'slide-up': 'slideUp 0.4s ease forwards',
         'slide-in': 'slideIn 0.3s ease forwards',
         'pulse-brand': 'pulseBrand 2s ease infinite',
-        'shimmer': 'shimmer 2s linear infinite',
+        shimmer: 'shimmer 2s linear infinite',
       },
       keyframes: {
         fadeIn: {

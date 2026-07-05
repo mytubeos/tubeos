@@ -1,108 +1,108 @@
 // src/pages/auth/Login.jsx
-import { useState, useEffect } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { useAuthStore } from '../../store/authStore';
-import authApi from '../../api/auth.api';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Toast } from '../../components/ui/Toast';
-import { Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
+import { useAuthStore } from '../../store/authStore'
+import authApi from '../../api/auth.api'
+import { Button } from '../../components/ui/Button'
+import { Input } from '../../components/ui/Input'
+import { Toast } from '../../components/ui/Toast'
+import { Eye, EyeOff } from 'lucide-react'
 
 export const Login = () => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { login, verifyEmail, isLoading: loading } = useAuthStore();
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const { login, verifyEmail, isLoading: loading } = useAuthStore()
 
   useEffect(() => {
     if (searchParams.get('verified') === '1') {
-      setSuccessMsg('Email verified! Now sign in with your password.');
+      setSuccessMsg('Email verified! Now sign in with your password.')
     }
-  }, []);
+  }, [])
 
-  const [formData, setFormData] = useState({ email: '', password: '' });
-  const [localError, setLocalError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
-  const [showPwd, setShowPwd] = useState(false);
+  const [formData, setFormData] = useState({ email: '', password: '' })
+  const [localError, setLocalError] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
+  const [showPwd, setShowPwd] = useState(false)
 
   // OTP flow when user is registered but not verified
-  const [showOtp, setShowOtp] = useState(false);
-  const [unverifiedUserId, setUnverifiedUserId] = useState('');
-  const [otp, setOtp] = useState('');
-  const [resending, setResending] = useState(false);
-  const [otpMsg, setOtpMsg] = useState('');
+  const [showOtp, setShowOtp] = useState(false)
+  const [unverifiedUserId, setUnverifiedUserId] = useState('')
+  const [otp, setOtp] = useState('')
+  const [resending, setResending] = useState(false)
+  const [otpMsg, setOtpMsg] = useState('')
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    setLocalError('');
-  };
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+    setLocalError('')
+  }
 
   const validateForm = () => {
     if (!formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-      setLocalError('Invalid email format');
-      return false;
+      setLocalError('Invalid email format')
+      return false
     }
     if (!formData.password) {
-      setLocalError('Password is required');
-      return false;
+      setLocalError('Password is required')
+      return false
     }
-    return true;
-  };
+    return true
+  }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
+    e.preventDefault()
+    if (!validateForm()) return
 
-    const result = await login(formData.email, formData.password);
+    const result = await login(formData.email, formData.password)
 
     if (result.success) {
-      navigate('/dashboard');
+      navigate('/dashboard')
     } else if (result.requiresVerification && result.userId) {
       // User registered but not verified — show OTP screen
-      setUnverifiedUserId(result.userId);
-      setShowOtp(true);
-      setLocalError('');
-      setOtpMsg('Enter the OTP sent to your email. Check Render logs if email not received.');
+      setUnverifiedUserId(result.userId)
+      setShowOtp(true)
+      setLocalError('')
+      setOtpMsg('Enter the OTP sent to your email. Check Render logs if email not received.')
     } else {
-      setLocalError(result.message || 'Login failed');
+      setLocalError(result.message || 'Login failed')
     }
-  };
+  }
 
   const handleOtpChange = (e) => {
-    setOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
-    setLocalError('');
-  };
+    setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))
+    setLocalError('')
+  }
 
   const handleOtpSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
     if (otp.length !== 6) {
-      setLocalError('OTP must be 6 digits');
-      return;
+      setLocalError('OTP must be 6 digits')
+      return
     }
-    const result = await verifyEmail(unverifiedUserId, otp);
+    const result = await verifyEmail(unverifiedUserId, otp)
     if (result.success) {
-      setShowOtp(false);
-      setOtp('');
-      setLocalError('');
-      setOtpMsg('');
-      setSuccessMsg('Email verified! Now sign in with your password.');
+      setShowOtp(false)
+      setOtp('')
+      setLocalError('')
+      setOtpMsg('')
+      setSuccessMsg('Email verified! Now sign in with your password.')
     } else {
-      setLocalError(result.message || 'OTP verification failed');
+      setLocalError(result.message || 'OTP verification failed')
     }
-  };
+  }
 
   const handleResendOTP = async () => {
-    setResending(true);
-    setLocalError('');
+    setResending(true)
+    setLocalError('')
     try {
-      await authApi.resendOTP(formData.email);
-      setOtpMsg('New OTP sent! Check Render logs or your email/spam folder.');
+      await authApi.resendOTP(formData.email)
+      setOtpMsg('New OTP sent! Check Render logs or your email/spam folder.')
     } catch (err) {
-      setLocalError(err.response?.data?.message || 'Failed to resend OTP');
+      setLocalError(err.response?.data?.message || 'Failed to resend OTP')
     } finally {
-      setResending(false);
+      setResending(false)
     }
-  };
+  }
 
   // ==================== OTP SCREEN (unverified user) ====================
   if (showOtp) {
@@ -166,7 +166,7 @@ export const Login = () => {
           </form>
         </div>
       </div>
-    );
+    )
   }
 
   // ==================== LOGIN FORM ====================
@@ -184,7 +184,14 @@ export const Login = () => {
         >
           <div className="mb-4">
             <label className="block text-sm font-medium text-slate-200 mb-2">Email Address</label>
-            <Input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="john@example.com" disabled={loading} />
+            <Input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="john@example.com"
+              disabled={loading}
+            />
           </div>
 
           <div className="mb-6">
@@ -195,8 +202,19 @@ export const Login = () => {
               </Link>
             </div>
             <div className="relative">
-              <Input type={showPwd ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} placeholder="••••••••" disabled={loading} />
-              <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+              <Input
+                type={showPwd ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="••••••••"
+                disabled={loading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+              >
                 {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
@@ -211,10 +229,12 @@ export const Login = () => {
 
           <p className="text-center text-slate-400">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-purple-400 hover:text-purple-300">Create one</Link>
+            <Link to="/signup" className="text-purple-400 hover:text-purple-300">
+              Create one
+            </Link>
           </p>
         </form>
       </div>
     </div>
-  );
+  )
 }

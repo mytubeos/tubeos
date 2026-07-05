@@ -63,13 +63,18 @@ export const useAuthStore = create(
           return { success: true }
         } catch (err) {
           set({ isLoading: false })
-          return { success: false, message: err.response?.data?.message || 'OTP verification failed' }
+          return {
+            success: false,
+            message: err.response?.data?.message || 'OTP verification failed',
+          }
         }
       },
 
       // Logout
       logout: async () => {
-        try { await authApi.logout() } catch {}
+        try {
+          await authApi.logout()
+        } catch {}
         localStorage.removeItem('accessToken')
         localStorage.removeItem('refreshToken')
         set({ user: null, accessToken: null, isAuthenticated: false })
@@ -87,7 +92,7 @@ export const useAuthStore = create(
 
       // Update user locally
       updateUser: (updates) => {
-        set(state => ({ user: { ...state.user, ...updates } }))
+        set((state) => ({ user: { ...state.user, ...updates } }))
       },
 
       setLoading: (isLoading) => set({ isLoading }),

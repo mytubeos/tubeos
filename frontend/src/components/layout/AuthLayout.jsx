@@ -10,16 +10,20 @@ export const AuthLayout = () => {
 
   return (
     <div className="min-h-screen bg-base-900 flex">
-
       {/* Left — Branding panel */}
-      <div className="hidden lg:flex lg:w-[45%] bg-base-800 border-r border-white/8
-                      flex-col justify-between p-10 relative overflow-hidden">
-
+      <div
+        className="hidden lg:flex lg:w-[45%] bg-base-800 border-r border-white/8
+                      flex-col justify-between p-10 relative overflow-hidden"
+      >
         {/* Glow Effects */}
-        <div className="absolute top-0 left-0 w-96 h-96 bg-brand/10 rounded-full
-                        blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan/8 rounded-full
-                        blur-3xl translate-x-1/2 translate-y-1/2 pointer-events-none" />
+        <div
+          className="absolute top-0 left-0 w-96 h-96 bg-brand/10 rounded-full
+                        blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+        />
+        <div
+          className="absolute bottom-0 right-0 w-96 h-96 bg-cyan/8 rounded-full
+                        blur-3xl translate-x-1/2 translate-y-1/2 pointer-events-none"
+        />
 
         {/* Logo */}
         <div className="flex items-center gap-3 relative z-10">
@@ -68,7 +72,7 @@ export const AuthLayout = () => {
               '⏰ Smart scheduling (best time AI)',
               '🚀 Upload directly to YouTube',
               '📈 Growth predictions & insights',
-            ].map(f => (
+            ].map((f) => (
               <div key={f} className="flex items-center gap-2 text-sm text-gray-400">
                 <div className="w-1.5 h-1.5 rounded-full bg-brand shrink-0" />
                 {f}

@@ -94,7 +94,12 @@ router.post('/content/tags', protect, checkUsageLimit('aiContent'), aiController
  * @access  Private
  * @body    { title, tags?, channelName?, addTimestamps? }
  */
-router.post('/content/description', protect, checkUsageLimit('aiContent'), aiController.generateDescription);
+router.post(
+  '/content/description',
+  protect,
+  checkUsageLimit('aiContent'),
+  aiController.generateDescription
+);
 
 /**
  * @route   GET /api/v1/ai/content/ideas
@@ -112,7 +117,12 @@ router.get('/content/ideas', protect, aiController.getContentIdeas);
  * @access  Private
  * @body    { topic, style?, duration? }
  */
-router.post('/shorts/script', protect, checkUsageLimit('aiContent'), aiController.generateShortsScript);
+router.post(
+  '/shorts/script',
+  protect,
+  checkUsageLimit('aiContent'),
+  aiController.generateShortsScript
+);
 
 /**
  * @route   POST /api/v1/ai/shorts/repurpose/:videoId
@@ -134,12 +144,7 @@ router.post(
  * @access  Private (Creator+)
  * @body    { thumbnailUrl?, title, niche? }
  */
-router.post(
-  '/thumbnail/score',
-  protect,
-  requirePlan('creator'),
-  aiController.scoreThumbnail
-);
+router.post('/thumbnail/score', protect, requirePlan('creator'), aiController.scoreThumbnail);
 
 /**
  * @route   GET /api/v1/ai/monetization/:channelId

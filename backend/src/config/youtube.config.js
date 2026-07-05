@@ -29,33 +29,33 @@ const QUOTA_COSTS = {
 };
 
 const VIDEO_CATEGORIES = {
-  '1': 'Film & Animation',
-  '2': 'Autos & Vehicles',
-  '10': 'Music',
-  '15': 'Pets & Animals',
-  '17': 'Sports',
-  '19': 'Travel & Events',
-  '20': 'Gaming',
-  '22': 'People & Blogs',
-  '23': 'Comedy',
-  '24': 'Entertainment',
-  '25': 'News & Politics',
-  '26': 'Howto & Style',
-  '27': 'Education',
-  '28': 'Science & Technology',
-  '29': 'Nonprofits & Activism',
+  1: 'Film & Animation',
+  2: 'Autos & Vehicles',
+  10: 'Music',
+  15: 'Pets & Animals',
+  17: 'Sports',
+  19: 'Travel & Events',
+  20: 'Gaming',
+  22: 'People & Blogs',
+  23: 'Comedy',
+  24: 'Entertainment',
+  25: 'News & Politics',
+  26: 'Howto & Style',
+  27: 'Education',
+  28: 'Science & Technology',
+  29: 'Nonprofits & Activism',
 };
 
 // Build OAuth2 authorization URL
 const getAuthUrl = (state) => {
   const params = new URLSearchParams({
-    client_id:     config.youtube.clientId,
-    redirect_uri:  config.youtube.redirectUri,
+    client_id: config.youtube.clientId,
+    redirect_uri: config.youtube.redirectUri,
     response_type: 'code',
-    scope:         YOUTUBE_SCOPES,
-    access_type:   'offline',  // refresh_token milega
-    prompt:        'consent',  // har baar refresh_token force karo
-    state:         state || 'default',
+    scope: YOUTUBE_SCOPES,
+    access_type: 'offline', // refresh_token milega
+    prompt: 'consent', // har baar refresh_token force karo
+    state: state || 'default',
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 };
@@ -67,10 +67,10 @@ const exchangeCodeForTokens = async (code) => {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id:     config.youtube.clientId,
+      client_id: config.youtube.clientId,
       client_secret: config.youtube.clientSecret,
-      redirect_uri:  config.youtube.redirectUri,
-      grant_type:    'authorization_code',
+      redirect_uri: config.youtube.redirectUri,
+      grant_type: 'authorization_code',
       code,
     }),
   });
@@ -78,7 +78,9 @@ const exchangeCodeForTokens = async (code) => {
   const data = await response.json();
 
   if (!response.ok) {
-    const err = new Error(data.error_description || data.error || 'Failed to exchange code for tokens');
+    const err = new Error(
+      data.error_description || data.error || 'Failed to exchange code for tokens'
+    );
     err.statusCode = response.status;
     throw err;
   }
@@ -86,7 +88,9 @@ const exchangeCodeForTokens = async (code) => {
   // FIX: refresh_token nahi aaya — ye tab hota hai jab user ne pehle consent de rakha ho
   // 'prompt: consent' se ye fix hona chahiye, lekin safety ke liye log karo
   if (!data.refresh_token) {
-    logger.warn('[youtube.config] No refresh_token received. User may need to revoke access at myaccount.google.com/permissions and retry.');
+    logger.warn(
+      '[youtube.config] No refresh_token received. User may need to revoke access at myaccount.google.com/permissions and retry.'
+    );
   }
 
   return data;
@@ -105,9 +109,9 @@ const refreshAccessToken = async (refreshToken) => {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id:     config.youtube.clientId,
+      client_id: config.youtube.clientId,
       client_secret: config.youtube.clientSecret,
-      grant_type:    'refresh_token',
+      grant_type: 'refresh_token',
       refresh_token: refreshToken,
     }),
   });
@@ -143,9 +147,7 @@ const youtubeRequest = async (endpoint, options = {}) => {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    const err = new Error(
-      error.error?.message || `YouTube API error: ${response.status}`
-    );
+    const err = new Error(error.error?.message || `YouTube API error: ${response.status}`);
     err.statusCode = response.status;
     err.youtubeError = error.error;
     throw err;

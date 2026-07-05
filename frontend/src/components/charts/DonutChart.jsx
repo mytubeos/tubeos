@@ -1,8 +1,5 @@
 // src/components/charts/DonutChart.jsx
-import {
-  PieChart, Pie, Cell, Tooltip,
-  ResponsiveContainer,
-} from 'recharts'
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { formatNumber } from '../../utils/formatters'
 
 const COLORS = ['#4F46E5', '#06B6D4', '#10B981', '#F59E0B', '#F43F5E', '#A855F7', '#6B7280']
@@ -22,8 +19,12 @@ const CustomTooltip = ({ active, payload }) => {
 }
 
 export const DonutChart = ({
-  data = [], nameKey = 'name', valueKey = 'value',
-  height = 200, innerRadius = 55, outerRadius = 80,
+  data = [],
+  nameKey = 'name',
+  valueKey = 'value',
+  height = 200,
+  innerRadius = 55,
+  outerRadius = 80,
 }) => (
   <ResponsiveContainer width="100%" height={height}>
     <PieChart>

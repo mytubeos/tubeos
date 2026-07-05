@@ -10,7 +10,6 @@ const {
   exchangeCodeForTokens,
   refreshAccessToken,
   youtubeRequest,
-  QUOTA_COSTS,
 } = require('../config/youtube.config');
 const logger = require('../config/logger');
 
@@ -72,13 +71,7 @@ const handleOAuthCallback = async (code, state) => {
   // 2. Exchange code for tokens
   const tokens = await exchangeCodeForTokens(code);
 
-  const {
-    access_token,
-    refresh_token,
-    expires_in,
-    token_type,
-    scope,
-  } = tokens;
+  const { access_token, refresh_token, expires_in, token_type, scope } = tokens;
 
   // 3. Get channel info from YouTube
   const channelData = await getChannelInfo(access_token);
@@ -151,8 +144,9 @@ const handleOAuthCallback = async (code, state) => {
 
   // 8. Fire-and-forget: import existing channel videos into Video collection
   setImmediate(() => {
-    require('./analytics.service').syncChannelVideos(channel, access_token, userId)
-      .catch(err => logger.error('[youtube] Initial video sync failed', { error: err.message }));
+    require('./analytics.service')
+      .syncChannelVideos(channel, access_token, userId)
+      .catch((err) => logger.error('[youtube] Initial video sync failed', { error: err.message }));
   });
 
   return {
@@ -164,14 +158,17 @@ const handleOAuthCallback = async (code, state) => {
 // ==================== GET CHANNEL INFO FROM YOUTUBE ====================
 const getChannelInfo = async (accessToken) => {
   try {
-    const data = await youtubeRequest(
-      '/channels?part=snippet,statistics&mine=true',
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
+    const data = await youtubeRequest('/channels?part=snippet,statistics&mine=true', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
     logger.debug('[getChannelInfo] items count', { count: data.items?.length });
     return data.items?.[0] || null;
   } catch (err) {
-    logger.error('[getChannelInfo] Failed', { error: err.message, statusCode: err.statusCode, youtubeError: err.youtubeError });
+    logger.error('[getChannelInfo] Failed', {
+      error: err.message,
+      statusCode: err.statusCode,
+      youtubeError: err.youtubeError,
+    });
     return null;
   }
 };
@@ -214,12 +211,9 @@ const syncChannelStats = async (channelId, userId) => {
   const accessToken = await getValidAccessToken(channel);
 
   // Fetch fresh stats from YouTube
-  const data = await youtubeRequest(
-    `/channels?part=snippet,statistics&id=${channel.channelId}`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }
-  );
+  const data = await youtubeRequest(`/channels?part=snippet,statistics&id=${channel.channelId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
 
   const ytChannel = data.items?.[0];
   if (!ytChannel) {
@@ -247,7 +241,10 @@ const syncChannelStats = async (channelId, userId) => {
 
 // ==================== DISCONNECT CHANNEL ====================
 const disconnectChannel = async (channelId, userId) => {
-  const channel = await YoutubeChannel.findOne({ _id: { $eq: channelId }, userId: { $eq: userId } });
+  const channel = await YoutubeChannel.findOne({
+    _id: { $eq: channelId },
+    userId: { $eq: userId },
+  });
 
   if (!channel) {
     const err = new Error('Channel not found');
@@ -301,7 +298,11 @@ const setPrimaryChannel = async (channelId, userId) => {
 
 // ==================== GET QUOTA STATUS ====================
 const getQuotaStatus = async (channelId, userId) => {
-  const channel = await YoutubeChannel.findOne({ _id: { $eq: channelId }, userId: { $eq: userId }, isActive: true });
+  const channel = await YoutubeChannel.findOne({
+    _id: { $eq: channelId },
+    userId: { $eq: userId },
+    isActive: true,
+  });
 
   if (!channel) {
     const err = new Error('Channel not found');

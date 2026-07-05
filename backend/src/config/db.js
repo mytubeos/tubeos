@@ -28,7 +28,6 @@ const connectDB = async (retries = 5) => {
       });
 
       return; // success — loop se bahar
-
     } catch (error) {
       logger.error(`MongoDB attempt ${i + 1}/${retries} failed`, { error: error.message });
       if (i === retries - 1) throw error; // last retry pe throw karo

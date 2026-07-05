@@ -30,15 +30,11 @@ const handleCallback = async (req, res) => {
     const { code, state, error } = req.query;
 
     if (error) {
-      return res.redirect(
-        `${config.cors.clientUrl}/youtube-callback?youtube_error=access_denied`
-      );
+      return res.redirect(`${config.cors.clientUrl}/youtube-callback?youtube_error=access_denied`);
     }
 
     if (!code || !state) {
-      return res.redirect(
-        `${config.cors.clientUrl}/youtube-callback?youtube_error=missing_params`
-      );
+      return res.redirect(`${config.cors.clientUrl}/youtube-callback?youtube_error=missing_params`);
     }
 
     const result = await youtubeService.handleOAuthCallback(code, state);
@@ -50,24 +46,21 @@ const handleCallback = async (req, res) => {
     // Duplicate callback (browser prefetch / double navigation): the first request
     // already connected the channel, so send the user to the success page, not an error.
     if (err.code === 'DUPLICATE_CALLBACK') {
-      return res.redirect(
-        `${config.cors.clientUrl}/youtube-callback?youtube_connected=true`
-      );
+      return res.redirect(`${config.cors.clientUrl}/youtube-callback?youtube_connected=true`);
     }
 
     logger.error('[youtube.controller] Callback error', { error: err.message, code: err.code });
 
-    const errorCode = err.code === 'NO_REFRESH_TOKEN'
-      ? 'no_refresh_token'
-      : err.code === 'RECONNECT_REQUIRED'
-      ? 'reconnect_required'
-      : err.statusCode === 409
-      ? 'already_connected'
-      : 'connect_failed';
+    const errorCode =
+      err.code === 'NO_REFRESH_TOKEN'
+        ? 'no_refresh_token'
+        : err.code === 'RECONNECT_REQUIRED'
+          ? 'reconnect_required'
+          : err.statusCode === 409
+            ? 'already_connected'
+            : 'connect_failed';
 
-    return res.redirect(
-      `${config.cors.clientUrl}/youtube-callback?youtube_error=${errorCode}`
-    );
+    return res.redirect(`${config.cors.clientUrl}/youtube-callback?youtube_error=${errorCode}`);
   }
 };
 
@@ -84,10 +77,7 @@ const getMyChannels = async (req, res) => {
 // POST /api/v1/youtube/channels/:channelId/sync
 const syncChannel = async (req, res) => {
   try {
-    const result = await youtubeService.syncChannelStats(
-      req.params.channelId,
-      req.user.id
-    );
+    const result = await youtubeService.syncChannelStats(req.params.channelId, req.user.id);
     return successResponse(res, 200, 'Channel synced', result.channel);
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);
@@ -97,10 +87,7 @@ const syncChannel = async (req, res) => {
 // DELETE /api/v1/youtube/channels/:channelId
 const disconnectChannel = async (req, res) => {
   try {
-    const result = await youtubeService.disconnectChannel(
-      req.params.channelId,
-      req.user.id
-    );
+    const result = await youtubeService.disconnectChannel(req.params.channelId, req.user.id);
     return successResponse(res, 200, result.message);
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);
@@ -110,10 +97,7 @@ const disconnectChannel = async (req, res) => {
 // PATCH /api/v1/youtube/channels/:channelId/primary
 const setPrimary = async (req, res) => {
   try {
-    const result = await youtubeService.setPrimaryChannel(
-      req.params.channelId,
-      req.user.id
-    );
+    const result = await youtubeService.setPrimaryChannel(req.params.channelId, req.user.id);
     return successResponse(res, 200, result.message, result.channel);
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);
@@ -123,10 +107,7 @@ const setPrimary = async (req, res) => {
 // GET /api/v1/youtube/channels/:channelId/quota
 const getQuota = async (req, res) => {
   try {
-    const result = await youtubeService.getQuotaStatus(
-      req.params.channelId,
-      req.user.id
-    );
+    const result = await youtubeService.getQuotaStatus(req.params.channelId, req.user.id);
     return successResponse(res, 200, 'Quota status', result.quota);
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);

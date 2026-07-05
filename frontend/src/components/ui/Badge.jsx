@@ -11,8 +11,12 @@ export const Badge = ({ children, variant = 'brand', size = 'sm', dot = false })
   }
 
   const dotColors = {
-    brand: 'bg-brand', cyan: 'bg-cyan', emerald: 'bg-emerald',
-    rose: 'bg-rose', amber: 'bg-amber', gray: 'bg-gray-400',
+    brand: 'bg-brand',
+    cyan: 'bg-cyan',
+    emerald: 'bg-emerald',
+    rose: 'bg-rose',
+    amber: 'bg-amber',
+    gray: 'bg-gray-400',
   }
 
   const sizes = {
@@ -22,11 +26,11 @@ export const Badge = ({ children, variant = 'brand', size = 'sm', dot = false })
   }
 
   return (
-    <span className={`inline-flex items-center gap-1.5 font-medium
-                      ${variants[variant]} ${sizes[size]}`}>
-      {dot && (
-        <span className={`w-1.5 h-1.5 rounded-full ${dotColors[variant]} animate-pulse`} />
-      )}
+    <span
+      className={`inline-flex items-center gap-1.5 font-medium
+                      ${variants[variant]} ${sizes[size]}`}
+    >
+      {dot && <span className={`w-1.5 h-1.5 rounded-full ${dotColors[variant]} animate-pulse`} />}
       {children}
     </span>
   )
@@ -41,7 +45,11 @@ export const PlanBadge = ({ plan }) => {
   }
   const { label, variant } = config[plan] || config.free
 
-  return <Badge variant={variant} size="sm">{label}</Badge>
+  return (
+    <Badge variant={variant} size="sm">
+      {label}
+    </Badge>
+  )
 }
 
 export const StatusBadge = ({ status }) => {
@@ -59,7 +67,11 @@ export const StatusBadge = ({ status }) => {
   }
   const { label, variant, dot } = config[status] || { label: status, variant: 'gray' }
 
-  return <Badge variant={variant} size="sm" dot={dot}>{label}</Badge>
+  return (
+    <Badge variant={variant} size="sm" dot={dot}>
+      {label}
+    </Badge>
+  )
 }
 
 export const SentimentBadge = ({ sentiment }) => {
@@ -72,5 +84,9 @@ export const SentimentBadge = ({ sentiment }) => {
   }
   const { label, variant } = config[sentiment] || config.neutral
 
-  return <Badge variant={variant} size="xs">{label}</Badge>
+  return (
+    <Badge variant={variant} size="xs">
+      {label}
+    </Badge>
+  )
 }

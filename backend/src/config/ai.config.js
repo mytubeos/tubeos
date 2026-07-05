@@ -1,37 +1,35 @@
 // src/config/ai.config.js
 
-const { config } = require('./env');
-
 const AI_MODELS = {
   gemini: {
-    name:        'gemini-2.0-flash',
-    provider:    'google',
-    maxTokens:   1000,
-    costPer1M:   0,
+    name: 'gemini-2.0-flash',
+    provider: 'google',
+    maxTokens: 1000,
+    costPer1M: 0,
   },
   groq: {
-    name:        'llama-3.3-70b-versatile',
-    provider:    'groq',
-    maxTokens:   1000,
-    costPer1M:   0, // free tier
+    name: 'llama-3.3-70b-versatile',
+    provider: 'groq',
+    maxTokens: 1000,
+    costPer1M: 0, // free tier
   },
   sonnet: {
-    name:        'claude-sonnet-4-5',
-    provider:    'anthropic',
-    maxTokens:   1000,
-    costPer1M:   3,
+    name: 'claude-sonnet-4-5',
+    provider: 'anthropic',
+    maxTokens: 1000,
+    costPer1M: 3,
   },
   opus: {
-    name:        'claude-opus-4-5',
-    provider:    'anthropic',
-    maxTokens:   2000,
-    costPer1M:   15,
+    name: 'claude-opus-4-5',
+    provider: 'anthropic',
+    maxTokens: 2000,
+    costPer1M: 15,
   },
   haiku: {
-    name:        'claude-haiku-4-5-20251001',
-    provider:    'anthropic',
-    maxTokens:   500,
-    costPer1M:   0.25,
+    name: 'claude-haiku-4-5-20251001',
+    provider: 'anthropic',
+    maxTokens: 500,
+    costPer1M: 0.25,
   },
 };
 
@@ -45,14 +43,14 @@ const getModelForPlan = (plan, task = 'default') => {
   const premium = testMode ? freeModel : AI_MODELS.opus;
 
   const mapping = {
-    free:    AI_MODELS.gemini,
+    free: AI_MODELS.gemini,
     creator: paid,
-    pro:     paid,
+    pro: paid,
     agency: {
-      default:       paid,
+      default: paid,
       deep_analysis: premium,
-      bulk:          testMode ? freeModel : bulkModel,
-      growth:        premium,
+      bulk: testMode ? freeModel : bulkModel,
+      growth: premium,
     },
   };
 
@@ -95,27 +93,36 @@ const callAIVision = async (plan, task, { prompt, systemPrompt, base64, mimeType
   return callClaudeVision(model.name, prompt, systemPrompt, base64, mimeType, model.maxTokens);
 };
 
-const callClaudeVision = async (modelName, prompt, systemPrompt, base64, mimeType, maxTokens = 1000) => {
+const callClaudeVision = async (
+  modelName,
+  prompt,
+  systemPrompt,
+  base64,
+  mimeType,
+  maxTokens = 1000
+) => {
   if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not configured');
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
-      'Content-Type':      'application/json',
-      'x-api-key':         process.env.ANTHROPIC_API_KEY,
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model:      modelName,
+      model: modelName,
       max_tokens: maxTokens,
-      system:     systemPrompt,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
-          { type: 'text', text: prompt },
-        ],
-      }],
+      system: systemPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
+            { type: 'text', text: prompt },
+          ],
+        },
+      ],
     }),
   });
 
@@ -138,13 +145,12 @@ const callGeminiVision = async (modelName, prompt, systemPrompt, base64, mimeTyp
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       system_instruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
-      contents: [{
-        role: 'user',
-        parts: [
-          { inline_data: { mime_type: mimeType, data: base64 } },
-          { text: prompt },
-        ],
-      }],
+      contents: [
+        {
+          role: 'user',
+          parts: [{ inline_data: { mime_type: mimeType, data: base64 } }, { text: prompt }],
+        },
+      ],
       generationConfig: { maxOutputTokens: 1000, temperature: 0.7 },
     }),
   });
@@ -165,14 +171,14 @@ const callClaude = async (modelName, messages, systemPrompt, maxTokens = 1000) =
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
-      'Content-Type':    'application/json',
-      'x-api-key':       process.env.ANTHROPIC_API_KEY,
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY,
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model:      modelName,
+      model: modelName,
       max_tokens: maxTokens,
-      system:     systemPrompt,
+      system: systemPrompt,
       messages,
     }),
   });
@@ -197,12 +203,12 @@ const callGroq = async (modelName, messages, systemPrompt, maxTokens = 1000) => 
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'Content-Type':  'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model:      modelName,
-      messages:   groqMessages,
+      model: modelName,
+      messages: groqMessages,
       max_tokens: maxTokens,
       temperature: 0.7,
     }),
@@ -223,8 +229,8 @@ const callGemini = async (modelName, messages, systemPrompt) => {
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-  const contents = messages.map(m => ({
-    role:  m.role === 'assistant' ? 'model' : 'user',
+  const contents = messages.map((m) => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
     parts: [{ text: m.content }],
   }));
 

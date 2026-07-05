@@ -15,7 +15,8 @@ const getEarnings = async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
     const result = await referralService.listEarnings(req.user.id, {
-      page: parseInt(page), limit: parseInt(limit),
+      page: parseInt(page),
+      limit: parseInt(limit),
     });
     return paginatedResponse(res, 200, 'Earnings fetched', result.earnings, result.pagination);
   } catch (err) {
@@ -27,7 +28,8 @@ const getReferredUsers = async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
     const result = await referralService.listReferredUsers(req.user.id, {
-      page: parseInt(page), limit: parseInt(limit),
+      page: parseInt(page),
+      limit: parseInt(limit),
     });
     return paginatedResponse(res, 200, 'Referred users', result.users, result.pagination);
   } catch (err) {
@@ -39,7 +41,10 @@ const createPayout = async (req, res) => {
   try {
     const { amount, method, upi, bankAccount } = req.body;
     const result = await referralService.requestPayout(req.user.id, {
-      amount: parseInt(amount), method, upi, bankAccount,
+      amount: parseInt(amount),
+      method,
+      upi,
+      bankAccount,
     });
     return successResponse(res, 201, result.message, result.payout);
   } catch (err) {
@@ -51,7 +56,8 @@ const getPayouts = async (req, res) => {
   try {
     const { page = 1, limit = 20 } = req.query;
     const result = await referralService.listPayouts(req.user.id, {
-      page: parseInt(page), limit: parseInt(limit),
+      page: parseInt(page),
+      limit: parseInt(limit),
     });
     return paginatedResponse(res, 200, 'Payouts fetched', result.payouts, result.pagination);
   } catch (err) {

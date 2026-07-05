@@ -96,7 +96,9 @@ const startServer = async () => {
     });
 
     process.on('unhandledRejection', (reason, promise) => {
-      logger.error('Unhandled Rejection', { reason: reason instanceof Error ? reason.message : String(reason) });
+      logger.error('Unhandled Rejection', {
+        reason: reason instanceof Error ? reason.message : String(reason),
+      });
       sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)));
       process.exit(1);
     });

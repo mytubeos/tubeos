@@ -4,12 +4,19 @@ import { X } from 'lucide-react'
 import { Button } from './Button'
 
 export const Modal = ({
-  isOpen, onClose, title, children,
-  size = 'md', footer, className = '',
+  isOpen,
+  onClose,
+  title,
+  children,
+  size = 'md',
+  footer,
+  className = '',
 }) => {
   // Close on Escape
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    const handler = (e) => {
+      if (e.key === 'Escape') onClose()
+    }
     if (isOpen) document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [isOpen, onClose])
@@ -18,7 +25,9 @@ export const Modal = ({
   useEffect(() => {
     if (isOpen) document.body.style.overflow = 'hidden'
     else document.body.style.overflow = ''
-    return () => { document.body.style.overflow = '' }
+    return () => {
+      document.body.style.overflow = ''
+    }
   }, [isOpen])
 
   if (!isOpen) return null
@@ -40,8 +49,10 @@ export const Modal = ({
       />
 
       {/* Modal */}
-      <div className={`relative w-full ${sizes[size]} bg-base-700 border border-white/10
-                       rounded-2xl shadow-2xl animate-slide-up ${className}`}>
+      <div
+        className={`relative w-full ${sizes[size]} bg-base-700 border border-white/10
+                       rounded-2xl shadow-2xl animate-slide-up ${className}`}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-white/8">
           <h2 className="font-display font-semibold text-white text-lg">{title}</h2>
@@ -55,9 +66,7 @@ export const Modal = ({
         </div>
 
         {/* Body */}
-        <div className="p-5 max-h-[70vh] overflow-y-auto">
-          {children}
-        </div>
+        <div className="p-5 max-h-[70vh] overflow-y-auto">{children}</div>
 
         {/* Footer */}
         {footer && (
@@ -71,17 +80,25 @@ export const Modal = ({
 }
 
 export const ConfirmModal = ({
-  isOpen, onClose, onConfirm,
+  isOpen,
+  onClose,
+  onConfirm,
   title = 'Are you sure?',
   message = 'This action cannot be undone.',
   confirmLabel = 'Confirm',
   confirmVariant = 'danger',
   loading = false,
 }) => (
-  <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm"
+  <Modal
+    isOpen={isOpen}
+    onClose={onClose}
+    title={title}
+    size="sm"
     footer={
       <>
-        <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+        <Button variant="ghost" size="sm" onClick={onClose}>
+          Cancel
+        </Button>
         <Button variant={confirmVariant} size="sm" onClick={onConfirm} loading={loading}>
           {confirmLabel}
         </Button>

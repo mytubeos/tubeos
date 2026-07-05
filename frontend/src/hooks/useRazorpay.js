@@ -17,7 +17,7 @@ const loadRazorpayScript = () =>
 
 export const useRazorpay = ({ onSuccess } = {}) => {
   const [loadingPlan, setLoadingPlan] = useState(null)
-  const { user, updateUser } = useAuthStore()
+  const { updateUser } = useAuthStore()
 
   const startCheckout = async (plan, couponCode = null) => {
     if (loadingPlan) return

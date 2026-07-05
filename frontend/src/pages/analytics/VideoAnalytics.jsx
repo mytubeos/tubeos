@@ -6,8 +6,7 @@ import { analyticsApi } from '../../api/analytics.api'
 import { AreaLineChart } from '../../components/charts/LineChart'
 import { Card, CardHeader, MetricCard } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
-import { StatusBadge } from '../../components/ui/Badge'
-import { formatNumber, formatDate, formatDuration, formatPct, formatWatchTime } from '../../utils/formatters'
+import { formatNumber, formatDate, formatDuration, formatPct } from '../../utils/formatters'
 
 export const VideoAnalytics = () => {
   const { videoId } = useParams()
@@ -19,8 +18,9 @@ export const VideoAnalytics = () => {
   useEffect(() => {
     if (!videoId) return
     setLoading(true)
-    analyticsApi.getVideoBreakdown(videoId)
-      .then(res => setData(res.data.data))
+    analyticsApi
+      .getVideoBreakdown(videoId)
+      .then((res) => setData(res.data.data))
       .catch(() => navigate(-1))
       .finally(() => setLoading(false))
   }, [videoId])
@@ -31,7 +31,11 @@ export const VideoAnalytics = () => {
         <div className="shimmer h-8 w-48 rounded" />
         <div className="shimmer h-40 rounded-xl" />
         <div className="grid grid-cols-4 gap-4">
-          {Array(4).fill(0).map((_, i) => <div key={i} className="shimmer h-24 rounded-xl" />)}
+          {Array(4)
+            .fill(0)
+            .map((_, i) => (
+              <div key={i} className="shimmer h-24 rounded-xl" />
+            ))}
         </div>
       </div>
     )
@@ -49,7 +53,6 @@ export const VideoAnalytics = () => {
 
   return (
     <div className="space-y-5">
-
       {/* Back + Title */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" icon={ArrowLeft} onClick={() => navigate(-1)}>
@@ -60,12 +63,13 @@ export const VideoAnalytics = () => {
       {/* Video header */}
       <div className="glass p-5 rounded-2xl flex items-start gap-5">
         <div className="w-40 h-24 rounded-xl overflow-hidden bg-base-600 shrink-0">
-          {video.thumbnail?.url
-            ? <img src={video.thumbnail.url} className="w-full h-full object-cover" alt="" />
-            : <div className="w-full h-full bg-brand/20 flex items-center justify-center">
-                <Eye size={24} className="text-brand/50" />
-              </div>
-          }
+          {video.thumbnail?.url ? (
+            <img src={video.thumbnail.url} className="w-full h-full object-cover" alt="" />
+          ) : (
+            <div className="w-full h-full bg-brand/20 flex items-center justify-center">
+              <Eye size={24} className="text-brand/50" />
+            </div>
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-3">
@@ -79,7 +83,9 @@ export const VideoAnalytics = () => {
                 rel="noopener noreferrer"
                 className="shrink-0"
               >
-                <Button variant="ghost" size="sm" icon={ExternalLink}>YouTube</Button>
+                <Button variant="ghost" size="sm" icon={ExternalLink}>
+                  YouTube
+                </Button>
               </a>
             )}
           </div>
@@ -124,7 +130,7 @@ export const VideoAnalytics = () => {
         <div className="flex items-center justify-between mb-4">
           <CardHeader title="Daily Performance" icon={Zap} />
           <div className="flex items-center glass rounded-xl p-1">
-            {METRICS.map(m => (
+            {METRICS.map((m) => (
               <button
                 key={m.key}
                 onClick={() => setActiveMetric(m.key)}
@@ -138,13 +144,13 @@ export const VideoAnalytics = () => {
         </div>
 
         <AreaLineChart
-          data={(daily || []).map(d => ({
+          data={(daily || []).map((d) => ({
             date: d.date,
             value: d[activeMetric] || 0,
           }))}
           dataKey="value"
-          label={METRICS.find(m => m.key === activeMetric)?.label}
-          color={METRICS.find(m => m.key === activeMetric)?.color || '#4F46E5'}
+          label={METRICS.find((m) => m.key === activeMetric)?.label}
+          color={METRICS.find((m) => m.key === activeMetric)?.color || '#4F46E5'}
           height={220}
         />
       </Card>

@@ -139,7 +139,7 @@ const forgotPassword = async (req, res) => {
 
     // Always return success (security: don't reveal if email exists)
     return successResponse(res, 200, result.message);
-  } catch (err) {
+  } catch {
     // Still return 200 for security
     return successResponse(res, 200, 'If an account exists, a password reset link has been sent.');
   }
@@ -278,13 +278,24 @@ const logoutAll = async (req, res) => {
 const updatePreferences = async (req, res) => {
   try {
     const User = require('../models/user.model');
-    const allowed = ['emailNotifications', 'marketingEmails', 'weeklyReport', 'reportFrequency', 'reportDay', 'timezone', 'language'];
+    const allowed = [
+      'emailNotifications',
+      'marketingEmails',
+      'weeklyReport',
+      'reportFrequency',
+      'reportDay',
+      'timezone',
+      'language',
+    ];
     const updates = {};
-    allowed.forEach(key => {
+    allowed.forEach((key) => {
       if (req.body[key] !== undefined) updates[`preferences.${key}`] = req.body[key];
     });
-    if (Object.keys(updates).length === 0) return errorResponse(res, 400, 'No valid preference fields provided');
-    const user = await User.findByIdAndUpdate(req.user.id, { $set: updates }, { new: true }).select('preferences');
+    if (Object.keys(updates).length === 0)
+      return errorResponse(res, 400, 'No valid preference fields provided');
+    const user = await User.findByIdAndUpdate(req.user.id, { $set: updates }, { new: true }).select(
+      'preferences'
+    );
     return successResponse(res, 200, 'Preferences updated', { preferences: user.preferences });
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);
@@ -306,4 +317,3 @@ module.exports = {
   logoutAll,
   updatePreferences,
 };
-  

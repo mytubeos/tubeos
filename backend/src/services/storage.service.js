@@ -20,7 +20,7 @@ let Storage = null;
 try {
   // Optional dependency — won't crash boot if missing
   ({ Storage } = require('@google-cloud/storage'));
-} catch (err) {
+} catch {
   logger.warn('[storage] @google-cloud/storage not installed — GCS disabled');
 }
 

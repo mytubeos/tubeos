@@ -1,8 +1,15 @@
 // src/components/charts/LineChart.jsx
 import {
-  AreaChart, Area, LineChart as ReLineChart, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend,
+  AreaChart,
+  Area,
+  LineChart as ReLineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
 } from 'recharts'
 import { formatNumber } from '../../utils/formatters'
 
@@ -26,10 +33,16 @@ const CustomTooltip = ({ active, payload, label, formatter }) => {
 }
 
 export const AreaLineChart = ({
-  data = [], dataKey = 'value', label = 'Value',
-  color = '#4F46E5', height = 220,
-  formatter, gradientId = 'chartGrad',
-  secondDataKey, secondLabel, secondColor = '#06B6D4',
+  data = [],
+  dataKey = 'value',
+  label = 'Value',
+  color = '#4F46E5',
+  height = 220,
+  formatter,
+  gradientId = 'chartGrad',
+  secondDataKey,
+  secondLabel,
+  secondColor = '#06B6D4',
   xKey = 'date',
 }) => (
   <ResponsiveContainer width="100%" height={height}>
@@ -108,7 +121,9 @@ export const MultiLineChart = ({ data = [], lines = [], height = 220, xKey = 'da
         tick={{ fill: '#6B7280', fontSize: 11 }}
         axisLine={false}
         tickLine={false}
-        tickFormatter={(v) => new Date(v).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+        tickFormatter={(v) =>
+          new Date(v).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })
+        }
       />
       <YAxis
         tick={{ fill: '#6B7280', fontSize: 11 }}
@@ -117,9 +132,7 @@ export const MultiLineChart = ({ data = [], lines = [], height = 220, xKey = 'da
         tickFormatter={formatNumber}
       />
       <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.08)' }} />
-      <Legend
-        wrapperStyle={{ paddingTop: '16px', fontSize: '12px', color: '#9CA3AF' }}
-      />
+      <Legend wrapperStyle={{ paddingTop: '16px', fontSize: '12px', color: '#9CA3AF' }} />
       {lines.map(({ key, label, color }) => (
         <Line
           key={key}

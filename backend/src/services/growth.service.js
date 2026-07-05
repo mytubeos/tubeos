@@ -3,7 +3,6 @@
 
 const { GrowthPrediction, Competitor, Trend } = require('../models/growth.model');
 const { ChannelAnalytics } = require('../models/analytics.model');
-const Video = require('../models/video.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
 const { getValidAccessToken } = require('./youtube.service');
 const { youtubeRequest } = require('../config/youtube.config');
@@ -16,7 +15,10 @@ const getGrowthPrediction = async (userId, channelId) => {
   const cached = await getCache(cacheKey);
   if (cached) return cached;
 
-  const channel = await YoutubeChannel.findOne({ _id: { $eq: channelId }, userId: { $eq: userId } });
+  const channel = await YoutubeChannel.findOne({
+    _id: { $eq: channelId },
+    userId: { $eq: userId },
+  });
   if (!channel) {
     const err = new Error('Channel not found');
     err.statusCode = 404;
@@ -30,7 +32,9 @@ const getGrowthPrediction = async (userId, channelId) => {
   const analyticsData = await ChannelAnalytics.find({
     channelId,
     date: { $gte: startDate },
-  }).sort({ date: 1 }).lean();
+  })
+    .sort({ date: 1 })
+    .lean();
 
   if (analyticsData.length < 7) {
     return getDefaultPrediction(channel, userId, channelId);
@@ -40,10 +44,10 @@ const getGrowthPrediction = async (userId, channelId) => {
   const recentData = analyticsData.slice(-30);
   const olderData = analyticsData.slice(0, 30);
 
-  const recentAvgViews = avg(recentData.map(d => d.metrics.views));
-  const olderAvgViews = avg(olderData.map(d => d.metrics.views));
-  const recentSubsGained = sum(recentData.map(d => d.metrics.subscribersGained));
-  const olderSubsGained = sum(olderData.map(d => d.metrics.subscribersGained));
+  const recentAvgViews = avg(recentData.map((d) => d.metrics.views));
+  const olderAvgViews = avg(olderData.map((d) => d.metrics.views));
+  const recentSubsGained = sum(recentData.map((d) => d.metrics.subscribersGained));
+  const olderSubsGained = sum(olderData.map((d) => d.metrics.subscribersGained));
 
   const viewsGrowthRate = calcGrowthRate(recentAvgViews, olderAvgViews);
   const subsGrowthRate = calcGrowthRate(recentSubsGained, olderSubsGained);
@@ -64,8 +68,8 @@ const getGrowthPrediction = async (userId, channelId) => {
   const suggestions = generateSuggestions(channel, analyticsData, recentData);
 
   // Trend direction
-  const trendDirection = subsGrowthRate > 5 ? 'growing'
-    : subsGrowthRate < -5 ? 'declining' : 'stable';
+  const trendDirection =
+    subsGrowthRate > 5 ? 'growing' : subsGrowthRate < -5 ? 'declining' : 'stable';
 
   const result = {
     channelId,
@@ -101,7 +105,8 @@ const getGrowthPrediction = async (userId, channelId) => {
     milestones,
     suggestions,
     trendDirection,
-    dataQuality: analyticsData.length >= 60 ? 'high' : analyticsData.length >= 30 ? 'medium' : 'low',
+    dataQuality:
+      analyticsData.length >= 60 ? 'high' : analyticsData.length >= 30 ? 'medium' : 'low',
     calculatedAt: new Date(),
   };
 
@@ -136,10 +141,9 @@ const resolveYoutubeChannel = async (rawInput, accessToken) => {
     query = `forHandle=${encodeURIComponent(handle)}`;
   }
 
-  const data = await youtubeRequest(
-    `/channels?part=snippet,statistics&${query}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
+  const data = await youtubeRequest(`/channels?part=snippet,statistics&${query}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
   return data.items?.[0] || null;
 };
 
@@ -156,7 +160,11 @@ const addCompetitor = async (userId, channelId, youtubeChannelId) => {
     throw err;
   }
 
-  const existingCount = await Competitor.countDocuments({ userId, trackingChannelId: channelId, isActive: true });
+  const existingCount = await Competitor.countDocuments({
+    userId,
+    trackingChannelId: channelId,
+    isActive: true,
+  });
   if (existingCount >= limit) {
     const err = new Error(`Your plan allows tracking ${limit} competitors. Upgrade for more.`);
     err.statusCode = 403;
@@ -164,8 +172,10 @@ const addCompetitor = async (userId, channelId, youtubeChannelId) => {
   }
 
   // Fetch competitor channel info from YouTube (resolves ID, @handle, or full URL)
-  const trackingChannel = await YoutubeChannel.findOne({ _id: { $eq: channelId }, userId: { $eq: userId } })
-    .select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
+  const trackingChannel = await YoutubeChannel.findOne({
+    _id: { $eq: channelId },
+    userId: { $eq: userId },
+  }).select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
 
   const accessToken = await getValidAccessToken(trackingChannel);
 
@@ -177,7 +187,10 @@ const addCompetitor = async (userId, channelId, youtubeChannelId) => {
   }
 
   // Check not duplicate — by the real resolved channel ID, not whatever the user typed
-  const existing = await Competitor.findOne({ userId: { $eq: userId }, youtubeChannelId: { $eq: yt.id } });
+  const existing = await Competitor.findOne({
+    userId: { $eq: userId },
+    youtubeChannelId: { $eq: yt.id },
+  });
   if (existing) {
     const err = new Error('Already tracking this competitor');
     err.statusCode = 409;
@@ -197,12 +210,14 @@ const addCompetitor = async (userId, channelId, youtubeChannelId) => {
       videoCount: parseInt(yt.statistics.videoCount) || 0,
       lastSyncedAt: new Date(),
     },
-    history: [{
-      date: new Date(),
-      subscribers: parseInt(yt.statistics.subscriberCount) || 0,
-      totalViews: parseInt(yt.statistics.viewCount) || 0,
-      videoCount: parseInt(yt.statistics.videoCount) || 0,
-    }],
+    history: [
+      {
+        date: new Date(),
+        subscribers: parseInt(yt.statistics.subscriberCount) || 0,
+        totalViews: parseInt(yt.statistics.viewCount) || 0,
+        videoCount: parseInt(yt.statistics.videoCount) || 0,
+      },
+    ],
   });
 
   return { competitor, message: `Now tracking "${competitor.channelName}"` };
@@ -270,7 +285,10 @@ const syncCompetitor = async (userId, competitorId) => {
 
 // ==================== REMOVE COMPETITOR ====================
 const removeCompetitor = async (userId, competitorId) => {
-  const competitor = await Competitor.findOne({ _id: { $eq: competitorId }, userId: { $eq: userId } });
+  const competitor = await Competitor.findOne({
+    _id: { $eq: competitorId },
+    userId: { $eq: userId },
+  });
   if (!competitor) {
     const err = new Error('Competitor not found');
     err.statusCode = 404;
@@ -291,10 +309,13 @@ const getTrends = async (userId, channelId, category = null) => {
 
   // Auto-refresh if data is older than 12 hours
   const newest = await Trend.findOne().sort({ detectedAt: -1 }).lean();
-  const stale = !newest || (Date.now() - new Date(newest.detectedAt).getTime()) > 12 * 60 * 60 * 1000;
+  const stale = !newest || Date.now() - new Date(newest.detectedAt).getTime() > 12 * 60 * 60 * 1000;
   if (stale) {
-    try { await refreshTrendsFromYouTube('IN'); }
-    catch (err) { logger.warn('[trends] refresh failed', { error: err.message }); }
+    try {
+      await refreshTrendsFromYouTube('IN');
+    } catch (err) {
+      logger.warn('[trends] refresh failed', { error: err.message });
+    }
   }
 
   const query = {
@@ -303,9 +324,7 @@ const getTrends = async (userId, channelId, category = null) => {
   };
   if (category) query.category = category;
 
-  const trends = await Trend.find(query)
-    .sort({ opportunityScore: -1 })
-    .limit(20);
+  const trends = await Trend.find(query).sort({ opportunityScore: -1 }).limit(20);
 
   // If still no trends, return curated defaults
   if (trends.length === 0) {
@@ -328,9 +347,10 @@ const refreshTrendsFromYouTube = async (region = 'IN') => {
     throw new Error('YOUTUBE_API_KEY not configured — cannot fetch trends');
   }
 
-  const url = `https://www.googleapis.com/youtube/v3/videos`
-    + `?part=snippet,statistics&chart=mostPopular`
-    + `&regionCode=${region}&maxResults=50&key=${apiKey}`;
+  const url =
+    `https://www.googleapis.com/youtube/v3/videos` +
+    `?part=snippet,statistics&chart=mostPopular` +
+    `&regionCode=${region}&maxResults=50&key=${apiKey}`;
 
   const res = await fetch(url);
   if (!res.ok) {
@@ -366,9 +386,10 @@ const refreshTrendsFromYouTube = async (region = 'IN') => {
       category: m.category,
       searchVolume: m.views,
       growthRate: Math.min(100, Math.round((m.count / (data.items?.length || 1)) * 100)),
-      opportunityScore: Math.min(100, Math.round(
-        m.count * 8 + Math.log10(m.views + 1) * 5 + (m.engage / m.count) * 4
-      )),
+      opportunityScore: Math.min(
+        100,
+        Math.round(m.count * 8 + Math.log10(m.views + 1) * 5 + (m.engage / m.count) * 4)
+      ),
       status: m.count >= 3 ? 'peaking' : 'rising',
     }))
     .sort((a, b) => b.opportunityScore - a.opportunityScore)
@@ -391,9 +412,18 @@ const refreshTrendsFromYouTube = async (region = 'IN') => {
 
 const mapYtCategory = (id) => {
   const map = {
-    '10': 'Music', '17': 'Sports', '20': 'Gaming', '22': 'People & Blogs',
-    '23': 'Comedy', '24': 'Entertainment', '25': 'News', '26': 'Howto & Style',
-    '27': 'Education', '28': 'Technology', '19': 'Travel', '15': 'Pets',
+    10: 'Music',
+    17: 'Sports',
+    20: 'Gaming',
+    22: 'People & Blogs',
+    23: 'Comedy',
+    24: 'Entertainment',
+    25: 'News',
+    26: 'Howto & Style',
+    27: 'Education',
+    28: 'Technology',
+    19: 'Travel',
+    15: 'Pets',
   };
   return map[id] || 'General';
 };
@@ -409,7 +439,7 @@ const getPerformanceSuggestions = async (userId, channelId) => {
 };
 
 // ==================== HELPERS ====================
-const avg = (arr) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
 const sum = (arr) => arr.reduce((a, b) => a + b, 0);
 
 const calcGrowthRate = (current, previous) => {
@@ -433,12 +463,11 @@ const predictGrowth = (current, weeklyGain, weeks, growthRate) => {
 };
 
 const calculateMilestones = (current, weeklyGain, growthRate) => {
-  const milestoneTargets = [
-    1000, 5000, 10000, 25000, 50000, 100000,
-    500000, 1000000,
-  ].filter(t => t > current);
+  const milestoneTargets = [1000, 5000, 10000, 25000, 50000, 100000, 500000, 1000000].filter(
+    (t) => t > current
+  );
 
-  return milestoneTargets.slice(0, 4).map(target => {
+  return milestoneTargets.slice(0, 4).map((target) => {
     const gap = target - current;
     const weeksNeeded = weeklyGain > 0 ? Math.ceil(gap / weeklyGain) : 999;
     const daysNeeded = weeksNeeded * 7;
@@ -446,8 +475,12 @@ const calculateMilestones = (current, weeklyGain, growthRate) => {
 
     return {
       target,
-      label: target >= 1000000 ? `${target / 1000000}M`
-        : target >= 1000 ? `${target / 1000}K` : target.toString(),
+      label:
+        target >= 1000000
+          ? `${target / 1000000}M`
+          : target >= 1000
+            ? `${target / 1000}K`
+            : target.toString(),
       estimatedDate,
       daysAway: daysNeeded,
       probability: daysNeeded <= 365 ? 80 : daysNeeded <= 730 ? 60 : 40,
@@ -457,8 +490,8 @@ const calculateMilestones = (current, weeklyGain, growthRate) => {
 
 const generateSuggestions = (channel, allData, recentData) => {
   const suggestions = [];
-  const recentAvgViews = avg(recentData.map(d => d.metrics.views));
-  const avgCtr = avg(recentData.map(d => d.metrics.impressionsCtr));
+  const recentAvgViews = avg(recentData.map((d) => d.metrics.views));
+  const avgCtr = avg(recentData.map((d) => d.metrics.impressionsCtr));
 
   if (avgCtr < 4) {
     suggestions.push({
@@ -470,8 +503,7 @@ const generateSuggestions = (channel, allData, recentData) => {
     });
   }
 
-  const videosPerMonth = allData.length > 0
-    ? (allData.length / 90) * 30 : 0;
+  const videosPerMonth = allData.length > 0 ? (allData.length / 90) * 30 : 0;
 
   if (videosPerMonth < 4) {
     suggestions.push({
@@ -487,7 +519,8 @@ const generateSuggestions = (channel, allData, recentData) => {
     suggestions.push({
       type: 'best_time',
       title: 'Post at peak hours',
-      description: 'Use the Time Intelligence heatmap to schedule videos when your audience is most active.',
+      description:
+        'Use the Time Intelligence heatmap to schedule videos when your audience is most active.',
       impact: 'medium',
       metric: 'views',
     });
@@ -496,7 +529,8 @@ const generateSuggestions = (channel, allData, recentData) => {
   suggestions.push({
     type: 'engagement',
     title: 'Reply to comments within 2 hours',
-    description: 'Channels that respond to comments in the first 2 hours see 28% higher engagement rates.',
+    description:
+      'Channels that respond to comments in the first 2 hours see 28% higher engagement rates.',
     impact: 'medium',
     metric: 'engagement',
   });
@@ -533,11 +567,41 @@ const getDefaultPrediction = (channel, userId, channelId) => ({
 
 const getDefaultTrends = () => ({
   trends: [
-    { keyword: 'AI Tools 2026', category: 'Technology', opportunityScore: 92, status: 'rising', growthRate: 45 },
-    { keyword: 'YouTube Automation', category: 'Business', opportunityScore: 88, status: 'rising', growthRate: 38 },
-    { keyword: 'Shorts Strategy', category: 'Creator', opportunityScore: 85, status: 'peaking', growthRate: 30 },
-    { keyword: 'Passive Income India', category: 'Finance', opportunityScore: 82, status: 'rising', growthRate: 25 },
-    { keyword: 'AI Video Editing', category: 'Technology', opportunityScore: 79, status: 'rising', growthRate: 55 },
+    {
+      keyword: 'AI Tools 2026',
+      category: 'Technology',
+      opportunityScore: 92,
+      status: 'rising',
+      growthRate: 45,
+    },
+    {
+      keyword: 'YouTube Automation',
+      category: 'Business',
+      opportunityScore: 88,
+      status: 'rising',
+      growthRate: 38,
+    },
+    {
+      keyword: 'Shorts Strategy',
+      category: 'Creator',
+      opportunityScore: 85,
+      status: 'peaking',
+      growthRate: 30,
+    },
+    {
+      keyword: 'Passive Income India',
+      category: 'Finance',
+      opportunityScore: 82,
+      status: 'rising',
+      growthRate: 25,
+    },
+    {
+      keyword: 'AI Video Editing',
+      category: 'Technology',
+      opportunityScore: 79,
+      status: 'rising',
+      growthRate: 55,
+    },
   ],
   updatedAt: new Date(),
   note: 'Curated trends — real-time data available with analytics sync',

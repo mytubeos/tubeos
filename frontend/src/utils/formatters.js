@@ -97,7 +97,7 @@ export const getInitials = (name) => {
   if (!name) return 'U'
   return name
     .split(' ')
-    .map(w => w[0])
+    .map((w) => w[0])
     .join('')
     .toUpperCase()
     .substring(0, 2)

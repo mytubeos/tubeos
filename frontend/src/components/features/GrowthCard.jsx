@@ -2,7 +2,6 @@
 import { TrendingUp, TrendingDown, Minus, Target, Lightbulb } from 'lucide-react'
 import { Card, CardHeader } from '../ui/Card'
 import { formatNumber, formatDate } from '../../utils/formatters'
-import { Badge } from '../ui/Badge'
 
 const TrendIcon = ({ direction }) => {
   if (direction === 'growing') return <TrendingUp size={16} className="text-emerald" />
@@ -51,7 +50,9 @@ const SuggestionRow = ({ suggestion }) => {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
           <p className="text-sm font-medium text-white">{suggestion.title}</p>
-          <span className={`text-2xs font-medium px-1.5 py-0.5 rounded-md ${impactColors[suggestion.impact]}`}>
+          <span
+            className={`text-2xs font-medium px-1.5 py-0.5 rounded-md ${impactColors[suggestion.impact]}`}
+          >
             {suggestion.impact}
           </span>
         </div>
@@ -67,7 +68,11 @@ export const GrowthPredictionCard = ({ data, loading = false }) => {
       <Card>
         <div className="shimmer h-5 w-40 rounded mb-5" />
         <div className="space-y-3">
-          {Array(3).fill(0).map((_, i) => <div key={i} className="shimmer h-16 rounded-xl" />)}
+          {Array(3)
+            .fill(0)
+            .map((_, i) => (
+              <div key={i} className="shimmer h-16 rounded-xl" />
+            ))}
         </div>
       </Card>
     )
@@ -83,7 +88,13 @@ export const GrowthPredictionCard = ({ data, loading = false }) => {
         title="Growth Prediction"
         subtitle={`Trend: ${data.trendDirection}`}
         icon={TrendingUp}
-        iconColor={data.trendDirection === 'growing' ? 'emerald' : data.trendDirection === 'declining' ? 'rose' : 'brand'}
+        iconColor={
+          data.trendDirection === 'growing'
+            ? 'emerald'
+            : data.trendDirection === 'declining'
+              ? 'rose'
+              : 'brand'
+        }
         action={
           <div className="flex items-center gap-1.5 text-xs text-gray-400">
             <TrendIcon direction={data.trendDirection} />
@@ -104,9 +115,7 @@ export const GrowthPredictionCard = ({ data, loading = false }) => {
             <p className={`font-display font-bold text-lg text-${color}`}>
               {pd?.subscribers ? formatNumber(pd.subscribers) : '—'}
             </p>
-            {pd?.gain > 0 && (
-              <p className="text-2xs text-gray-600">+{formatNumber(pd.gain)}</p>
-            )}
+            {pd?.gain > 0 && <p className="text-2xs text-gray-600">+{formatNumber(pd.gain)}</p>}
             {pd?.confidence > 0 && (
               <p className="text-2xs text-gray-600 mt-1">{pd.confidence}% confidence</p>
             )}
@@ -131,13 +140,24 @@ export const GrowthPredictionCard = ({ data, loading = false }) => {
 
 export const SuggestionsCard = ({ suggestions = [], loading = false }) => (
   <Card>
-    <CardHeader title="Performance Tips" subtitle="AI recommendations" icon={Lightbulb} iconColor="amber" />
+    <CardHeader
+      title="Performance Tips"
+      subtitle="AI recommendations"
+      icon={Lightbulb}
+      iconColor="amber"
+    />
     {loading ? (
       <div className="space-y-3">
-        {Array(3).fill(0).map((_, i) => <div key={i} className="shimmer h-14 rounded-xl" />)}
+        {Array(3)
+          .fill(0)
+          .map((_, i) => (
+            <div key={i} className="shimmer h-14 rounded-xl" />
+          ))}
       </div>
     ) : suggestions.length === 0 ? (
-      <p className="text-center text-gray-500 text-sm py-6">No suggestions yet — sync analytics to get tips</p>
+      <p className="text-center text-gray-500 text-sm py-6">
+        No suggestions yet — sync analytics to get tips
+      </p>
     ) : (
       suggestions.slice(0, 4).map((s, i) => <SuggestionRow key={i} suggestion={s} />)
     )}

@@ -26,7 +26,10 @@ const verifyPayment = async (req, res) => {
     }
 
     const result = await paymentService.verifyPayment(req.user.id, {
-      razorpayOrderId, razorpayPaymentId, razorpaySignature, plan,
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
+      plan,
       couponCode: couponCode || null,
     });
 

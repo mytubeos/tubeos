@@ -1,12 +1,12 @@
 // src/pages/analytics/Analytics.jsx
 import { useState, useEffect } from 'react'
-import { BarChart3, RefreshCw, Eye, Users, Clock, Zap, TrendingUp } from 'lucide-react'
+import { BarChart3, RefreshCw, TrendingUp } from 'lucide-react'
 import { useChannelStore } from '../../store/channelStore'
 import { analyticsApi } from '../../api/analytics.api'
 import { KPIGrid } from '../../components/features/KPICard'
 import { TopVideos } from '../../components/features/TopVideos'
 import { TrafficSources } from '../../components/features/TrafficSources'
-import { AreaLineChart, MultiLineChart } from '../../components/charts/LineChart'
+import { AreaLineChart } from '../../components/charts/LineChart'
 import { DayWiseBar } from '../../components/charts/BarChart'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
@@ -56,13 +56,16 @@ export const Analytics = () => {
     }
   }
 
-  useEffect(() => { fetchAll() }, [channelId, period])
+  useEffect(() => {
+    fetchAll()
+  }, [channelId, period])
 
   // Refetch only graph when metric changes
   useEffect(() => {
     if (!channelId) return
-    analyticsApi.getDailyGraph(channelId, period, activeMetric)
-      .then(res => setGraphData(res.data.data))
+    analyticsApi
+      .getDailyGraph(channelId, period, activeMetric)
+      .then((res) => setGraphData(res.data.data))
       .catch(() => {})
   }, [activeMetric, channelId, period])
 
@@ -94,11 +97,10 @@ export const Analytics = () => {
 
   return (
     <div className="space-y-6">
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center glass rounded-xl p-1">
-          {PERIODS.map(p => (
+          {PERIODS.map((p) => (
             <button
               key={p.value}
               onClick={() => setPeriod(p.value)}
@@ -123,7 +125,7 @@ export const Analytics = () => {
         <div className="flex items-center justify-between mb-4">
           <CardHeader title="Performance Over Time" icon={TrendingUp} />
           <div className="flex items-center glass rounded-xl p-1">
-            {METRIC_TABS.map(m => (
+            {METRIC_TABS.map((m) => (
               <button
                 key={m.key}
                 onClick={() => setActiveMetric(m.key)}
@@ -142,8 +144,8 @@ export const Analytics = () => {
           <AreaLineChart
             data={graphData?.data || []}
             dataKey="value"
-            label={METRIC_TABS.find(m => m.key === activeMetric)?.label}
-            color={METRIC_TABS.find(m => m.key === activeMetric)?.color || '#4F46E5'}
+            label={METRIC_TABS.find((m) => m.key === activeMetric)?.label}
+            color={METRIC_TABS.find((m) => m.key === activeMetric)?.color || '#4F46E5'}
             height={240}
           />
         )}

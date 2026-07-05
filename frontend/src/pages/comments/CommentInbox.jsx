@@ -1,13 +1,10 @@
 // src/pages/comments/CommentInbox.jsx
 import { useState, useEffect } from 'react'
-import { MessageCircle, RefreshCw, Search, Filter, Sparkles, CheckCheck } from 'lucide-react'
+import { MessageCircle, RefreshCw, Search, Sparkles, CheckCheck } from 'lucide-react'
 import { useChannelStore } from '../../store/channelStore'
 import { aiApi } from '../../api/ai.api'
 import { CommentCard } from '../../components/features/CommentCard'
-import { ReplyBox } from '../../components/features/ReplyBox'
 import { Button } from '../../components/ui/Button'
-import { Badge } from '../../components/ui/Badge'
-import { Modal } from '../../components/ui/Modal'
 import { formatNumber } from '../../utils/formatters'
 import toast from 'react-hot-toast'
 
@@ -45,7 +42,6 @@ export const CommentInbox = () => {
   const [generatingId, setGeneratingId] = useState(null)
   const [postingId, setPostingId] = useState(null)
   const [bulkGenerating, setBulkGenerating] = useState(false)
-  const [replyModal, setReplyModal] = useState(null)
 
   const fetchComments = async () => {
     if (!channelId) return
@@ -67,10 +63,14 @@ export const CommentInbox = () => {
     }
   }
 
-  useEffect(() => { fetchComments() }, [channelId, statusFilter, sentimentFilter, page])
+  useEffect(() => {
+    fetchComments()
+  }, [channelId, statusFilter, sentimentFilter, page])
 
   useEffect(() => {
-    const timer = setTimeout(() => { if (channelId) fetchComments() }, 400)
+    const timer = setTimeout(() => {
+      if (channelId) fetchComments()
+    }, 400)
     return () => clearTimeout(timer)
   }, [search])
 
@@ -92,9 +92,7 @@ export const CommentInbox = () => {
     setGeneratingId(commentId)
     try {
       const res = await aiApi.generateReply(commentId, tone)
-      setComments(prev =>
-        prev.map(c => c._id === commentId ? { ...c, ...res.data.data } : c)
-      )
+      setComments((prev) => prev.map((c) => (c._id === commentId ? { ...c, ...res.data.data } : c)))
       toast.success('Reply generated!')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to generate reply')
@@ -107,8 +105,8 @@ export const CommentInbox = () => {
     setPostingId(commentId)
     try {
       await aiApi.postReply(commentId)
-      setComments(prev =>
-        prev.map(c => c._id === commentId ? { ...c, status: 'replied' } : c)
+      setComments((prev) =>
+        prev.map((c) => (c._id === commentId ? { ...c, status: 'replied' } : c))
       )
       toast.success('Reply posted!')
     } catch {
@@ -122,11 +120,9 @@ export const CommentInbox = () => {
     try {
       await aiApi.updateCommentStatus(commentId, status)
       if (statusFilter && status !== statusFilter) {
-        setComments(prev => prev.filter(c => c._id !== commentId))
+        setComments((prev) => prev.filter((c) => c._id !== commentId))
       } else {
-        setComments(prev =>
-          prev.map(c => c._id === commentId ? { ...c, status } : c)
-        )
+        setComments((prev) => prev.map((c) => (c._id === commentId ? { ...c, status } : c)))
       }
     } catch {
       toast.error('Failed to update status')
@@ -134,7 +130,10 @@ export const CommentInbox = () => {
   }
 
   const handleBulkGenerate = async () => {
-    if (!selectedIds.length) { toast.error('Select comments first'); return }
+    if (!selectedIds.length) {
+      toast.error('Select comments first')
+      return
+    }
     setBulkGenerating(true)
     try {
       await aiApi.bulkGenerateReplies({
@@ -153,9 +152,7 @@ export const CommentInbox = () => {
   }
 
   const toggleSelect = (id) => {
-    setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    )
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]))
   }
 
   if (!channelId) {
@@ -169,7 +166,6 @@ export const CommentInbox = () => {
 
   return (
     <div className="space-y-4">
-
       {/* Stats bar */}
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
         {[
@@ -197,7 +193,7 @@ export const CommentInbox = () => {
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
             <input
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               placeholder="Search comments..."
               className="input-field pl-9 text-sm h-9"
             />
@@ -205,23 +201,12 @@ export const CommentInbox = () => {
         </div>
 
         {selectedIds.length > 0 && (
-          <Button
-            size="sm"
-            icon={Sparkles}
-            onClick={handleBulkGenerate}
-            loading={bulkGenerating}
-          >
+          <Button size="sm" icon={Sparkles} onClick={handleBulkGenerate} loading={bulkGenerating}>
             Generate {selectedIds.length} Replies
           </Button>
         )}
 
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={RefreshCw}
-          onClick={handleSync}
-          loading={syncing}
-        >
+        <Button variant="ghost" size="sm" icon={RefreshCw} onClick={handleSync} loading={syncing}>
           Sync
         </Button>
       </div>
@@ -229,14 +214,19 @@ export const CommentInbox = () => {
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center glass rounded-xl p-1">
-          {STATUS_FILTERS.map(f => (
+          {STATUS_FILTERS.map((f) => (
             <button
               key={f.value}
-              onClick={() => { setStatusFilter(f.value); setPage(1) }}
+              onClick={() => {
+                setStatusFilter(f.value)
+                setPage(1)
+              }}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all
-                          ${statusFilter === f.value
-                            ? 'bg-brand text-white'
-                            : 'text-gray-400 hover:text-white'}`}
+                          ${
+                            statusFilter === f.value
+                              ? 'bg-brand text-white'
+                              : 'text-gray-400 hover:text-white'
+                          }`}
             >
               {f.label}
               {f.value === 'unread' && stats.unread > 0 && (
@@ -249,14 +239,19 @@ export const CommentInbox = () => {
         </div>
 
         <div className="flex items-center glass rounded-xl p-1">
-          {SENTIMENT_FILTERS.map(f => (
+          {SENTIMENT_FILTERS.map((f) => (
             <button
               key={f.value}
-              onClick={() => { setSentimentFilter(f.value); setPage(1) }}
+              onClick={() => {
+                setSentimentFilter(f.value)
+                setPage(1)
+              }}
               className={`px-2.5 py-1.5 rounded-lg text-xs transition-all
-                          ${sentimentFilter === f.value
-                            ? 'bg-white/10 text-white'
-                            : 'text-gray-500 hover:text-gray-300'}`}
+                          ${
+                            sentimentFilter === f.value
+                              ? 'bg-white/10 text-white'
+                              : 'text-gray-500 hover:text-gray-300'
+                          }`}
             >
               {f.label}
             </button>
@@ -268,7 +263,11 @@ export const CommentInbox = () => {
       {comments.length > 0 && (
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setSelectedIds(selectedIds.length === comments.length ? [] : comments.map(c => c._id))}
+            onClick={() =>
+              setSelectedIds(
+                selectedIds.length === comments.length ? [] : comments.map((c) => c._id)
+              )
+            }
             className="text-xs text-gray-500 hover:text-brand transition-colors flex items-center gap-1.5"
           >
             <CheckCheck size={14} />
@@ -277,16 +276,18 @@ export const CommentInbox = () => {
           {selectedIds.length > 0 && (
             <span className="text-xs text-brand">{selectedIds.length} selected</span>
           )}
-          <span className="text-xs text-gray-600 ml-auto">
-            {total} comments
-          </span>
+          <span className="text-xs text-gray-600 ml-auto">{total} comments</span>
         </div>
       )}
 
       {/* Comments list */}
       {loading ? (
         <div className="space-y-3">
-          {Array(5).fill(0).map((_, i) => <div key={i} className="shimmer h-20 rounded-xl" />)}
+          {Array(5)
+            .fill(0)
+            .map((_, i) => (
+              <div key={i} className="shimmer h-20 rounded-xl" />
+            ))}
         </div>
       ) : comments.length === 0 ? (
         <div className="text-center py-16 text-gray-500">
@@ -298,7 +299,7 @@ export const CommentInbox = () => {
         </div>
       ) : (
         <div className="space-y-2">
-          {comments.map(comment => (
+          {comments.map((comment) => (
             <CommentCard
               key={comment._id}
               comment={comment}
@@ -307,10 +308,7 @@ export const CommentInbox = () => {
               expanded={expandedId === comment._id}
               onExpand={() => setExpandedId(expandedId === comment._id ? null : comment._id)}
               onGenerateReply={handleGenerateReply}
-              onPostReply={() => {
-                setReplyModal(comment)
-                setExpandedId(comment._id)
-              }}
+              onPostReply={() => handlePostReply(comment._id)}
               onUpdateStatus={handleUpdateStatus}
               generating={generatingId === comment._id}
               posting={postingId === comment._id}
@@ -322,11 +320,21 @@ export const CommentInbox = () => {
       {/* Pagination */}
       {total > 20 && (
         <div className="flex items-center justify-center gap-2 pt-2">
-          <Button variant="ghost" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
+          >
             Previous
           </Button>
           <span className="text-sm text-gray-500">Page {page}</span>
-          <Button variant="ghost" size="sm" disabled={comments.length < 20} onClick={() => setPage(p => p + 1)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={comments.length < 20}
+            onClick={() => setPage((p) => p + 1)}
+          >
             Next
           </Button>
         </div>

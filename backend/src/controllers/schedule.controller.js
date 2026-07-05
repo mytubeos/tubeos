@@ -2,11 +2,7 @@
 // FIX: req.user._id → req.user.id (consistent)
 
 const scheduleService = require('../services/schedule.service');
-const {
-  successResponse,
-  errorResponse,
-  paginatedResponse,
-} = require('../utils/response.utils');
+const { successResponse, errorResponse, paginatedResponse } = require('../utils/response.utils');
 
 const createSchedule = async (req, res) => {
   try {
@@ -14,10 +10,12 @@ const createSchedule = async (req, res) => {
     if (!videoId || !scheduledAt) {
       return errorResponse(res, 400, 'videoId and scheduledAt are required');
     }
-    const result = await scheduleService.createSchedule(
-      req.user.id, videoId, scheduledAt,
-      { timezone, isAiRecommended, aiScore, aiReason }
-    );
+    const result = await scheduleService.createSchedule(req.user.id, videoId, scheduledAt, {
+      timezone,
+      isAiRecommended,
+      aiScore,
+      aiReason,
+    });
     return successResponse(res, 201, result.message, result.schedule);
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);
@@ -59,7 +57,7 @@ const getCalendar = async (req, res) => {
     const now = new Date();
     const result = await scheduleService.getCalendarView(
       req.user.id,
-      parseInt(year)  || now.getFullYear(),
+      parseInt(year) || now.getFullYear(),
       parseInt(month) || now.getMonth() + 1
     );
     return successResponse(res, 200, 'Calendar fetched', result);
@@ -79,7 +77,10 @@ const getJobStatus = async (req, res) => {
 
 const getBestTime = async (req, res) => {
   try {
-    const result = await scheduleService.getBestTimeRecommendation(req.user.id, req.params.channelId);
+    const result = await scheduleService.getBestTimeRecommendation(
+      req.user.id,
+      req.params.channelId
+    );
     return successResponse(res, 200, 'Best time recommendation', result);
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);

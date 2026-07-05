@@ -1,5 +1,14 @@
 // src/components/features/KPICard.jsx
-import { Eye, Users, Clock, ThumbsUp, MessageCircle, TrendingUp, DollarSign, Zap } from 'lucide-react'
+import {
+  Eye,
+  Users,
+  Clock,
+  ThumbsUp,
+  MessageCircle,
+  TrendingUp,
+  DollarSign,
+  Zap,
+} from 'lucide-react'
 import { MetricCard } from '../ui/Card'
 import { formatNumber, formatWatchTime, formatCurrency, formatPct } from '../../utils/formatters'
 
@@ -83,8 +92,9 @@ export const KPIGrid = ({ overview, loading = false, channelStats = null, period
 
   // Show period-based gained/lost only when we have real Analytics API data
   // In fallback mode (youtube.readonly only), gained/lost are both 0 — show total instead
-  const hasRealSubData = (metrics.subscribers?.gained || 0) > 0 || (metrics.subscribers?.lost || 0) > 0
-  const subValue    = hasRealSubData ? metrics.subscribers?.net : channelStats?.subscriberCount
+  const hasRealSubData =
+    (metrics.subscribers?.gained || 0) > 0 || (metrics.subscribers?.lost || 0) > 0
+  const subValue = hasRealSubData ? metrics.subscribers?.net : channelStats?.subscriberCount
   const subSubtitle = hasRealSubData
     ? `+${formatNumber(metrics.subscribers?.gained ?? 0)} gained · ${periodLabel}`
     : 'Total subscribers'
@@ -121,4 +131,3 @@ export const KPIGrid = ({ overview, loading = false, channelStats = null, period
     </div>
   )
 }
-

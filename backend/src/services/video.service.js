@@ -6,7 +6,6 @@ const YoutubeChannel = require('../models/youtube-channel.model');
 const User = require('../models/user.model');
 const { getValidAccessToken } = require('./youtube.service');
 const { youtubeRequest, QUOTA_COSTS } = require('../config/youtube.config');
-const { setCache, getCache } = require('../config/redis');
 const storageService = require('./storage.service');
 const logger = require('../config/logger');
 
@@ -99,9 +98,7 @@ const uploadVideo = async (userId, videoId, fileRef, mimeType) => {
     // 4. Check user plan upload limit
     const user = await User.findById(userId);
     if (!user.hasUsageLeft('uploads')) {
-      const err = new Error(
-        `Monthly upload limit reached. Upgrade your plan for more uploads.`
-      );
+      const err = new Error(`Monthly upload limit reached. Upgrade your plan for more uploads.`);
       err.statusCode = 429;
       throw err;
     }
@@ -115,72 +112,70 @@ const uploadVideo = async (userId, videoId, fileRef, mimeType) => {
     await video.save();
 
     try {
-    // 7. Prepare video metadata for YouTube
-    const videoResource = {
-      snippet: {
-        title: video.title,
-        description: video.description,
-        tags: video.tags,
-        categoryId: video.category,
-        defaultLanguage: video.language,
-      },
-      status: {
-        privacyStatus: video.scheduledAt ? 'private' : video.privacy,
-        // If scheduled, YouTube will make it public at scheduled time
-        publishAt: video.scheduledAt ? video.scheduledAt.toISOString() : undefined,
-        selfDeclaredMadeForKids: false,
-      },
-    };
+      // 7. Prepare video metadata for YouTube
+      const videoResource = {
+        snippet: {
+          title: video.title,
+          description: video.description,
+          tags: video.tags,
+          categoryId: video.category,
+          defaultLanguage: video.language,
+        },
+        status: {
+          privacyStatus: video.scheduledAt ? 'private' : video.privacy,
+          // If scheduled, YouTube will make it public at scheduled time
+          publishAt: video.scheduledAt ? video.scheduledAt.toISOString() : undefined,
+          selfDeclaredMadeForKids: false,
+        },
+      };
 
-    // 8. Upload to YouTube using resumable upload
-    const youtubeVideoId = await uploadToYouTube(
-      accessToken,
-      videoResource,
-      fileRef,
-      mimeType
-    );
+      // 8. Upload to YouTube using resumable upload
+      const youtubeVideoId = await uploadToYouTube(accessToken, videoResource, fileRef, mimeType);
 
-    // 9. Upload custom thumbnail if provided
-    if (video.thumbnail.url && video.thumbnail.isCustom) {
-      await uploadThumbnailToYouTube(accessToken, youtubeVideoId, video.thumbnail.url);
-    }
+      // 9. Upload custom thumbnail if provided
+      if (video.thumbnail.url && video.thumbnail.isCustom) {
+        await uploadThumbnailToYouTube(accessToken, youtubeVideoId, video.thumbnail.url);
+      }
 
-    // 10. Update video with YouTube data
-    video.youtubeVideoId = youtubeVideoId;
-    video.youtubeUrl = `https://www.youtube.com/watch?v=${youtubeVideoId}`;
-    video.status = video.scheduledAt ? 'scheduled' : 'processing';
-    video.uploadInfo.uploadCompletedAt = new Date();
-    await video.save();
+      // 10. Update video with YouTube data
+      video.youtubeVideoId = youtubeVideoId;
+      video.youtubeUrl = `https://www.youtube.com/watch?v=${youtubeVideoId}`;
+      video.status = video.scheduledAt ? 'scheduled' : 'processing';
+      video.uploadInfo.uploadCompletedAt = new Date();
+      await video.save();
 
-    // 11. Update channel quota + user usage
-    await YoutubeChannel.findByIdAndUpdate(channel._id, {
-      $inc: {
-        'quota.dailyUsed': QUOTA_COSTS.videos_insert,
-        'quota.uploadCount': 1,
-      },
-    });
+      // 11. Update channel quota + user usage
+      await YoutubeChannel.findByIdAndUpdate(channel._id, {
+        $inc: {
+          'quota.dailyUsed': QUOTA_COSTS.videos_insert,
+          'quota.uploadCount': 1,
+        },
+      });
 
-    await User.findByIdAndUpdate({ $eq: userId }, {
-      $inc: { 'usage.uploadsUsed': 1 },
-    });
+      await User.findByIdAndUpdate(
+        { $eq: userId },
+        {
+          $inc: { 'usage.uploadsUsed': 1 },
+        }
+      );
 
-    return {
-      video,
-      youtubeVideoId,
-      message: video.scheduledAt
-        ? `Video scheduled for ${video.scheduledAt.toISOString()}`
-        : 'Video uploaded successfully! YouTube is processing it.',
-    };
-  } catch (err) {
-    // Update video status to failed
-    video.status = 'failed';
-    video.lastError = {
-      message: err.message,
-      code: err.code || 'UPLOAD_FAILED',
-      occurredAt: new Date(),
-    };
-    video.retryCount += 1;
-    await video.save();
+      return {
+        video,
+        youtubeVideoId,
+        message: video.scheduledAt
+          ? `Video scheduled for ${video.scheduledAt.toISOString()}`
+          : 'Video uploaded successfully! YouTube is processing it.',
+      };
+    } catch (err) {
+      // Update video status to failed
+      video.status = 'failed';
+      video.lastError = {
+        message: err.message,
+        code: err.code || 'UPLOAD_FAILED',
+        occurredAt: new Date(),
+      };
+      video.retryCount += 1;
+      await video.save();
 
       throw err;
     }
@@ -300,8 +295,14 @@ const updateVideo = async (userId, videoId, updates) => {
 
   // Update allowed fields
   const allowedFields = [
-    'title', 'description', 'tags', 'category',
-    'privacy', 'scheduledAt', 'notes', 'thumbnail',
+    'title',
+    'description',
+    'tags',
+    'category',
+    'privacy',
+    'scheduledAt',
+    'notes',
+    'thumbnail',
   ];
 
   allowedFields.forEach((field) => {
@@ -315,29 +316,27 @@ const updateVideo = async (userId, videoId, updates) => {
   // If video is already on YouTube, update metadata there too
   if (video.youtubeVideoId && video.status !== 'draft') {
     try {
-      const channel = await YoutubeChannel.findById(video.channelId)
-        .select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
+      const channel = await YoutubeChannel.findById(video.channelId).select(
+        '+oauth.accessToken +oauth.refreshToken +oauth.expiresAt'
+      );
       const accessToken = await getValidAccessToken(channel);
 
-      await youtubeRequest(
-        `/videos?part=snippet,status`,
-        {
-          method: 'PUT',
-          headers: { Authorization: `Bearer ${accessToken}` },
-          body: JSON.stringify({
-            id: video.youtubeVideoId,
-            snippet: {
-              title: video.title,
-              description: video.description,
-              tags: video.tags,
-              categoryId: video.category,
-            },
-            status: {
-              privacyStatus: video.privacy,
-            },
-          }),
-        }
-      );
+      await youtubeRequest(`/videos?part=snippet,status`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({
+          id: video.youtubeVideoId,
+          snippet: {
+            title: video.title,
+            description: video.description,
+            tags: video.tags,
+            categoryId: video.category,
+          },
+          status: {
+            privacyStatus: video.privacy,
+          },
+        }),
+      });
     } catch (err) {
       logger.error('Failed to update YouTube metadata', { error: err.message });
       // Don't fail — local update succeeded
@@ -359,17 +358,15 @@ const deleteVideo = async (userId, videoId, deleteFromYouTube = false) => {
   // Optionally delete from YouTube
   if (deleteFromYouTube && video.youtubeVideoId) {
     try {
-      const channel = await YoutubeChannel.findById(video.channelId)
-        .select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
+      const channel = await YoutubeChannel.findById(video.channelId).select(
+        '+oauth.accessToken +oauth.refreshToken +oauth.expiresAt'
+      );
       const accessToken = await getValidAccessToken(channel);
 
-      await youtubeRequest(
-        `/videos?id=${video.youtubeVideoId}`,
-        {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
+      await youtubeRequest(`/videos?id=${video.youtubeVideoId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
     } catch (err) {
       logger.error('Failed to delete from YouTube', { error: err.message });
     }
@@ -381,13 +378,7 @@ const deleteVideo = async (userId, videoId, deleteFromYouTube = false) => {
 
 // ==================== GET MY VIDEOS ====================
 const getMyVideos = async (userId, filters = {}) => {
-  const {
-    page = 1,
-    limit = 10,
-    status,
-    channelId,
-    search,
-  } = filters;
+  const { page = 1, limit = 10, status, channelId, search } = filters;
 
   const query = { userId };
   if (status) query.status = status;
@@ -417,8 +408,10 @@ const getMyVideos = async (userId, filters = {}) => {
 
 // ==================== GET SINGLE VIDEO ====================
 const getVideo = async (userId, videoId) => {
-  const video = await Video.findOne({ _id: { $eq: videoId }, userId: { $eq: userId } })
-    .populate('channelId', 'channelName thumbnail channelId stats');
+  const video = await Video.findOne({ _id: { $eq: videoId }, userId: { $eq: userId } }).populate(
+    'channelId',
+    'channelName thumbnail channelId stats'
+  );
 
   if (!video) {
     const err = new Error('Video not found');
@@ -445,7 +438,11 @@ const getUpcomingVideos = async (userId) => {
 
 // ==================== CANCEL SCHEDULED VIDEO ====================
 const cancelScheduled = async (userId, videoId) => {
-  const video = await Video.findOne({ _id: { $eq: videoId }, userId: { $eq: userId }, status: 'scheduled' });
+  const video = await Video.findOne({
+    _id: { $eq: videoId },
+    userId: { $eq: userId },
+    status: 'scheduled',
+  });
   if (!video) {
     const err = new Error('Scheduled video not found');
     err.statusCode = 404;

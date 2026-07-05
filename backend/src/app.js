@@ -14,19 +14,21 @@ const logger = require('./config/logger');
 const app = express();
 
 // ==================== SECURITY MIDDLEWARES ====================
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' },
-  // Helmet's default COOP is 'same-origin', which severs window.opener and
-  // blocks the parent's `popup.closed` check — breaking the Google OAuth popup
-  // (the "Cross-Origin-Opener-Policy would block the window.closed call" errors).
-  // 'same-origin-allow-popups' keeps the opener link so the popup flow works.
-  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
-}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    // Helmet's default COOP is 'same-origin', which severs window.opener and
+    // blocks the parent's `popup.closed` check — breaking the Google OAuth popup
+    // (the "Cross-Origin-Opener-Policy would block the window.closed call" errors).
+    // 'same-origin-allow-popups' keeps the opener link so the popup flow works.
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+  })
+);
 
 // CORS — every allowed origin comes from env config, nothing hardcoded here.
 const allowedOrigins = [
-  config.cors.clientUrl,        // .env CLIENT_URL
-  ...config.cors.extraOrigins,  // .env CORS_EXTRA_ORIGINS (defaults to local dev ports when unset in dev)
+  config.cors.clientUrl, // .env CLIENT_URL
+  ...config.cors.extraOrigins, // .env CORS_EXTRA_ORIGINS (defaults to local dev ports when unset in dev)
 ];
 
 // Vercel sets VERCEL_URL automatically at build/deploy time (not user-configured)
@@ -37,23 +39,25 @@ if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
 }
 
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    // FIX: Vercel preview URLs allow karo (*.vercel.app)
-    if (origin.endsWith('.vercel.app') || origin.endsWith('.onrender.com')) {
-      return callback(null, true);
-    }
-    return callback(new Error(`CORS: ${origin} not allowed`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      // FIX: Vercel preview URLs allow karo (*.vercel.app)
+      if (origin.endsWith('.vercel.app') || origin.endsWith('.onrender.com')) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS: ${origin} not allowed`));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 
 // Trust proxy (needed for Render deployment)
 app.set('trust proxy', 1);
@@ -64,7 +68,9 @@ app.use((req, res, next) => {
   if (req.originalUrl === '/api/v1/payment/webhook') {
     let data = '';
     req.setEncoding('utf8');
-    req.on('data', (chunk) => { data += chunk; });
+    req.on('data', (chunk) => {
+      data += chunk;
+    });
     req.on('end', () => {
       req.rawBody = data;
       req.body = JSON.parse(data || '{}');

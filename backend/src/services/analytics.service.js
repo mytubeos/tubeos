@@ -16,10 +16,9 @@ const logger = require('../config/logger');
 const syncChannelVideos = async (channel, accessToken, userId) => {
   try {
     // 1. Get uploads playlist ID
-    const channelData = await youtubeRequest(
-      `/channels?part=contentDetails&mine=true`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
+    const channelData = await youtubeRequest(`/channels?part=contentDetails&mine=true`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
     const uploadsPlaylistId = channelData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
     if (!uploadsPlaylistId) return 0;
 
@@ -29,8 +28,10 @@ const syncChannelVideos = async (channel, accessToken, userId) => {
 
     do {
       const url = `/playlistItems?part=contentDetails&playlistId=${uploadsPlaylistId}&maxResults=50${pageToken ? `&pageToken=${pageToken}` : ''}`;
-      const data = await youtubeRequest(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-      (data.items || []).forEach(item => {
+      const data = await youtubeRequest(url, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      (data.items || []).forEach((item) => {
         if (item.contentDetails?.videoId) allVideoIds.push(item.contentDetails.videoId);
       });
       pageToken = data.nextPageToken || null;
@@ -48,9 +49,14 @@ const syncChannelVideos = async (channel, accessToken, userId) => {
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
-      const bulkOps = (videosData.items || []).map(video => {
+      const bulkOps = (videosData.items || []).map((video) => {
         const thumbs = video.snippet?.thumbnails;
-        const thumbUrl = thumbs?.maxres?.url || thumbs?.high?.url || thumbs?.medium?.url || thumbs?.default?.url || null;
+        const thumbUrl =
+          thumbs?.maxres?.url ||
+          thumbs?.high?.url ||
+          thumbs?.medium?.url ||
+          thumbs?.default?.url ||
+          null;
         const duration = parseDuration(video.contentDetails?.duration || '');
         const isShort = duration > 0 && duration <= 60;
 
@@ -69,7 +75,9 @@ const syncChannelVideos = async (channel, accessToken, userId) => {
                 category: video.snippet?.categoryId || '22',
                 privacy: video.status?.privacyStatus || 'public',
                 status: 'published',
-                publishedAt: video.snippet?.publishedAt ? new Date(video.snippet.publishedAt) : null,
+                publishedAt: video.snippet?.publishedAt
+                  ? new Date(video.snippet.publishedAt)
+                  : null,
                 'thumbnail.url': thumbUrl,
                 'thumbnail.isCustom': false,
                 isShort,
@@ -91,7 +99,9 @@ const syncChannelVideos = async (channel, accessToken, userId) => {
       }
     }
 
-    logger.info(`[analytics] syncChannelVideos: imported ${totalSynced} videos`, { channelId: channel._id });
+    logger.info(`[analytics] syncChannelVideos: imported ${totalSynced} videos`, {
+      channelId: channel._id,
+    });
     return totalSynced;
   } catch (err) {
     logger.error('[analytics] syncChannelVideos failed', { error: err.message });
@@ -103,7 +113,7 @@ const syncChannelVideos = async (channel, accessToken, userId) => {
 const parseDuration = (iso) => {
   const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
   if (!match) return 0;
-  return (parseInt(match[1] || 0) * 3600) + (parseInt(match[2] || 0) * 60) + parseInt(match[3] || 0);
+  return parseInt(match[1] || 0) * 3600 + parseInt(match[2] || 0) * 60 + parseInt(match[3] || 0);
 };
 
 // Clears all analytics caches for a channel so next request gets fresh DB data
@@ -111,8 +121,10 @@ const invalidateAnalyticsCache = async (channelId) => {
   const periods = ['7d', '30d', '90d'];
   const metrics = ['views', 'subscribers', 'likes', 'comments', 'watchTime', 'ctr'];
   await Promise.all([
-    ...periods.map(p => deleteCache(`analytics:overview:${channelId}:${p}`)),
-    ...periods.flatMap(p => metrics.map(m => deleteCache(`analytics:daily:${channelId}:${p}:${m}`))),
+    ...periods.map((p) => deleteCache(`analytics:overview:${channelId}:${p}`)),
+    ...periods.flatMap((p) =>
+      metrics.map((m) => deleteCache(`analytics:daily:${channelId}:${p}:${m}`))
+    ),
     deleteCache(`analytics:topvideos:${channelId}:5:views`),
     deleteCache(`analytics:topvideos:${channelId}:10:views`),
   ]);
@@ -121,8 +133,9 @@ const invalidateAnalyticsCache = async (channelId) => {
 // ==================== SYNC CHANNEL ANALYTICS ====================
 // Fetches last N days of analytics from YouTube API
 const syncChannelAnalytics = async (channelId, userId, days = 30) => {
-  const channel = await YoutubeChannel.findOne({ _id: channelId, userId, isActive: true })
-    .select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
+  const channel = await YoutubeChannel.findOne({ _id: channelId, userId, isActive: true }).select(
+    '+oauth.accessToken +oauth.refreshToken +oauth.expiresAt'
+  );
 
   if (!channel) {
     const err = new Error('Channel not found');
@@ -134,13 +147,20 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
 
   // Date range
   const endDate = new Date().toISOString().split('T')[0];
-  const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
-    .toISOString().split('T')[0];
+  const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   const BASE_METRICS = [
-    'views', 'estimatedMinutesWatched', 'averageViewDuration',
-    'averageViewPercentage', 'subscribersGained', 'subscribersLost',
-    'likes', 'comments', 'shares', 'impressions', 'impressionsCtr',
+    'views',
+    'estimatedMinutesWatched',
+    'averageViewDuration',
+    'averageViewPercentage',
+    'subscribersGained',
+    'subscribersLost',
+    'likes',
+    'comments',
+    'shares',
+    'impressions',
+    'impressionsCtr',
   ];
 
   const buildAnalyticsUrl = (metrics) => {
@@ -161,7 +181,10 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
   let revenueAvailable = true;
 
   if (!response.ok) {
-    const revenueError = await response.clone().json().catch(() => ({}));
+    const revenueError = await response
+      .clone()
+      .json()
+      .catch(() => ({}));
     const revenueMsg = revenueError.error?.message || '';
     if (response.status === 403 && /revenue|monetary|monetization/i.test(revenueMsg)) {
       // Channel isn't monetized / token predates the monetary scope — retry without revenue
@@ -184,7 +207,10 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
         'monetization.revenueDataAvailable': false,
       });
       await invalidateAnalyticsCache(channelId);
-      return { synced, message: `Synced ${synced} days of data (basic mode — views, likes, comments)` };
+      return {
+        synced,
+        message: `Synced ${synced} days of data (basic mode — views, likes, comments)`,
+      };
     }
     const err = new Error(error.error?.message || 'Failed to fetch analytics');
     err.statusCode = response.status;
@@ -193,12 +219,14 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
 
   const data = await response.json();
   const rows = data.rows || [];
-  const headers = data.columnHeaders?.map(h => h.name) || [];
+  const headers = data.columnHeaders?.map((h) => h.name) || [];
 
   // Upsert each day's data
-  const bulkOps = rows.map(row => {
+  const bulkOps = rows.map((row) => {
     const record = {};
-    headers.forEach((h, i) => { record[h] = row[i]; });
+    headers.forEach((h, i) => {
+      record[h] = row[i];
+    });
 
     return {
       updateOne: {
@@ -219,7 +247,9 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
             'metrics.shares': record.shares || 0,
             'metrics.impressions': record.impressions || 0,
             'metrics.impressionsCtr': record.impressionsCtr || 0,
-            ...(revenueAvailable ? { 'metrics.estimatedRevenue': record.estimatedRevenue || 0 } : {}),
+            ...(revenueAvailable
+              ? { 'metrics.estimatedRevenue': record.estimatedRevenue || 0 }
+              : {}),
           },
         },
         upsert: true,
@@ -320,7 +350,14 @@ const syncTopVideoAnalytics = async (channel, accessToken, userId, startDate, en
 
 // Fetches per-day metrics for a specific set of videos from the YouTube Analytics API
 // (one request per video — the API has no multi-video "day" dimension breakdown).
-const syncVideoAnalyticsBatch = async (channel, accessToken, userId, videos, startDate, endDate) => {
+const syncVideoAnalyticsBatch = async (
+  channel,
+  accessToken,
+  userId,
+  videos,
+  startDate,
+  endDate
+) => {
   for (const video of videos) {
     if (!video.youtubeVideoId) continue;
     try {
@@ -328,11 +365,20 @@ const syncVideoAnalyticsBatch = async (channel, accessToken, userId, videos, sta
       url.searchParams.set('ids', 'channel==MINE');
       url.searchParams.set('startDate', startDate);
       url.searchParams.set('endDate', endDate);
-      url.searchParams.set('metrics', [
-        'views', 'estimatedMinutesWatched', 'averageViewDuration',
-        'averageViewPercentage', 'likes', 'comments', 'shares',
-        'impressions', 'impressionsCtr',
-      ].join(','));
+      url.searchParams.set(
+        'metrics',
+        [
+          'views',
+          'estimatedMinutesWatched',
+          'averageViewDuration',
+          'averageViewPercentage',
+          'likes',
+          'comments',
+          'shares',
+          'impressions',
+          'impressionsCtr',
+        ].join(',')
+      );
       url.searchParams.set('dimensions', 'day');
       url.searchParams.set('filters', `video==${video.youtubeVideoId}`);
       url.searchParams.set('sort', 'day');
@@ -344,11 +390,13 @@ const syncVideoAnalyticsBatch = async (channel, accessToken, userId, videos, sta
 
       const data = await response.json();
       const rows = data.rows || [];
-      const headers = data.columnHeaders?.map(h => h.name) || [];
+      const headers = data.columnHeaders?.map((h) => h.name) || [];
 
-      const bulkOps = rows.map(row => {
+      const bulkOps = rows.map((row) => {
         const record = {};
-        headers.forEach((h, i) => { record[h] = row[i]; });
+        headers.forEach((h, i) => {
+          record[h] = row[i];
+        });
         return {
           updateOne: {
             filter: { youtubeVideoId: video.youtubeVideoId, date: new Date(record.day) },
@@ -379,7 +427,9 @@ const syncVideoAnalyticsBatch = async (channel, accessToken, userId, videos, sta
         await VideoAnalytics.bulkWrite(bulkOps);
       }
     } catch (err) {
-      logger.error(`[analytics] video analytics sync failed for ${video.youtubeVideoId}`, { error: err.message });
+      logger.error(`[analytics] video analytics sync failed for ${video.youtubeVideoId}`, {
+        error: err.message,
+      });
     }
   }
 };
@@ -391,19 +441,18 @@ const syncVideoAnalyticsBatch = async (channel, accessToken, userId, videos, sta
 const syncFromVideoStats = async (channel, accessToken, startDate, endDate, userId) => {
   try {
     // 1. Get uploads playlist ID
-    const channelData = await youtubeRequest(
-      `/channels?part=contentDetails,statistics&mine=true`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
+    const channelData = await youtubeRequest(`/channels?part=contentDetails,statistics&mine=true`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
     const uploadsId = channelData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
     const channelStats = channelData.items?.[0]?.statistics || {};
 
     // Save fresh subscriber/view counts to YoutubeChannel so dashboard always shows latest
     await YoutubeChannel.findByIdAndUpdate(channel._id, {
       'stats.subscriberCount': parseInt(channelStats.subscriberCount) || 0,
-      'stats.viewCount':       parseInt(channelStats.viewCount)       || 0,
-      'stats.videoCount':      parseInt(channelStats.videoCount)      || 0,
-      'stats.lastSyncedAt':    new Date(),
+      'stats.viewCount': parseInt(channelStats.viewCount) || 0,
+      'stats.videoCount': parseInt(channelStats.videoCount) || 0,
+      'stats.lastSyncedAt': new Date(),
     });
     await invalidateChannelCache(userId);
 
@@ -436,9 +485,15 @@ const syncFromVideoStats = async (channel, accessToken, startDate, endDate, user
     const allItems = playlistData.items || [];
 
     // 3. Get stats for all videos
-    const videoIds = allItems.map(i => i.contentDetails.videoId).filter(Boolean).slice(0, 50);
+    const videoIds = allItems
+      .map((i) => i.contentDetails.videoId)
+      .filter(Boolean)
+      .slice(0, 50);
 
-    let totalViews = 0, totalLikes = 0, totalComments = 0, totalEstimatedMinutes = 0;
+    let totalViews = 0,
+      totalLikes = 0,
+      totalComments = 0,
+      totalEstimatedMinutes = 0;
 
     if (videoIds.length > 0) {
       const statsData = await youtubeRequest(
@@ -446,11 +501,11 @@ const syncFromVideoStats = async (channel, accessToken, startDate, endDate, user
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
-      for (const video of (statsData.items || [])) {
-        const views    = parseInt(video.statistics?.viewCount)    || 0;
+      for (const video of statsData.items || []) {
+        const views = parseInt(video.statistics?.viewCount) || 0;
         const durationSec = parseDuration(video.contentDetails?.duration || 'PT0S');
-        totalViews    += views;
-        totalLikes    += parseInt(video.statistics?.likeCount)    || 0;
+        totalViews += views;
+        totalLikes += parseInt(video.statistics?.likeCount) || 0;
         totalComments += parseInt(video.statistics?.commentCount) || 0;
         totalEstimatedMinutes += Math.round(views * (durationSec / 60) * 0.4);
       }
@@ -464,9 +519,9 @@ const syncFromVideoStats = async (channel, accessToken, startDate, endDate, user
           userId,
           channelId: channel._id,
           date: new Date(today),
-          'metrics.views':                   totalViews,
-          'metrics.likes':                   totalLikes,
-          'metrics.comments':                totalComments,
+          'metrics.views': totalViews,
+          'metrics.likes': totalLikes,
+          'metrics.comments': totalComments,
           'metrics.estimatedMinutesWatched': totalEstimatedMinutes,
         },
       },
@@ -553,24 +608,24 @@ const getOverview = async (userId, channelId, period = '30d') => {
       {
         $group: {
           _id: null,
-          totalViews:    { $sum: '$performance.views' },
-          totalLikes:    { $sum: '$performance.likes' },
+          totalViews: { $sum: '$performance.views' },
+          totalLikes: { $sum: '$performance.likes' },
           totalComments: { $sum: '$performance.comments' },
         },
       },
     ]);
     if (videoFallback[0]?.totalViews) {
       curr = {
-        totalViews:         videoFallback[0].totalViews,
-        totalLikes:         videoFallback[0].totalLikes,
-        totalComments:      videoFallback[0].totalComments,
-        totalWatchTime:     0,
-        subscribersGained:  0,
-        subscribersLost:    0,
-        totalImpressions:   0,
-        avgCtr:             0,
-        avgViewDuration:    0,
-        totalRevenue:       0,
+        totalViews: videoFallback[0].totalViews,
+        totalLikes: videoFallback[0].totalLikes,
+        totalComments: videoFallback[0].totalComments,
+        totalWatchTime: 0,
+        subscribersGained: 0,
+        subscribersLost: 0,
+        totalImpressions: 0,
+        avgCtr: 0,
+        avgViewDuration: 0,
+        totalRevenue: 0,
       };
     }
   }
@@ -630,16 +685,17 @@ const getDailyGraph = async (userId, channelId, period = '30d', metric = 'views'
   const days = parsePeriod(period);
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-  const metricField = {
-    views: 'metrics.views',
-    subscribers: 'metrics.subscribersGained',
-    likes: 'metrics.likes',
-    comments: 'metrics.comments',
-    impressions: 'metrics.impressions',
-    ctr: 'metrics.impressionsCtr',
-    watchTime: 'metrics.estimatedMinutesWatched',
-    revenue: 'metrics.estimatedRevenue',
-  }[metric] || 'metrics.views';
+  const metricField =
+    {
+      views: 'metrics.views',
+      subscribers: 'metrics.subscribersGained',
+      likes: 'metrics.likes',
+      comments: 'metrics.comments',
+      impressions: 'metrics.impressions',
+      ctr: 'metrics.impressionsCtr',
+      watchTime: 'metrics.estimatedMinutesWatched',
+      revenue: 'metrics.estimatedRevenue',
+    }[metric] || 'metrics.views';
 
   const data = await ChannelAnalytics.find({
     channelId: require('mongoose').Types.ObjectId.createFromHexString(channelId),
@@ -652,7 +708,7 @@ const getDailyGraph = async (userId, channelId, period = '30d', metric = 'views'
   const result = {
     metric,
     period,
-    data: data.map(d => ({
+    data: data.map((d) => ({
       date: d.date.toISOString().split('T')[0],
       value: getNestedValue(d, metricField) || 0,
     })),
@@ -692,12 +748,21 @@ const getDayWisePerformance = async (userId, channelId, period = '90d') => {
     { $sort: { _id: 1 } },
   ]);
 
-  const dayNames = ['', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayNames = [
+    '',
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ];
 
   const result = {
     period,
     data: dayNames.slice(1).map((name, i) => {
-      const found = data.find(d => d._id === i + 1);
+      const found = data.find((d) => d._id === i + 1);
       return {
         day: name,
         dayShort: name.slice(0, 3),
@@ -726,14 +791,15 @@ const getTopVideos = async (userId, channelId, limit = 10, sortBy = 'views') => 
   const cached = await getCache(cacheKey);
   if (cached) return cached;
 
-  const sortField = {
-    views: 'performance.views',
-    ctr: 'performance.ctr',
-    likes: 'performance.likes',
-    comments: 'performance.comments',
-    revenue: 'performance.revenue',
-    duration: 'performance.avgViewDuration',
-  }[sortBy] || 'performance.views';
+  const sortField =
+    {
+      views: 'performance.views',
+      ctr: 'performance.ctr',
+      likes: 'performance.likes',
+      comments: 'performance.comments',
+      revenue: 'performance.revenue',
+      duration: 'performance.avgViewDuration',
+    }[sortBy] || 'performance.views';
 
   const videos = await Video.find({
     userId,
@@ -748,7 +814,7 @@ const getTopVideos = async (userId, channelId, limit = 10, sortBy = 'views') => 
 
   const result = {
     sortBy,
-    videos: videos.map(v => ({
+    videos: videos.map((v) => ({
       ...v,
       watchUrl: `https://www.youtube.com/watch?v=${v.youtubeVideoId}`,
     })),
@@ -764,8 +830,10 @@ const getVideoBreakdown = async (userId, videoId) => {
   const cached = await getCache(cacheKey);
   if (cached) return cached;
 
-  const video = await Video.findOne({ _id: videoId, userId })
-    .populate('channelId', 'channelName thumbnail');
+  const video = await Video.findOne({ _id: videoId, userId }).populate(
+    'channelId',
+    'channelName thumbnail'
+  );
 
   if (!video) {
     const err = new Error('Video not found');
@@ -774,26 +842,35 @@ const getVideoBreakdown = async (userId, videoId) => {
   }
 
   // Get daily breakdown
-  let dailyData = await VideoAnalytics.find({ videoId })
-    .sort({ date: 1 })
-    .lean();
+  let dailyData = await VideoAnalytics.find({ videoId }).sort({ date: 1 }).lean();
 
   // Lazy sync: this video hasn't had its per-day breakdown pulled yet
   // (e.g. it wasn't in the top-N videos synced by the channel-wide sync).
   // Fetch it on demand so the page isn't permanently empty.
   if (dailyData.length === 0 && video.youtubeVideoId) {
     try {
-      const channel = await YoutubeChannel.findOne({ _id: video.channelId._id || video.channelId, userId, isActive: true })
-        .select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
+      const channel = await YoutubeChannel.findOne({
+        _id: video.channelId._id || video.channelId,
+        userId,
+        isActive: true,
+      }).select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
       if (channel) {
         const accessToken = await getValidAccessToken(channel);
         const endDate = new Date().toISOString().split('T')[0];
-        const startDate = (video.publishedAt ? new Date(video.publishedAt) : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000))
-          .toISOString().split('T')[0];
+        const startDate = (
+          video.publishedAt
+            ? new Date(video.publishedAt)
+            : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+        )
+          .toISOString()
+          .split('T')[0];
         await syncVideoAnalyticsBatch(
-          channel, accessToken, userId,
+          channel,
+          accessToken,
+          userId,
           [{ _id: video._id, youtubeVideoId: video.youtubeVideoId }],
-          startDate, endDate
+          startDate,
+          endDate
         );
         dailyData = await VideoAnalytics.find({ videoId }).sort({ date: 1 }).lean();
       }
@@ -803,14 +880,17 @@ const getVideoBreakdown = async (userId, videoId) => {
   }
 
   // Aggregate totals
-  const totals = dailyData.reduce((acc, d) => ({
-    views: acc.views + (d.metrics.views || 0),
-    watchTime: acc.watchTime + (d.metrics.estimatedMinutesWatched || 0),
-    likes: acc.likes + (d.metrics.likes || 0),
-    comments: acc.comments + (d.metrics.comments || 0),
-    impressions: acc.impressions + (d.metrics.impressions || 0),
-    revenue: acc.revenue + (d.metrics.estimatedRevenue || 0),
-  }), { views: 0, watchTime: 0, likes: 0, comments: 0, impressions: 0, revenue: 0 });
+  const totals = dailyData.reduce(
+    (acc, d) => ({
+      views: acc.views + (d.metrics.views || 0),
+      watchTime: acc.watchTime + (d.metrics.estimatedMinutesWatched || 0),
+      likes: acc.likes + (d.metrics.likes || 0),
+      comments: acc.comments + (d.metrics.comments || 0),
+      impressions: acc.impressions + (d.metrics.impressions || 0),
+      revenue: acc.revenue + (d.metrics.estimatedRevenue || 0),
+    }),
+    { views: 0, watchTime: 0, likes: 0, comments: 0, impressions: 0, revenue: 0 }
+  );
 
   const result = {
     video: {
@@ -830,7 +910,7 @@ const getVideoBreakdown = async (userId, videoId) => {
         ? dailyData.reduce((s, d) => s + d.metrics.averageViewDuration, 0) / dailyData.length
         : 0,
     },
-    daily: dailyData.map(d => ({
+    daily: dailyData.map((d) => ({
       date: d.date.toISOString().split('T')[0],
       views: d.metrics.views,
       watchTime: d.metrics.estimatedMinutesWatched,
@@ -870,7 +950,10 @@ const getTrafficSources = async (userId, channelId, period = '30d') => {
   ]);
 
   const d = data[0] || {};
-  const total = Object.values(d).filter(v => typeof v === 'number').reduce((a, b) => a + b, 0) || 1;
+  const total =
+    Object.values(d)
+      .filter((v) => typeof v === 'number')
+      .reduce((a, b) => a + b, 0) || 1;
 
   return {
     period,

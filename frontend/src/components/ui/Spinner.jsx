@@ -22,7 +22,8 @@ export const PageLoader = () => (
       <div className="relative">
         <div className="w-16 h-16 border-2 border-white/5 rounded-full" />
         <div className="w-16 h-16 border-2 border-brand border-t-transparent rounded-full animate-spin absolute inset-0" />
-        <div className="w-16 h-16 border-2 border-cyan/30 border-b-transparent rounded-full animate-spin absolute inset-0"
+        <div
+          className="w-16 h-16 border-2 border-cyan/30 border-b-transparent rounded-full animate-spin absolute inset-0"
           style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}
         />
       </div>

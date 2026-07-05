@@ -24,7 +24,12 @@ const getTierName = (count) => {
 
 // Credit commission to a referrer when their referred user pays.
 // Called from payment.service after successful payment.captured.
-const recordEarningFromPayment = async ({ referredUserId, paidAmountPaise, plan, razorpayPaymentId }) => {
+const recordEarningFromPayment = async ({
+  referredUserId,
+  paidAmountPaise,
+  plan,
+  razorpayPaymentId,
+}) => {
   const referredUser = await User.findById(referredUserId);
   if (!referredUser?.referral?.referredBy) return null;
 
@@ -40,17 +45,17 @@ const recordEarningFromPayment = async ({ referredUserId, paidAmountPaise, plan,
   if (prior >= MAX_COMMISSION_CYCLES) return null;
 
   const rate = getCommissionRate(referrer.referral.totalReferrals || 0);
-  const paidAmount = (paidAmountPaise || 0) / 100;            // ₹
+  const paidAmount = (paidAmountPaise || 0) / 100; // ₹
   const commissionAmount = Math.round((paidAmount * rate) / 100);
 
   if (commissionAmount <= 0) return null;
 
   const earning = await ReferralEarning.create({
-    referrerId:        referrer._id,
+    referrerId: referrer._id,
     referredUserId,
     plan,
     paidAmount,
-    commissionRate:    rate,
+    commissionRate: rate,
     commissionAmount,
     razorpayPaymentId: razorpayPaymentId || null,
     billingCycleIndex: prior + 1,
@@ -58,7 +63,7 @@ const recordEarningFromPayment = async ({ referredUserId, paidAmountPaise, plan,
 
   await User.findByIdAndUpdate(referrer._id, {
     $inc: {
-      'wallet.balance':     commissionAmount,
+      'wallet.balance': commissionAmount,
       'wallet.totalEarned': commissionAmount,
     },
   });
@@ -82,18 +87,26 @@ const getStats = async (userId) => {
   });
 
   return {
-    code:             user.referral?.myCode || null,
-    tier:             getTierName(totalReferrals),
-    tierColor:        totalReferrals >= 50 ? 'amber' : totalReferrals >= 25 ? 'emerald' : totalReferrals >= 10 ? 'cyan' : 'brand',
-    commissionRate:   getCommissionRate(totalReferrals),
-    nextTierAt:       totalReferrals >= 50 ? null : totalReferrals >= 25 ? 50 : totalReferrals >= 10 ? 25 : 10,
+    code: user.referral?.myCode || null,
+    tier: getTierName(totalReferrals),
+    tierColor:
+      totalReferrals >= 50
+        ? 'amber'
+        : totalReferrals >= 25
+          ? 'emerald'
+          : totalReferrals >= 10
+            ? 'cyan'
+            : 'brand',
+    commissionRate: getCommissionRate(totalReferrals),
+    nextTierAt:
+      totalReferrals >= 50 ? null : totalReferrals >= 25 ? 50 : totalReferrals >= 10 ? 25 : 10,
     totalReferrals,
     activeReferrals,
     wallet: {
-      balance:        user.wallet?.balance || 0,
-      totalEarned:    user.wallet?.totalEarned || 0,
+      balance: user.wallet?.balance || 0,
+      totalEarned: user.wallet?.totalEarned || 0,
       totalWithdrawn: user.wallet?.totalWithdrawn || 0,
-      pendingPayout:  user.wallet?.pendingPayout || 0,
+      pendingPayout: user.wallet?.pendingPayout || 0,
     },
     minPayout: MIN_PAYOUT,
   };
@@ -144,7 +157,10 @@ const requestPayout = async (userId, { amount, method, upi, bankAccount }) => {
     err.statusCode = 400;
     throw err;
   }
-  if (method === 'bank' && (!bankAccount?.accountNumber || !bankAccount?.ifsc || !bankAccount?.holderName)) {
+  if (
+    method === 'bank' &&
+    (!bankAccount?.accountNumber || !bankAccount?.ifsc || !bankAccount?.holderName)
+  ) {
     const err = new Error('Bank account number, IFSC, and holder name are required');
     err.statusCode = 400;
     throw err;
@@ -157,7 +173,7 @@ const requestPayout = async (userId, { amount, method, upi, bankAccount }) => {
     throw err;
   }
 
-  const available = (user.wallet?.balance || 0);
+  const available = user.wallet?.balance || 0;
   if (amount > available) {
     const err = new Error(`Insufficient balance. Available: ₹${available}`);
     err.statusCode = 400;
@@ -175,7 +191,7 @@ const requestPayout = async (userId, { amount, method, upi, bankAccount }) => {
     userId,
     amount,
     method,
-    upi:         method === 'upi'  ? upi         : null,
+    upi: method === 'upi' ? upi : null,
     bankAccount: method === 'bank' ? bankAccount : undefined,
   });
 
@@ -186,10 +202,7 @@ const requestPayout = async (userId, { amount, method, upi, bankAccount }) => {
 const listPayouts = async (userId, { page = 1, limit = 20 } = {}) => {
   const skip = (page - 1) * limit;
   const [payouts, total] = await Promise.all([
-    PayoutRequest.find({ userId })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit),
+    PayoutRequest.find({ userId }).sort({ createdAt: -1 }).skip(skip).limit(limit),
     PayoutRequest.countDocuments({ userId }),
   ]);
   return { payouts, pagination: { page, limit, total } };

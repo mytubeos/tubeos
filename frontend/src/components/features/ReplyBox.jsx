@@ -25,7 +25,10 @@ export const ReplyBox = ({ commentId, commentText, onReplied }) => {
   }
 
   const post = async () => {
-    if (!replyText.trim()) { toast.error('Reply text is empty'); return }
+    if (!replyText.trim()) {
+      toast.error('Reply text is empty')
+      return
+    }
     setPosting(true)
     try {
       await aiApi.postReply(commentId, replyText)
@@ -44,14 +47,16 @@ export const ReplyBox = ({ commentId, commentText, onReplied }) => {
       {/* Tone selector */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs text-gray-500">Tone:</span>
-        {REPLY_TONES.map(t => (
+        {REPLY_TONES.map((t) => (
           <button
             key={t.value}
             onClick={() => setTone(t.value)}
             className={`px-2.5 py-1 rounded-lg text-xs transition-all
-                        ${tone === t.value
-                          ? 'bg-brand text-white'
-                          : 'glass text-gray-400 hover:text-white'}`}
+                        ${
+                          tone === t.value
+                            ? 'bg-brand text-white'
+                            : 'glass text-gray-400 hover:text-white'
+                        }`}
           >
             {t.label}
           </button>
@@ -61,7 +66,7 @@ export const ReplyBox = ({ commentId, commentText, onReplied }) => {
       {/* Text area */}
       <textarea
         value={replyText}
-        onChange={e => setReplyText(e.target.value)}
+        onChange={(e) => setReplyText(e.target.value)}
         placeholder="Write a reply or click Generate AI Reply..."
         rows={3}
         className="input-field resize-none text-sm"

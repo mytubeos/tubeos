@@ -5,15 +5,15 @@
 const express = require('express');
 const router = express.Router();
 
-const authRoutes      = require('./auth.routes');
-const youtubeRoutes   = require('./youtube.routes');
-const videoRoutes     = require('./video.routes');
-const scheduleRoutes  = require('./schedule.routes');
+const authRoutes = require('./auth.routes');
+const youtubeRoutes = require('./youtube.routes');
+const videoRoutes = require('./video.routes');
+const scheduleRoutes = require('./schedule.routes');
 const analyticsRoutes = require('./analytics.routes');
-const aiRoutes        = require('./ai.routes');
-const paymentRoutes   = require('./payment.routes');
-const adminRoutes     = require('./admin.routes');
-const referralRoutes  = require('./referral.routes');
+const aiRoutes = require('./ai.routes');
+const paymentRoutes = require('./payment.routes');
+const adminRoutes = require('./admin.routes');
+const referralRoutes = require('./referral.routes');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -32,14 +32,14 @@ router.get('/ping', (req, res) => {
 });
 
 // All routes
-router.use('/auth',      authRoutes);
-router.use('/youtube',   youtubeRoutes);
-router.use('/videos',    videoRoutes);
-router.use('/schedule',  scheduleRoutes);
+router.use('/auth', authRoutes);
+router.use('/youtube', youtubeRoutes);
+router.use('/videos', videoRoutes);
+router.use('/schedule', scheduleRoutes);
 router.use('/analytics', analyticsRoutes);
-router.use('/ai',        aiRoutes);
-router.use('/payment',   paymentRoutes);
-router.use('/admin',     adminRoutes);
-router.use('/referral',  referralRoutes);
+router.use('/ai', aiRoutes);
+router.use('/payment', paymentRoutes);
+router.use('/admin', adminRoutes);
+router.use('/referral', referralRoutes);
 
 module.exports = router;

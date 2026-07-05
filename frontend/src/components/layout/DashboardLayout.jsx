@@ -1,9 +1,7 @@
 // src/components/layout/DashboardLayout.jsx
-import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Navbar } from './Navbar'
-import { NAV_ITEMS } from '../../utils/constants'
 
 // Map path to page title
 const getPageTitle = (pathname) => {

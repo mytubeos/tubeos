@@ -1,8 +1,19 @@
 // src/pages/admin/AdminCoupons.jsx
 import { useEffect, useState, useCallback } from 'react'
 import {
-  Plus, Search, Pencil, Trash2, ToggleLeft, ToggleRight,
-  Tag, Lock, Globe, Copy, RefreshCw, X, Check, ChevronLeft, ChevronRight
+  Plus,
+  Search,
+  Pencil,
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
+  Lock,
+  Globe,
+  Copy,
+  RefreshCw,
+  Check,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Button } from '../../components/ui/Button'
@@ -28,7 +39,11 @@ const formatDiscount = (c) =>
 
 const formatExpiry = (d) => {
   if (!d) return 'Never'
-  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  return new Date(d).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
 }
 
 const isExpired = (d) => d && new Date(d) < new Date()
@@ -36,8 +51,15 @@ const isExpired = (d) => d && new Date(d) < new Date()
 // ─── Coupon Form Modal ────────────────────────────────────────────────────────
 
 const EMPTY_FORM = {
-  code: '', type: 'public', discountType: 'percent', discountValue: '',
-  validPlans: ['creator', 'pro', 'agency'], maxUses: '', expiresAt: '', description: '', isActive: true,
+  code: '',
+  type: 'public',
+  discountType: 'percent',
+  discountValue: '',
+  validPlans: ['creator', 'pro', 'agency'],
+  maxUses: '',
+  expiresAt: '',
+  description: '',
+  isActive: true,
 }
 
 const CouponForm = ({ isOpen, onClose, editData, onSaved }) => {
@@ -46,32 +68,36 @@ const CouponForm = ({ isOpen, onClose, editData, onSaved }) => {
 
   useEffect(() => {
     if (isOpen) {
-      setForm(editData
-        ? {
-            ...editData,
-            discountValue: editData.discountValue?.toString() || '',
-            maxUses: editData.maxUses?.toString() || '',
-            expiresAt: editData.expiresAt ? new Date(editData.expiresAt).toISOString().split('T')[0] : '',
-          }
-        : EMPTY_FORM
+      setForm(
+        editData
+          ? {
+              ...editData,
+              discountValue: editData.discountValue?.toString() || '',
+              maxUses: editData.maxUses?.toString() || '',
+              expiresAt: editData.expiresAt
+                ? new Date(editData.expiresAt).toISOString().split('T')[0]
+                : '',
+            }
+          : EMPTY_FORM
       )
     }
   }, [isOpen, editData])
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
   const togglePlan = (plan) => {
-    setForm(f => ({
+    setForm((f) => ({
       ...f,
       validPlans: f.validPlans.includes(plan)
-        ? f.validPlans.filter(p => p !== plan)
+        ? f.validPlans.filter((p) => p !== plan)
         : [...f.validPlans, plan],
     }))
   }
 
   const handleSubmit = async () => {
     if (!form.code.trim()) return toast.error('Coupon code is required')
-    if (!form.discountValue || isNaN(form.discountValue)) return toast.error('Valid discount value is required')
+    if (!form.discountValue || isNaN(form.discountValue))
+      return toast.error('Valid discount value is required')
     if (form.validPlans.length === 0) return toast.error('Select at least one plan')
 
     setSaving(true)
@@ -108,7 +134,9 @@ const CouponForm = ({ isOpen, onClose, editData, onSaved }) => {
       size="lg"
       footer={
         <>
-          <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
           <Button size="sm" loading={saving} onClick={handleSubmit}>
             {editData ? 'Save Changes' : 'Create Coupon'}
           </Button>
@@ -116,7 +144,6 @@ const CouponForm = ({ isOpen, onClose, editData, onSaved }) => {
       }
     >
       <div className="space-y-5">
-
         {/* Code */}
         <div>
           <label className="text-sm font-medium text-gray-300 mb-1.5 block">
@@ -127,7 +154,7 @@ const CouponForm = ({ isOpen, onClose, editData, onSaved }) => {
               className="input-field uppercase flex-1"
               placeholder="e.g. SAVE50"
               value={form.code}
-              onChange={e => set('code', e.target.value.toUpperCase())}
+              onChange={(e) => set('code', e.target.value.toUpperCase())}
             />
             <button
               onClick={() => set('code', randomCode())}
@@ -138,7 +165,10 @@ const CouponForm = ({ isOpen, onClose, editData, onSaved }) => {
               <RefreshCw size={15} />
             </button>
             <button
-              onClick={() => { navigator.clipboard.writeText(form.code); toast.success('Copied!') }}
+              onClick={() => {
+                navigator.clipboard.writeText(form.code)
+                toast.success('Copied!')
+              }}
               className="px-3 glass border border-white/10 rounded-lg text-gray-400
                          hover:text-white hover:border-white/20 transition-all"
               title="Copy code"
@@ -153,16 +183,30 @@ const CouponForm = ({ isOpen, onClose, editData, onSaved }) => {
           <label className="text-sm font-medium text-gray-300 mb-1.5 block">Coupon Type</label>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { value: 'public',   icon: Globe, label: 'Public',   desc: 'Visible to users',       color: 'brand' },
-              { value: 'internal', icon: Lock,  label: 'Internal', desc: 'Developer / team only',  color: 'amber' },
+              {
+                value: 'public',
+                icon: Globe,
+                label: 'Public',
+                desc: 'Visible to users',
+                color: 'brand',
+              },
+              {
+                value: 'internal',
+                icon: Lock,
+                label: 'Internal',
+                desc: 'Developer / team only',
+                color: 'amber',
+              },
             ].map(({ value, icon: Icon, label, desc, color }) => (
               <button
                 key={value}
                 onClick={() => set('type', value)}
                 className={`flex items-center gap-3 p-3 rounded-xl border transition-all text-left
-                            ${form.type === value
-                              ? `bg-${color}/10 border-${color}/30 text-${color}`
-                              : 'glass border-white/10 text-gray-400 hover:border-white/20'}`}
+                            ${
+                              form.type === value
+                                ? `bg-${color}/10 border-${color}/30 text-${color}`
+                                : 'glass border-white/10 text-gray-400 hover:border-white/20'
+                            }`}
               >
                 <Icon size={16} />
                 <div>
@@ -180,10 +224,10 @@ const CouponForm = ({ isOpen, onClose, editData, onSaved }) => {
           <Select
             label="Discount Type"
             value={form.discountType}
-            onChange={e => set('discountType', e.target.value)}
+            onChange={(e) => set('discountType', e.target.value)}
             options={[
               { value: 'percent', label: 'Percentage (%)' },
-              { value: 'fixed',   label: 'Fixed Amount (₹)' },
+              { value: 'fixed', label: 'Fixed Amount (₹)' },
             ]}
           />
           <Input
@@ -191,7 +235,7 @@ const CouponForm = ({ isOpen, onClose, editData, onSaved }) => {
             type="number"
             placeholder={form.discountType === 'percent' ? '50' : '100'}
             value={form.discountValue}
-            onChange={e => set('discountValue', e.target.value)}
+            onChange={(e) => set('discountValue', e.target.value)}
             hint={form.discountType === 'percent' ? 'Max 100' : 'In rupees'}
           />
         </div>
@@ -200,14 +244,16 @@ const CouponForm = ({ isOpen, onClose, editData, onSaved }) => {
         <div>
           <label className="text-sm font-medium text-gray-300 mb-1.5 block">Valid for Plans</label>
           <div className="flex gap-2">
-            {PLANS.map(plan => (
+            {PLANS.map((plan) => (
               <button
                 key={plan}
                 onClick={() => togglePlan(plan)}
                 className={`flex-1 py-2 rounded-lg border text-sm font-medium capitalize transition-all
-                            ${form.validPlans.includes(plan)
-                              ? `bg-${PLAN_COLORS[plan]}/15 border-${PLAN_COLORS[plan]}/30 text-${PLAN_COLORS[plan]}`
-                              : 'glass border-white/10 text-gray-500 hover:border-white/20'}`}
+                            ${
+                              form.validPlans.includes(plan)
+                                ? `bg-${PLAN_COLORS[plan]}/15 border-${PLAN_COLORS[plan]}/30 text-${PLAN_COLORS[plan]}`
+                                : 'glass border-white/10 text-gray-500 hover:border-white/20'
+                            }`}
               >
                 {plan}
               </button>
@@ -222,14 +268,14 @@ const CouponForm = ({ isOpen, onClose, editData, onSaved }) => {
             type="number"
             placeholder="Leave empty for unlimited"
             value={form.maxUses}
-            onChange={e => set('maxUses', e.target.value)}
+            onChange={(e) => set('maxUses', e.target.value)}
             hint="Unlimited if empty"
           />
           <Input
             label="Expiry Date"
             type="date"
             value={form.expiresAt}
-            onChange={e => set('expiresAt', e.target.value)}
+            onChange={(e) => set('expiresAt', e.target.value)}
             hint="Never expires if empty"
           />
         </div>
@@ -239,7 +285,7 @@ const CouponForm = ({ isOpen, onClose, editData, onSaved }) => {
           label="Internal Note"
           placeholder="e.g. For dev team testing, Q1 launch promo..."
           value={form.description}
-          onChange={e => set('description', e.target.value)}
+          onChange={(e) => set('description', e.target.value)}
         />
 
         {/* Active toggle */}
@@ -283,7 +329,8 @@ export const AdminCoupons = () => {
     setLoading(true)
     try {
       const res = await adminAPI.listCoupons({
-        page, limit: LIMIT,
+        page,
+        limit: LIMIT,
         ...(typeFilter && { type: typeFilter }),
         ...(statusFilter && { status: statusFilter }),
         ...(search && { search }),
@@ -297,10 +344,18 @@ export const AdminCoupons = () => {
     }
   }, [page, typeFilter, statusFilter, search])
 
-  useEffect(() => { fetchCoupons() }, [fetchCoupons])
+  useEffect(() => {
+    fetchCoupons()
+  }, [fetchCoupons])
 
-  const openCreate = () => { setEditData(null); setFormOpen(true) }
-  const openEdit = (c) => { setEditData(c); setFormOpen(true) }
+  const openCreate = () => {
+    setEditData(null)
+    setFormOpen(true)
+  }
+  const openEdit = (c) => {
+    setEditData(c)
+    setFormOpen(true)
+  }
 
   const handleToggle = async (coupon) => {
     setToggling(coupon._id)
@@ -344,7 +399,9 @@ export const AdminCoupons = () => {
           <h1 className="font-display font-bold text-white text-2xl">Coupons</h1>
           <p className="text-gray-500 text-sm mt-0.5">{total} coupons total</p>
         </div>
-        <Button icon={Plus} onClick={openCreate}>New Coupon</Button>
+        <Button icon={Plus} onClick={openCreate}>
+          New Coupon
+        </Button>
       </div>
 
       {/* Filters */}
@@ -355,30 +412,46 @@ export const AdminCoupons = () => {
             className="input-field pl-9 h-9 text-xs"
             placeholder="Search code..."
             value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1) }}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
           />
         </div>
 
         {[
-          { value: typeFilter, setter: setTypeFilter, options: [
-            { value: '', label: 'All Types' },
-            { value: 'public', label: 'Public' },
-            { value: 'internal', label: 'Internal' },
-          ]},
-          { value: statusFilter, setter: setStatusFilter, options: [
-            { value: '', label: 'All Status' },
-            { value: 'active', label: 'Active' },
-            { value: 'inactive', label: 'Inactive' },
-          ]},
+          {
+            value: typeFilter,
+            setter: setTypeFilter,
+            options: [
+              { value: '', label: 'All Types' },
+              { value: 'public', label: 'Public' },
+              { value: 'internal', label: 'Internal' },
+            ],
+          },
+          {
+            value: statusFilter,
+            setter: setStatusFilter,
+            options: [
+              { value: '', label: 'All Status' },
+              { value: 'active', label: 'Active' },
+              { value: 'inactive', label: 'Inactive' },
+            ],
+          },
         ].map((f, i) => (
           <select
             key={i}
             value={f.value}
-            onChange={e => { f.setter(e.target.value); setPage(1) }}
+            onChange={(e) => {
+              f.setter(e.target.value)
+              setPage(1)
+            }}
             className="input-field h-9 text-xs bg-base-600 w-36"
           >
-            {f.options.map(o => (
-              <option key={o.value} value={o.value} className="bg-base-500">{o.label}</option>
+            {f.options.map((o) => (
+              <option key={o.value} value={o.value} className="bg-base-500">
+                {o.label}
+              </option>
             ))}
           </select>
         ))}
@@ -389,33 +462,35 @@ export const AdminCoupons = () => {
         <table className="w-full">
           <thead>
             <tr className="border-b border-white/8">
-              {['Code', 'Type', 'Discount', 'Plans', 'Uses', 'Expiry', 'Status', ''].map(h => (
-                <th key={h} className="px-4 py-3 text-left text-2xs font-semibold text-gray-500 uppercase tracking-wider">
+              {['Code', 'Type', 'Discount', 'Plans', 'Uses', 'Expiry', 'Status', ''].map((h) => (
+                <th
+                  key={h}
+                  className="px-4 py-3 text-left text-2xs font-semibold text-gray-500 uppercase tracking-wider"
+                >
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {loading
-              ? Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={i} className="border-b border-white/5">
-                    {Array.from({ length: 8 }).map((_, j) => (
-                      <td key={j} className="px-4 py-3.5">
-                        <div className="shimmer h-3 rounded w-16" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              : coupons.length === 0
-              ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-500 text-sm">
-                    No coupons found. Create your first one.
-                  </td>
+            {loading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <tr key={i} className="border-b border-white/5">
+                  {Array.from({ length: 8 }).map((_, j) => (
+                    <td key={j} className="px-4 py-3.5">
+                      <div className="shimmer h-3 rounded w-16" />
+                    </td>
+                  ))}
                 </tr>
-              )
-              : coupons.map(c => (
+              ))
+            ) : coupons.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-4 py-12 text-center text-gray-500 text-sm">
+                  No coupons found. Create your first one.
+                </td>
+              </tr>
+            ) : (
+              coupons.map((c) => (
                 <tr
                   key={c._id}
                   className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
@@ -431,16 +506,25 @@ export const AdminCoupons = () => {
                       <Copy size={11} className="text-gray-600 group-hover:text-brand" />
                     </button>
                     {c.description && (
-                      <p className="text-2xs text-gray-600 mt-0.5 truncate max-w-32">{c.description}</p>
+                      <p className="text-2xs text-gray-600 mt-0.5 truncate max-w-32">
+                        {c.description}
+                      </p>
                     )}
                   </td>
 
                   {/* Type */}
                   <td className="px-4 py-3.5">
-                    {c.type === 'internal'
-                      ? <Badge variant="amber" size="xs"><Lock size={9} className="mr-0.5" />Internal</Badge>
-                      : <Badge variant="brand" size="xs"><Globe size={9} className="mr-0.5" />Public</Badge>
-                    }
+                    {c.type === 'internal' ? (
+                      <Badge variant="amber" size="xs">
+                        <Lock size={9} className="mr-0.5" />
+                        Internal
+                      </Badge>
+                    ) : (
+                      <Badge variant="brand" size="xs">
+                        <Globe size={9} className="mr-0.5" />
+                        Public
+                      </Badge>
+                    )}
                   </td>
 
                   {/* Discount */}
@@ -451,8 +535,10 @@ export const AdminCoupons = () => {
                   {/* Plans */}
                   <td className="px-4 py-3.5">
                     <div className="flex flex-wrap gap-1">
-                      {c.validPlans.map(p => (
-                        <Badge key={p} variant={PLAN_COLORS[p]} size="xs">{p}</Badge>
+                      {c.validPlans.map((p) => (
+                        <Badge key={p} variant={PLAN_COLORS[p]} size="xs">
+                          {p}
+                        </Badge>
                       ))}
                     </div>
                   </td>
@@ -467,19 +553,28 @@ export const AdminCoupons = () => {
 
                   {/* Expiry */}
                   <td className="px-4 py-3.5">
-                    <span className={`text-xs ${isExpired(c.expiresAt) ? 'text-rose' : 'text-gray-400'}`}>
+                    <span
+                      className={`text-xs ${isExpired(c.expiresAt) ? 'text-rose' : 'text-gray-400'}`}
+                    >
                       {formatExpiry(c.expiresAt)}
                     </span>
                   </td>
 
                   {/* Status */}
                   <td className="px-4 py-3.5">
-                    {isExpired(c.expiresAt)
-                      ? <Badge variant="rose" size="xs">Expired</Badge>
-                      : c.isActive
-                        ? <Badge variant="emerald" size="xs" dot>Active</Badge>
-                        : <Badge variant="gray" size="xs">Inactive</Badge>
-                    }
+                    {isExpired(c.expiresAt) ? (
+                      <Badge variant="rose" size="xs">
+                        Expired
+                      </Badge>
+                    ) : c.isActive ? (
+                      <Badge variant="emerald" size="xs" dot>
+                        Active
+                      </Badge>
+                    ) : (
+                      <Badge variant="gray" size="xs">
+                        Inactive
+                      </Badge>
+                    )}
                   </td>
 
                   {/* Actions */}
@@ -489,9 +584,11 @@ export const AdminCoupons = () => {
                         onClick={() => handleToggle(c)}
                         disabled={toggling === c._id}
                         className={`p-1.5 rounded-lg transition-colors
-                                    ${c.isActive
-                                      ? 'text-emerald/70 hover:text-emerald hover:bg-emerald/10'
-                                      : 'text-gray-600 hover:text-gray-400 hover:bg-white/5'}`}
+                                    ${
+                                      c.isActive
+                                        ? 'text-emerald/70 hover:text-emerald hover:bg-emerald/10'
+                                        : 'text-gray-600 hover:text-gray-400 hover:bg-white/5'
+                                    }`}
                         title={c.isActive ? 'Deactivate' : 'Activate'}
                       >
                         {c.isActive ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
@@ -514,7 +611,7 @@ export const AdminCoupons = () => {
                   </td>
                 </tr>
               ))
-            }
+            )}
           </tbody>
         </table>
       </div>
@@ -528,15 +625,17 @@ export const AdminCoupons = () => {
           <div className="flex gap-1">
             <button
               disabled={page === 1}
-              onClick={() => setPage(p => p - 1)}
+              onClick={() => setPage((p) => p - 1)}
               className="p-1.5 glass rounded-lg text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <ChevronLeft size={15} />
             </button>
-            <span className="px-3 py-1.5 text-xs text-gray-400">{page} / {totalPages}</span>
+            <span className="px-3 py-1.5 text-xs text-gray-400">
+              {page} / {totalPages}
+            </span>
             <button
               disabled={page === totalPages}
-              onClick={() => setPage(p => p + 1)}
+              onClick={() => setPage((p) => p + 1)}
               className="p-1.5 glass rounded-lg text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <ChevronRight size={15} />

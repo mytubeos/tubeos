@@ -8,7 +8,6 @@ const User = require('../models/user.model');
 const { getValidAccessToken } = require('./youtube.service');
 const { youtubeRequest } = require('../config/youtube.config');
 const { callAI } = require('../config/ai.config');
-const { setCache, getCache } = require('../config/redis');
 const { sanitizePromptInput } = require('../utils/sanitize.utils');
 
 // ==================== SYNC COMMENTS ====================
@@ -17,8 +16,9 @@ const { sanitizePromptInput } = require('../utils/sanitize.utils');
 // Activity heatmap, and skipping sentiment keeps the scheduled job LLM-cost-free.
 const syncComments = async (userId, channelId, youtubeVideoId = null, options = {}) => {
   const { analyze = true } = options;
-  const channel = await YoutubeChannel.findOne({ _id: channelId, userId, isActive: true })
-    .select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
+  const channel = await YoutubeChannel.findOne({ _id: channelId, userId, isActive: true }).select(
+    '+oauth.accessToken +oauth.refreshToken +oauth.expiresAt'
+  );
 
   if (!channel) {
     const err = new Error('Channel not found');
@@ -37,24 +37,22 @@ const syncComments = async (userId, channelId, youtubeVideoId = null, options = 
     order: 'time',
     ...(youtubeVideoId
       ? { videoId: youtubeVideoId }
-      : { allThreadsRelatedToChannelId: channel.channelId }
-    ),
+      : { allThreadsRelatedToChannelId: channel.channelId }),
   });
 
   // Paginate through comments
   do {
     if (pageToken) params.set('pageToken', pageToken);
 
-    const data = await youtubeRequest(
-      `/commentThreads?${params.toString()}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
+    const data = await youtubeRequest(`/commentThreads?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
 
     const items = data.items || [];
     pageToken = data.nextPageToken || null;
 
     // Process in batch
-    const bulkOps = items.map(item => {
+    const bulkOps = items.map((item) => {
       const top = item.snippet.topLevelComment.snippet;
       return {
         updateOne: {
@@ -119,9 +117,7 @@ const analyzeSentimentBatch = async (userId, channelId, limit = 50) => {
   const batchSize = 10;
   for (let i = 0; i < comments.length; i += batchSize) {
     const batch = comments.slice(i, i + batchSize);
-    await Promise.allSettled(
-      batch.map(comment => analyzeSentiment(comment, user.plan))
-    );
+    await Promise.allSettled(batch.map((comment) => analyzeSentiment(comment, user.plan)));
   }
 };
 
@@ -151,13 +147,20 @@ confidence: 0-100`;
       'sentiment.score': parsed.score || 0,
       'sentiment.confidence': parsed.confidence || 50,
     });
-  } catch (err) {
+  } catch {
     // Fallback: simple keyword-based sentiment
     const text = comment.text.toLowerCase();
-    const label = text.includes('?') ? 'question'
-      : ['great', 'amazing', 'love', 'best', 'awesome', 'nice', 'good', 'thanks'].some(w => text.includes(w)) ? 'positive'
-      : ['bad', 'hate', 'worst', 'terrible', 'awful', 'dislike', 'stop'].some(w => text.includes(w)) ? 'negative'
-      : 'neutral';
+    const label = text.includes('?')
+      ? 'question'
+      : ['great', 'amazing', 'love', 'best', 'awesome', 'nice', 'good', 'thanks'].some((w) =>
+            text.includes(w)
+          )
+        ? 'positive'
+        : ['bad', 'hate', 'worst', 'terrible', 'awful', 'dislike', 'stop'].some((w) =>
+              text.includes(w)
+            )
+          ? 'negative'
+          : 'neutral';
 
     await Comment.findByIdAndUpdate(comment._id, {
       'sentiment.label': label,
@@ -207,7 +210,7 @@ Rules:
 Reply with ONLY the reply text, nothing else.`;
 
   const safeAuthor = sanitizePromptInput(comment.authorName, 100);
-  const safeText   = sanitizePromptInput(comment.text, 1500);
+  const safeText = sanitizePromptInput(comment.text, 1500);
 
   const reply = await callAI(
     user.plan,
@@ -252,8 +255,9 @@ const postReply = async (userId, commentId, replyText = null) => {
     throw err;
   }
 
-  const channel = await YoutubeChannel.findById(comment.channelId)
-    .select('+oauth.accessToken +oauth.refreshToken +oauth.expiresAt');
+  const channel = await YoutubeChannel.findById(comment.channelId).select(
+    '+oauth.accessToken +oauth.refreshToken +oauth.expiresAt'
+  );
   const accessToken = await getValidAccessToken(channel);
 
   // Post to YouTube
@@ -283,11 +287,12 @@ const postReply = async (userId, commentId, replyText = null) => {
 
 // ==================== GET COMMENT INBOX ====================
 const getCommentInbox = async (userId, channelId, filters = {}) => {
-  const {
-    status, sentiment, videoId, page = 1, limit = 20, search,
-  } = filters;
+  const { status, sentiment, videoId, page = 1, limit = 20, search } = filters;
 
-  const query = { userId, channelId: require('mongoose').Types.ObjectId.createFromHexString(channelId) };
+  const query = {
+    userId,
+    channelId: require('mongoose').Types.ObjectId.createFromHexString(channelId),
+  };
   if (status) query.status = status;
   if (sentiment) query['sentiment.label'] = sentiment;
   if (videoId) query.youtubeVideoId = videoId;
@@ -296,17 +301,18 @@ const getCommentInbox = async (userId, channelId, filters = {}) => {
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
   const [comments, total] = await Promise.all([
-    Comment.find(query)
-      .sort({ publishedAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .lean(),
+    Comment.find(query).sort({ publishedAt: -1 }).skip(skip).limit(parseInt(limit)).lean(),
     Comment.countDocuments(query),
   ]);
 
   // Summary stats
   const stats = await Comment.aggregate([
-    { $match: { userId: require('mongoose').Types.ObjectId.createFromHexString(userId.toString()), channelId: require('mongoose').Types.ObjectId.createFromHexString(channelId) } },
+    {
+      $match: {
+        userId: require('mongoose').Types.ObjectId.createFromHexString(userId.toString()),
+        channelId: require('mongoose').Types.ObjectId.createFromHexString(channelId),
+      },
+    },
     {
       $group: {
         _id: null,
@@ -323,7 +329,14 @@ const getCommentInbox = async (userId, channelId, filters = {}) => {
   return {
     comments,
     pagination: { page: parseInt(page), limit: parseInt(limit), total },
-    stats: stats[0] || { total: 0, unread: 0, pendingReply: 0, positive: 0, negative: 0, questions: 0 },
+    stats: stats[0] || {
+      total: 0,
+      unread: 0,
+      pendingReply: 0,
+      positive: 0,
+      negative: 0,
+      questions: 0,
+    },
   };
 };
 
@@ -338,9 +351,10 @@ const bulkGenerateReplies = async (userId, channelId, commentIds, tone = 'friend
   }
 
   const results = [];
-  for (const id of commentIds.slice(0, 10)) { // Max 10 at once
+  for (const id of commentIds.slice(0, 10)) {
+    // Max 10 at once
     try {
-      const result = await generateReply(userId, id, tone);
+      await generateReply(userId, id, tone);
       results.push({ commentId: id, success: true });
     } catch (err) {
       results.push({ commentId: id, success: false, error: err.message });
@@ -348,7 +362,7 @@ const bulkGenerateReplies = async (userId, channelId, commentIds, tone = 'friend
   }
 
   // One bulk operation = one bulkReplies credit (regardless of size)
-  const successful = results.filter(r => r.success).length;
+  const successful = results.filter((r) => r.success).length;
   if (successful > 0) {
     await User.findByIdAndUpdate(userId, { $inc: { 'usage.bulkRepliesUsed': 1 } });
   }
@@ -358,7 +372,7 @@ const bulkGenerateReplies = async (userId, channelId, commentIds, tone = 'friend
     summary: {
       total: results.length,
       successful,
-      failed: results.filter(r => !r.success).length,
+      failed: results.filter((r) => !r.success).length,
     },
   };
 };

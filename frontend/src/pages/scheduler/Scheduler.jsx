@@ -5,12 +5,11 @@ import { useChannelStore } from '../../store/channelStore'
 import { scheduleApi } from '../../api/schedule.api'
 import { CalendarView } from '../../components/features/CalendarView'
 import { BestTimeWidget } from '../../components/features/BestTimeWidget'
-import { VideoCard } from '../../components/features/VideoCard'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Badge, StatusBadge } from '../../components/ui/Badge'
 import { Modal, ConfirmModal } from '../../components/ui/Modal'
-import { formatDate, formatNumber } from '../../utils/formatters'
+import { formatDate } from '../../utils/formatters'
 import { ScheduleForm } from './ScheduleForm'
 import toast from 'react-hot-toast'
 
@@ -50,7 +49,9 @@ export const Scheduler = () => {
     }
   }
 
-  useEffect(() => { fetchData() }, [channelId])
+  useEffect(() => {
+    fetchData()
+  }, [channelId])
 
   const handleCancel = async () => {
     if (!cancelId) return
@@ -58,7 +59,7 @@ export const Scheduler = () => {
     try {
       await scheduleApi.cancel(cancelId)
       toast.success('Schedule cancelled')
-      setSchedules(prev => prev.filter(s => s.videoId !== cancelId))
+      setSchedules((prev) => prev.filter((s) => s.videoId !== cancelId))
       await fetchData()
     } catch {
       toast.error('Failed to cancel')
@@ -84,7 +85,6 @@ export const Scheduler = () => {
 
   return (
     <div className="space-y-5">
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center glass rounded-xl p-1">
@@ -130,25 +130,22 @@ export const Scheduler = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
         {/* Main content */}
         <div className="lg:col-span-2">
           {view === 'calendar' ? (
             <Card>
-              <CalendarView
-                calendar={calendar}
-                onDayClick={handleDayClick}
-                loading={loading}
-              />
+              <CalendarView calendar={calendar} onDayClick={handleDayClick} loading={loading} />
             </Card>
           ) : (
             <Card>
               <CardHeader title="Upcoming Schedules" subtitle="Sorted by time" icon={Clock} />
               {loading ? (
                 <div className="space-y-3">
-                  {Array(5).fill(0).map((_, i) => (
-                    <div key={i} className="shimmer h-20 rounded-xl" />
-                  ))}
+                  {Array(5)
+                    .fill(0)
+                    .map((_, i) => (
+                      <div key={i} className="shimmer h-20 rounded-xl" />
+                    ))}
                 </div>
               ) : schedules.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
@@ -160,12 +157,18 @@ export const Scheduler = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {schedules.map(s => (
+                  {schedules.map((s) => (
                     <div key={s._id} className="flex items-center gap-3 p-3 glass rounded-xl">
                       <div className="w-16 h-10 rounded-lg overflow-hidden bg-base-600 shrink-0">
-                        {s.videoId?.thumbnail?.url
-                          ? <img src={s.videoId.thumbnail.url} className="w-full h-full object-cover" alt="" />
-                          : <div className="w-full h-full bg-brand/20" />}
+                        {s.videoId?.thumbnail?.url ? (
+                          <img
+                            src={s.videoId.thumbnail.url}
+                            className="w-full h-full object-cover"
+                            alt=""
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-brand/20" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-white truncate">
@@ -201,10 +204,12 @@ export const Scheduler = () => {
 
         {/* Sidebar */}
         <div className="space-y-4">
-          <BestTimeWidget onSelectTime={(time) => {
-            setSelectedDay({ prefilledTime: time })
-            setShowForm(true)
-          }} />
+          <BestTimeWidget
+            onSelectTime={(time) => {
+              setSelectedDay({ prefilledTime: time })
+              setShowForm(true)
+            }}
+          />
 
           {/* Legend */}
           <Card>
@@ -216,8 +221,10 @@ export const Scheduler = () => {
                 { step: '3', text: 'Video auto-publishes at the scheduled time' },
               ].map(({ step, text }) => (
                 <div key={step} className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full bg-brand/15 text-brand text-xs
-                                  flex items-center justify-center font-bold shrink-0 mt-0.5">
+                  <div
+                    className="w-5 h-5 rounded-full bg-brand/15 text-brand text-xs
+                                  flex items-center justify-center font-bold shrink-0 mt-0.5"
+                  >
                     {step}
                   </div>
                   <p>{text}</p>
@@ -231,7 +238,10 @@ export const Scheduler = () => {
       {/* Schedule Form Modal */}
       <Modal
         isOpen={showForm}
-        onClose={() => { setShowForm(false); setSelectedDay(null) }}
+        onClose={() => {
+          setShowForm(false)
+          setSelectedDay(null)
+        }}
         title="Schedule Video"
         size="lg"
       >
@@ -243,7 +253,10 @@ export const Scheduler = () => {
             setSelectedDay(null)
             fetchData()
           }}
-          onCancel={() => { setShowForm(false); setSelectedDay(null) }}
+          onCancel={() => {
+            setShowForm(false)
+            setSelectedDay(null)
+          }}
         />
       </Modal>
 

@@ -52,8 +52,8 @@ const config = {
     // ports so local dev keeps working out of the box; unset in production
     // means no extra origins (only CLIENT_URL / FRONTEND_URL / VERCEL_URL).
     extraOrigins: (
-      process.env.CORS_EXTRA_ORIGINS
-      ?? (process.env.NODE_ENV !== 'production' ? 'http://localhost:3000,http://localhost:5173' : '')
+      process.env.CORS_EXTRA_ORIGINS ??
+      (process.env.NODE_ENV !== 'production' ? 'http://localhost:3000,http://localhost:5173' : '')
     )
       .split(',')
       .map((o) => o.trim())

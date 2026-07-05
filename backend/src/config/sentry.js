@@ -7,7 +7,7 @@ const logger = require('./logger');
 let Sentry = null;
 try {
   Sentry = require('@sentry/node');
-} catch (err) {
+} catch {
   logger.warn('[sentry] @sentry/node not installed — error tracking disabled');
 }
 

@@ -52,11 +52,7 @@ router.get('/:videoId', protect, videoController.getVideo);
  * @access  Private
  * @body    { channelId, title, description, tags, category, privacy, scheduledAt }
  */
-router.post(
-  '/draft',
-  protect,
-  videoController.createDraft
-);
+router.post('/draft', protect, videoController.createDraft);
 
 /**
  * @route   POST /api/v1/videos/:videoId/upload

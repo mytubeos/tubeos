@@ -54,12 +54,7 @@ const createSchedule = async (userId, videoId, scheduledAt, options = {}) => {
   }
 
   // 4. Create BullMQ job
-  const job = await scheduleVideoPublish(
-    videoId,
-    video.channelId,
-    userId,
-    scheduleDate
-  );
+  const job = await scheduleVideoPublish(videoId, video.channelId, userId, scheduleDate);
 
   // 5. Create schedule record
   const schedule = await Schedule.create({
@@ -147,11 +142,14 @@ const cancelSchedule = async (userId, videoId) => {
   await schedule.save();
 
   // Update video back to draft
-  await Video.findOneAndUpdate({ _id: { $eq: videoId } }, {
-    status: 'draft',
-    scheduledAt: null,
-    scheduledJobId: null,
-  });
+  await Video.findOneAndUpdate(
+    { _id: { $eq: videoId } },
+    {
+      status: 'draft',
+      scheduledAt: null,
+      scheduledJobId: null,
+    }
+  );
 
   return { message: 'Schedule cancelled successfully' };
 };
@@ -248,7 +246,10 @@ const getQueueDashboard = async () => {
 // Full implementation in Part 4 (Time Intelligence System)
 // This is a placeholder that returns smart defaults
 const getBestTimeRecommendation = async (userId, channelId) => {
-  const channel = await YoutubeChannel.findOne({ _id: { $eq: channelId }, userId: { $eq: userId } });
+  const channel = await YoutubeChannel.findOne({
+    _id: { $eq: channelId },
+    userId: { $eq: userId },
+  });
   if (!channel) {
     const err = new Error('Channel not found');
     err.statusCode = 404;
@@ -257,7 +258,8 @@ const getBestTimeRecommendation = async (userId, channelId) => {
 
   // Check if we have calculated data
   if (channel.bestTimeData?.lastCalculatedAt) {
-    const daysSinceCalc = (Date.now() - channel.bestTimeData.lastCalculatedAt) / (1000 * 60 * 60 * 24);
+    const daysSinceCalc =
+      (Date.now() - channel.bestTimeData.lastCalculatedAt) / (1000 * 60 * 60 * 24);
 
     // Return cached if calculated within 7 days
     if (daysSinceCalc < 7 && channel.bestTimeData.bestHours.length > 0) {
@@ -363,7 +365,9 @@ const getNextBestSlots = (bestDays, bestHours, count = 5, grid = null) => {
     const date = new Date(now);
     date.setDate(date.getDate() + daysAhead);
     const dayIndex = date.getDay();
-    const dayName = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][dayIndex];
+    const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][
+      dayIndex
+    ];
 
     if (bestDays.includes(dayName)) {
       for (const hour of bestHours) {

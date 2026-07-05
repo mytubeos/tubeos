@@ -90,7 +90,7 @@ const optionalAuth = async (req, res, next) => {
           plan: decoded.plan,
         };
       }
-    } catch (err) {
+    } catch {
       // Token invalid/expired - continue as guest
       logger.debug('[auth.middleware] Optional token invalid, continuing as guest');
     }

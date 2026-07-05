@@ -45,7 +45,8 @@ api.interceptors.response.use(
     const originalRequest = error.config
 
     if (error.response?.status === 401 && !originalRequest._retry) {
-      const isAuthRoute = originalRequest?.url?.includes('/auth/login') ||
+      const isAuthRoute =
+        originalRequest?.url?.includes('/auth/login') ||
         originalRequest?.url?.includes('/auth/register') ||
         originalRequest?.url?.includes('/auth/refresh')
 
@@ -53,7 +54,7 @@ api.interceptors.response.use(
         if (isRefreshing) {
           return new Promise((resolve, reject) => {
             failedQueue.push({ resolve, reject })
-          }).then(token => {
+          }).then((token) => {
             originalRequest.headers.Authorization = `Bearer ${token}`
             return api(originalRequest)
           })

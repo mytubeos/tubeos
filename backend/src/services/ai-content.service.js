@@ -12,11 +12,11 @@ const logger = require('../config/logger');
 
 // ==================== GENERATE TITLES ====================
 const generateTitles = async (userId, { topic, description, tags, channelNiche, count = 5 }) => {
-  topic        = sanitizePromptInput(topic, 300);
-  description  = sanitizePromptInput(description, 1000);
-  tags         = sanitizePromptArray(tags, 50, 20);
+  topic = sanitizePromptInput(topic, 300);
+  description = sanitizePromptInput(description, 1000);
+  tags = sanitizePromptArray(tags, 50, 20);
   channelNiche = sanitizePromptInput(channelNiche, 100);
-  count        = Math.min(Math.max(parseInt(count) || 5, 1), 10);
+  count = Math.min(Math.max(parseInt(count) || 5, 1), 10);
 
   const user = await User.findById(userId);
   const channel = await YoutubeChannel.findOne({ userId, isPrimary: true });
@@ -36,12 +36,7 @@ No explanation, no markdown.`;
 ${description ? `Description: ${description}` : ''}
 ${tags?.length ? `Keywords: ${tags.join(', ')}` : ''}`;
 
-  const result = await callAI(
-    user.plan,
-    'default',
-    [{ role: 'user', content }],
-    systemPrompt
-  );
+  const result = await callAI(user.plan, 'default', [{ role: 'user', content }], systemPrompt);
 
   const clean = result.replace(/```json|```/g, '').trim();
   const titles = JSON.parse(clean);
@@ -52,9 +47,9 @@ ${tags?.length ? `Keywords: ${tags.join(', ')}` : ''}`;
 
 // ==================== GENERATE TAGS ====================
 const generateTags = async (userId, { title, description, category }) => {
-  title       = sanitizePromptInput(title, 200);
+  title = sanitizePromptInput(title, 200);
   description = sanitizePromptInput(description, 1000);
-  category    = sanitizePromptInput(category, 50);
+  category = sanitizePromptInput(category, 50);
 
   const user = await User.findById(userId);
 
@@ -72,7 +67,12 @@ No explanation, no markdown.`;
   const result = await callAI(
     user.plan,
     'default',
-    [{ role: 'user', content: `Title: ${title}\nDescription: ${description || ''}\nCategory: ${category || 'General'}` }],
+    [
+      {
+        role: 'user',
+        content: `Title: ${title}\nDescription: ${description || ''}\nCategory: ${category || 'General'}`,
+      },
+    ],
     systemPrompt
   );
 
@@ -85,8 +85,8 @@ No explanation, no markdown.`;
 
 // ==================== GENERATE DESCRIPTION ====================
 const generateDescription = async (userId, { title, tags, channelName, addTimestamps = false }) => {
-  title       = sanitizePromptInput(title, 200);
-  tags        = sanitizePromptArray(tags, 50, 20);
+  title = sanitizePromptInput(title, 200);
+  tags = sanitizePromptArray(tags, 50, 20);
   channelName = sanitizePromptInput(channelName, 100);
 
   const user = await User.findById(userId);
@@ -109,7 +109,12 @@ Write the complete description directly, no extra commentary.`;
   const result = await callAI(
     user.plan,
     'default',
-    [{ role: 'user', content: `Title: ${title}\nKeywords: ${(tags || []).slice(0, 10).join(', ')}` }],
+    [
+      {
+        role: 'user',
+        content: `Title: ${title}\nKeywords: ${(tags || []).slice(0, 10).join(', ')}`,
+      },
+    ],
     systemPrompt
   );
 
@@ -130,7 +135,9 @@ const generateContentIdeas = async (userId, { channelId, niche, count = 10 }) =>
     ? await YoutubeChannel.findOne({ _id: channelId, userId })
     : await YoutubeChannel.findOne({ userId, isPrimary: true });
 
-  const channelInfo = channel ? `Channel: ${channel.channelName} (${channel.stats.subscriberCount} subs)` : '';
+  const channelInfo = channel
+    ? `Channel: ${channel.channelName} (${channel.stats.subscriberCount} subs)`
+    : '';
 
   const systemPrompt = `You are a YouTube content strategist.
 Generate ${count} high-potential video ideas.
@@ -143,7 +150,12 @@ Return ONLY valid JSON array:
   const result = await callAI(
     user.plan,
     'default',
-    [{ role: 'user', content: `Generate ${count} video ideas for niche: ${niche || 'general YouTube content'}` }],
+    [
+      {
+        role: 'user',
+        content: `Generate ${count} video ideas for niche: ${niche || 'general YouTube content'}`,
+      },
+    ],
     systemPrompt
   );
 
@@ -157,8 +169,10 @@ Return ONLY valid JSON array:
 
 // ==================== GENERATE SHORTS SCRIPT ====================
 const generateShortsScript = async (userId, { topic, style = 'educational', duration = 60 }) => {
-  topic    = sanitizePromptInput(topic, 500);
-  style    = ['educational','entertainment','trending','motivation'].includes(style) ? style : 'educational';
+  topic = sanitizePromptInput(topic, 500);
+  style = ['educational', 'entertainment', 'trending', 'motivation'].includes(style)
+    ? style
+    : 'educational';
   duration = Math.min(Math.max(parseInt(duration) || 60, 15), 60);
 
   const user = await User.findById(userId);
@@ -220,14 +234,19 @@ For each Short:
 Return ONLY valid JSON:
 [{"title":"string","timestampHint":"string","script":"string","whyItWorks":"string"}]`;
 
-  const safeTitle       = sanitizePromptInput(video.title, 200);
+  const safeTitle = sanitizePromptInput(video.title, 200);
   const safeDescription = sanitizePromptInput(video.description, 500);
-  const safeTags        = sanitizePromptArray(video.tags, 50, 10);
+  const safeTags = sanitizePromptArray(video.tags, 50, 10);
 
   const result = await callAI(
     user.plan,
     'default',
-    [{ role: 'user', content: `Original video title: ${safeTitle}\nDescription: ${safeDescription || 'No description'}\nTags: ${safeTags.join(', ')}` }],
+    [
+      {
+        role: 'user',
+        content: `Original video title: ${safeTitle}\nDescription: ${safeDescription || 'No description'}\nTags: ${safeTags.join(', ')}`,
+      },
+    ],
     systemPrompt
   );
 
@@ -282,11 +301,18 @@ Return ONLY valid JSON:
         mimeType: contentType,
       });
     } catch (visionErr) {
-      logger.warn('[scoreThumbnail] vision failed, falling back to text-only', { error: visionErr.message });
+      logger.warn('[scoreThumbnail] vision failed, falling back to text-only', {
+        error: visionErr.message,
+      });
       result = await callAI(
         user.plan,
         'default',
-        [{ role: 'user', content: `Title: ${title}\nNiche: ${niche || 'general'}\n(Image analysis unavailable — score based on title alone.)` }],
+        [
+          {
+            role: 'user',
+            content: `Title: ${title}\nNiche: ${niche || 'general'}\n(Image analysis unavailable — score based on title alone.)`,
+          },
+        ],
         systemPrompt
       );
     }
@@ -294,7 +320,12 @@ Return ONLY valid JSON:
     result = await callAI(
       user.plan,
       'default',
-      [{ role: 'user', content: `Title: ${title}\nNiche: ${niche || 'general'}\n(No thumbnail provided — score based on title alone.)` }],
+      [
+        {
+          role: 'user',
+          content: `Title: ${title}\nNiche: ${niche || 'general'}\n(No thumbnail provided — score based on title alone.)`,
+        },
+      ],
       systemPrompt
     );
   }
@@ -327,7 +358,12 @@ Return ONLY valid JSON:
   const result = await callAI(
     user.plan,
     'default',
-    [{ role: 'user', content: `Channel: ${channel.channelName}\nSubscribers: ${channel.stats.subscriberCount}\nVideos: ${channel.stats.videoCount}\nTotal Views: ${channel.stats.viewCount}` }],
+    [
+      {
+        role: 'user',
+        content: `Channel: ${channel.channelName}\nSubscribers: ${channel.stats.subscriberCount}\nVideos: ${channel.stats.videoCount}\nTotal Views: ${channel.stats.viewCount}`,
+      },
+    ],
     systemPrompt
   );
 

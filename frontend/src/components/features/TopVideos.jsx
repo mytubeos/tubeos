@@ -1,7 +1,7 @@
 // src/components/features/TopVideos.jsx
 import { useNavigate } from 'react-router-dom'
-import { ExternalLink, Eye, ThumbsUp, Clock } from 'lucide-react'
-import { formatNumber, formatDate, formatDuration, timeAgo } from '../../utils/formatters'
+import { ExternalLink, Eye, ThumbsUp } from 'lucide-react'
+import { formatNumber, timeAgo } from '../../utils/formatters'
 import { Card, CardHeader } from '../ui/Card'
 
 const VideoRow = ({ video, rank }) => {
@@ -17,23 +17,24 @@ const VideoRow = ({ video, rank }) => {
       onClick={() => navigate(`/analytics/video/${video._id}`)}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/analytics/video/${video._id}`) }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') navigate(`/analytics/video/${video._id}`)
+      }}
       className="flex items-center gap-3 py-3 border-b border-white/5 last:border-0 cursor-pointer
-                    hover:bg-white/[0.02] transition-colors -mx-2 px-2 rounded-lg group">
+                    hover:bg-white/[0.02] transition-colors -mx-2 px-2 rounded-lg group"
+    >
       {/* Rank */}
-      <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0
-                       text-xs font-bold ${rankColors[rank] || 'text-gray-500 bg-white/5'}`}>
+      <div
+        className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0
+                       text-xs font-bold ${rankColors[rank] || 'text-gray-500 bg-white/5'}`}
+      >
         {rank}
       </div>
 
       {/* Thumbnail */}
       <div className="w-14 h-9 rounded-lg overflow-hidden bg-base-600 shrink-0">
         {video.thumbnail?.url ? (
-          <img
-            src={video.thumbnail.url}
-            alt={video.title}
-            className="w-full h-full object-cover"
-          />
+          <img src={video.thumbnail.url} alt={video.title} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <Eye size={14} className="text-gray-600" />
@@ -43,9 +44,7 @@ const VideoRow = ({ video, rank }) => {
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-white truncate leading-tight">
-          {video.title}
-        </p>
+        <p className="text-sm font-medium text-white truncate leading-tight">{video.title}</p>
         <p className="text-2xs text-gray-500 mt-0.5">{timeAgo(video.publishedAt)}</p>
       </div>
 
@@ -84,21 +83,21 @@ export const TopVideos = ({ videos = [], loading = false, title = 'Top Videos' }
     <CardHeader title={title} subtitle="By views" icon={Eye} />
     {loading ? (
       <div className="space-y-3">
-        {Array(5).fill(0).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 py-2">
-            <div className="shimmer w-6 h-6 rounded-md" />
-            <div className="shimmer w-14 h-9 rounded-lg" />
-            <div className="flex-1 space-y-1.5">
-              <div className="shimmer h-3.5 w-3/4 rounded" />
-              <div className="shimmer h-3 w-1/3 rounded" />
+        {Array(5)
+          .fill(0)
+          .map((_, i) => (
+            <div key={i} className="flex items-center gap-3 py-2">
+              <div className="shimmer w-6 h-6 rounded-md" />
+              <div className="shimmer w-14 h-9 rounded-lg" />
+              <div className="flex-1 space-y-1.5">
+                <div className="shimmer h-3.5 w-3/4 rounded" />
+                <div className="shimmer h-3 w-1/3 rounded" />
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
     ) : videos.length === 0 ? (
-      <div className="text-center py-8 text-gray-500 text-sm">
-        No published videos yet
-      </div>
+      <div className="text-center py-8 text-gray-500 text-sm">No published videos yet</div>
     ) : (
       <div>
         {videos.map((video, idx) => (

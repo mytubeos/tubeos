@@ -3,8 +3,17 @@
 @tailwind utilities;
 
 @layer base {
-  * { border-color: rgba(255, 255, 255, 0.08); }
-  h1, h2, h3, h4, h5, h6 { font-family: 'Syne', sans-serif; }
+  * {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Syne', sans-serif;
+  }
 }
 
 @layer components {
@@ -58,19 +67,39 @@
   .badge {
     @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-2xs font-medium;
   }
-  .badge-brand { @apply badge bg-brand/20 text-brand; }
-  .badge-green { @apply badge bg-emerald/20 text-emerald; }
-  .badge-red { @apply badge bg-rose/20 text-rose; }
-  .badge-yellow { @apply badge bg-amber/20 text-amber; }
-  .badge-cyan { @apply badge bg-cyan/20 text-cyan; }
+  .badge-brand {
+    @apply badge bg-brand/20 text-brand;
+  }
+  .badge-green {
+    @apply badge bg-emerald/20 text-emerald;
+  }
+  .badge-red {
+    @apply badge bg-rose/20 text-rose;
+  }
+  .badge-yellow {
+    @apply badge bg-amber/20 text-amber;
+  }
+  .badge-cyan {
+    @apply badge bg-cyan/20 text-cyan;
+  }
 
   /* Scrollbar hide */
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 
   /* Shimmer loading */
   .shimmer {
-    background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.08) 50%,
+      rgba(255, 255, 255, 0.03) 75%
+    );
     background-size: 200% 100%;
     animation: shimmer 2s linear infinite;
   }

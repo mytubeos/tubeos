@@ -77,10 +77,7 @@ const channelAnalyticsSchema = new mongoose.Schema(
 );
 
 // Unique per channel per day
-channelAnalyticsSchema.index(
-  { channelId: 1, date: 1 },
-  { unique: true }
-);
+channelAnalyticsSchema.index({ channelId: 1, date: 1 }, { unique: true });
 channelAnalyticsSchema.index({ channelId: 1, date: -1 });
 
 // ==================== VIDEO DAILY SNAPSHOT ====================
@@ -136,10 +133,7 @@ const videoAnalyticsSchema = new mongoose.Schema(
 
 videoAnalyticsSchema.index({ videoId: 1, date: -1 });
 videoAnalyticsSchema.index({ channelId: 1, date: -1 });
-videoAnalyticsSchema.index(
-  { youtubeVideoId: 1, date: 1 },
-  { unique: true }
-);
+videoAnalyticsSchema.index({ youtubeVideoId: 1, date: 1 }, { unique: true });
 
 // ==================== HEATMAP MODEL ====================
 // 7x24 audience activity grid — cached, recalculated weekly
@@ -162,17 +156,20 @@ const heatmapSchema = new mongoose.Schema(
     // day: 0=Sun, 1=Mon, ..., 6=Sat
     grid: {
       type: [[Number]], // 7x24 2D array
-      default: () => Array(7).fill(null).map(() => Array(24).fill(0)),
+      default: () =>
+        Array(7)
+          .fill(null)
+          .map(() => Array(24).fill(0)),
     },
 
     // Best slots ranked
     bestSlots: [
       {
-        day: Number,      // 0-6
-        dayName: String,  // 'friday'
-        hour: Number,     // 0-23
-        score: Number,    // 0-100
-        label: String,    // '7:00 PM'
+        day: Number, // 0-6
+        dayName: String, // 'friday'
+        hour: Number, // 0-23
+        score: Number, // 0-100
+        label: String, // '7:00 PM'
       },
     ],
 

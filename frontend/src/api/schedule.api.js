@@ -8,7 +8,8 @@ export const scheduleApi = {
   getJobStatus: (videoId) => api.get(`/schedule/${videoId}/status`),
   create: (data) => api.post('/schedule', data),
   bulkCreate: (schedules) => api.post('/schedule/bulk', { schedules }),
-  reschedule: (videoId, scheduledAt) => api.patch(`/schedule/${videoId}/reschedule`, { scheduledAt }),
+  reschedule: (videoId, scheduledAt) =>
+    api.patch(`/schedule/${videoId}/reschedule`, { scheduledAt }),
   cancel: (videoId) => api.delete(`/schedule/${videoId}`),
   getQueueStats: () => api.get('/schedule/queue/stats'),
 }

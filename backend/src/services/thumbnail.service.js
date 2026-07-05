@@ -9,23 +9,25 @@ let cloudinary = null;
 try {
   // Optional dependency — won't crash boot if missing
   cloudinary = require('cloudinary').v2;
-} catch (err) {
+} catch {
   logger.warn('[thumbnail] cloudinary package not installed — uploads disabled');
 }
 
 const isConfigured = () => {
-  return !!(cloudinary &&
+  return !!(
+    cloudinary &&
     process.env.CLOUDINARY_CLOUD_NAME &&
     process.env.CLOUDINARY_API_KEY &&
-    process.env.CLOUDINARY_API_SECRET);
+    process.env.CLOUDINARY_API_SECRET
+  );
 };
 
 if (cloudinary && isConfigured()) {
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key:    process.env.CLOUDINARY_API_KEY,
+    api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
-    secure:     true,
+    secure: true,
   });
 }
 
@@ -58,8 +60,11 @@ const uploadThumbnail = async (userId, videoId, fileBuffer, mimeType) => {
 
   // Delete old thumbnail if exists
   if (video.thumbnail?.cloudinaryId) {
-    try { await cloudinary.uploader.destroy(video.thumbnail.cloudinaryId); }
-    catch (err) { logger.warn('[thumbnail] old destroy failed', { error: err.message }); }
+    try {
+      await cloudinary.uploader.destroy(video.thumbnail.cloudinaryId);
+    } catch (err) {
+      logger.warn('[thumbnail] old destroy failed', { error: err.message });
+    }
   }
 
   // Upload via stream
@@ -76,11 +81,11 @@ const uploadThumbnail = async (userId, videoId, fileBuffer, mimeType) => {
   });
 
   video.thumbnail = {
-    url:          result.secure_url,
+    url: result.secure_url,
     cloudinaryId: result.public_id,
-    isCustom:     true,
-    width:        result.width,
-    height:       result.height,
+    isCustom: true,
+    width: result.width,
+    height: result.height,
   };
   await video.save();
 
@@ -96,8 +101,11 @@ const deleteThumbnail = async (userId, videoId) => {
   }
 
   if (video.thumbnail?.cloudinaryId && isConfigured()) {
-    try { await cloudinary.uploader.destroy(video.thumbnail.cloudinaryId); }
-    catch (err) { logger.warn('[thumbnail] destroy failed', { error: err.message }); }
+    try {
+      await cloudinary.uploader.destroy(video.thumbnail.cloudinaryId);
+    } catch (err) {
+      logger.warn('[thumbnail] destroy failed', { error: err.message });
+    }
   }
 
   video.thumbnail = { url: null, cloudinaryId: null, isCustom: false };

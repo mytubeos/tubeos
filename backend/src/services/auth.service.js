@@ -1,17 +1,10 @@
-
 // src/services/auth.service.js
 // FIXED: Full OTP verification via Brevo, forgot password, reset password, no bugs
 const crypto = require('crypto');
-const { v4: uuidv4 } = require('uuid');
-const bcrypt = require('bcryptjs');
 const User = require('../models/user.model');
 const { generateTokenPair, verifyRefreshToken } = require('../utils/jwt.utils');
 const { setCache, getCache, deleteCache, getRedisClient } = require('../config/redis');
-const {
-  sendOTPEmail,
-  sendPasswordResetEmail,
-  sendWelcomeEmail,
-} = require('../utils/email.utils');
+const { sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail } = require('../utils/email.utils');
 const logger = require('../config/logger');
 
 // ==================== HELPER FUNCTIONS ====================
@@ -99,7 +92,10 @@ const register = async ({ name, email, password, referralCode }) => {
     await sendOTPEmail(user.email, user.name, otp);
     logger.info(`[register] OTP email sent`, { email: user.email });
   } catch (emailError) {
-    logger.error('[register] Failed to send OTP email', { error: emailError.message, brevoError: emailError.response?.data });
+    logger.error('[register] Failed to send OTP email', {
+      error: emailError.message,
+      brevoError: emailError.response?.data,
+    });
     // Log OTP for testing when email fails (remove before full production)
     logger.debug(`[register] OTP for ${user.email}: ${otp}`);
   }
@@ -150,11 +146,7 @@ const verifyEmail = async (otp, userId) => {
   }
 
   // Mark email as verified
-  const user = await User.findByIdAndUpdate(
-    userId,
-    { isEmailVerified: true },
-    { new: true }
-  );
+  const user = await User.findByIdAndUpdate(userId, { isEmailVerified: true }, { new: true });
 
   if (!user) {
     const error = new Error('User not found');
@@ -214,7 +206,10 @@ const resendOTP = async (email) => {
     await sendOTPEmail(user.email, user.name, otp);
     logger.info(`[resendOTP] OTP email sent`, { email: user.email });
   } catch (emailError) {
-    logger.error('[resendOTP] Failed to send OTP', { error: emailError.message, brevoError: emailError.response?.data });
+    logger.error('[resendOTP] Failed to send OTP', {
+      error: emailError.message,
+      brevoError: emailError.response?.data,
+    });
     // Log OTP for testing when email fails (remove before full production)
     logger.debug(`[resendOTP] OTP for ${user.email}: ${otp}`);
   }
@@ -235,7 +230,12 @@ const login = async ({ email, password, ip }) => {
 
   // Find user (+isAdmin so the frontend can gate the admin panel)
   const user = await User.findOne({ email }).select('+password +isAdmin');
-  logger.debug('[login] lookup', { email, found: !!user, verified: user?.isEmailVerified, active: user?.isActive });
+  logger.debug('[login] lookup', {
+    email,
+    found: !!user,
+    verified: user?.isEmailVerified,
+    active: user?.isActive,
+  });
   if (!user) {
     const error = new Error('Invalid email or password');
     error.statusCode = 401;
@@ -329,14 +329,19 @@ const forgotPassword = async (email) => {
 
   // Reset link logged at debug level only — contains the plaintext token
   const clientUrl = process.env.CLIENT_URL || 'https://tubeos-eight.vercel.app';
-  logger.debug(`[forgotPassword] RESET LINK for ${user.email}: ${clientUrl}/reset-password?token=${resetToken}`);
+  logger.debug(
+    `[forgotPassword] RESET LINK for ${user.email}: ${clientUrl}/reset-password?token=${resetToken}`
+  );
 
   // Send reset email
   try {
     await sendPasswordResetEmail(user.email, user.name, resetToken);
     logger.info('[forgotPassword] Reset email sent', { email: user.email });
   } catch (emailError) {
-    logger.error('[forgotPassword] Failed to send reset email', { error: emailError.message, brevoError: emailError.response?.data });
+    logger.error('[forgotPassword] Failed to send reset email', {
+      error: emailError.message,
+      brevoError: emailError.response?.data,
+    });
     // Don't throw — token is saved in DB, user can use the logged link above
   }
 
@@ -367,7 +372,10 @@ const resetPassword = async (resetToken, newPassword) => {
   try {
     const redisClient = getRedisClient();
     const raw = await redisClient.get(`pwd_reset:${hashedToken}`);
-    logger.debug('[resetPassword] Redis lookup', { keyPrefix: hashedToken.slice(0, 8), found: !!raw });
+    logger.debug('[resetPassword] Redis lookup', {
+      keyPrefix: hashedToken.slice(0, 8),
+      found: !!raw,
+    });
     if (raw) userId = raw.replace(/^"|"$/g, ''); // strip JSON quotes if present
   } catch (redisErr) {
     logger.error('[resetPassword] Redis get error', { error: redisErr.message });
@@ -445,7 +453,7 @@ const refreshToken = async (token) => {
       refreshToken: tokens.refreshToken,
     };
   } catch (err) {
-    const error = new Error('Invalid or expired refresh token');
+    const error = new Error('Invalid or expired refresh token', { cause: err });
     error.statusCode = 401;
     throw error;
   }
@@ -565,4 +573,3 @@ module.exports = {
   logout,
   logoutAll,
 };
-    

@@ -36,9 +36,11 @@ export const showToast = {
     }
 
     toast.custom((t) => (
-      <div className={`flex items-center gap-3 bg-base-600 border border-white/10 
+      <div
+        className={`flex items-center gap-3 bg-base-600 border border-white/10 
                        rounded-xl px-4 py-3 shadow-xl transition-all duration-300
-                       ${t.visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}>
+                       ${t.visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}
+      >
         {icons[type]}
         <p className="text-sm text-gray-200 font-body">{msg}</p>
       </div>

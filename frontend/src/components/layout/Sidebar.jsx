@@ -1,9 +1,19 @@
 // src/components/layout/Sidebar.jsx
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, BarChart3, Flame, Calendar,
-  Video, MessageCircle, Sparkles, TrendingUp,
-  Youtube, Gift, Settings, LogOut, ChevronRight,
+  LayoutDashboard,
+  BarChart3,
+  Flame,
+  Calendar,
+  Video,
+  MessageCircle,
+  Sparkles,
+  TrendingUp,
+  Youtube,
+  Gift,
+  Settings,
+  LogOut,
+  ChevronRight,
   Zap,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
@@ -51,10 +61,11 @@ export const Sidebar = ({ collapsed = false }) => {
   const navigate = useNavigate()
 
   return (
-    <aside className={`h-screen bg-base-800 border-r border-white/8 flex flex-col
+    <aside
+      className={`h-screen bg-base-800 border-r border-white/8 flex flex-col
                         transition-all duration-300
-                        ${collapsed ? 'w-16' : 'w-60'}`}>
-
+                        ${collapsed ? 'w-16' : 'w-60'}`}
+    >
       {/* Logo */}
       <div className="p-4 border-b border-white/8">
         <div className="flex items-center gap-3">
@@ -75,7 +86,10 @@ export const Sidebar = ({ collapsed = false }) => {
         <div className="mx-3 mt-3 p-3 glass rounded-xl">
           <div className="flex items-center gap-2.5">
             <img
-              src={activeChannel.thumbnail || `https://ui-avatars.com/api/?name=${activeChannel.channelName}&background=4F46E5&color=fff`}
+              src={
+                activeChannel.thumbnail ||
+                `https://ui-avatars.com/api/?name=${activeChannel.channelName}&background=4F46E5&color=fff`
+              }
               alt={activeChannel.channelName}
               className="w-8 h-8 rounded-full object-cover ring-1 ring-brand/30"
             />
@@ -106,9 +120,10 @@ export const Sidebar = ({ collapsed = false }) => {
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium
                      transition-all duration-150 cursor-pointer
-                     ${isActive
-                       ? 'bg-brand/15 text-brand border border-brand/20'
-                       : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+                     ${
+                       isActive
+                         ? 'bg-brand/15 text-brand border border-brand/20'
+                         : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
                      }`
                   }
                 >
@@ -151,8 +166,10 @@ export const Sidebar = ({ collapsed = false }) => {
       <div className="p-3 border-t border-white/8 space-y-2">
         {!collapsed && user && (
           <div className="flex items-center gap-2.5 px-2 py-1.5">
-            <div className="w-8 h-8 rounded-full bg-brand-gradient flex items-center justify-center
-                            text-white text-xs font-bold shrink-0">
+            <div
+              className="w-8 h-8 rounded-full bg-brand-gradient flex items-center justify-center
+                            text-white text-xs font-bold shrink-0"
+            >
               {getInitials(user.name)}
             </div>
             <div className="min-w-0 flex-1">

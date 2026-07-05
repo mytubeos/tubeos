@@ -8,9 +8,11 @@ export const Card = ({ children, className = '', hover = false, glow = null }) =
   }
 
   return (
-    <div className={`glass p-5 transition-all duration-300
+    <div
+      className={`glass p-5 transition-all duration-300
                      ${hover ? `cursor-pointer ${glowColors[glow] || 'hover:border-white/15 hover:bg-white/[0.06]'}` : ''}
-                     ${className}`}>
+                     ${className}`}
+    >
       {children}
     </div>
   )
@@ -29,7 +31,9 @@ export const CardHeader = ({ title, subtitle, action, icon: Icon, iconColor = 'b
     <div className="flex items-start justify-between mb-4">
       <div className="flex items-center gap-3">
         {Icon && (
-          <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${iconColors[iconColor]}`}>
+          <div
+            className={`w-9 h-9 rounded-lg flex items-center justify-center ${iconColors[iconColor]}`}
+          >
             <Icon size={18} />
           </div>
         )}
@@ -45,8 +49,14 @@ export const CardHeader = ({ title, subtitle, action, icon: Icon, iconColor = 'b
 
 // Metric card with KPI data
 export const MetricCard = ({
-  label, value, change, trend, icon: Icon,
-  iconColor = 'brand', subtitle, loading = false,
+  label,
+  value,
+  change,
+  trend,
+  icon: Icon,
+  iconColor = 'brand',
+  subtitle,
+  loading = false,
 }) => {
   const isPositive = change >= 0
   const iconColors = {
@@ -72,8 +82,10 @@ export const MetricCard = ({
       <div className="flex items-start justify-between mb-4">
         <p className="text-gray-400 text-sm font-medium">{label}</p>
         {Icon && (
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center
-                          transition-transform duration-300 group-hover:scale-110 ${iconColors[iconColor]}`}>
+          <div
+            className={`w-9 h-9 rounded-xl flex items-center justify-center
+                          transition-transform duration-300 group-hover:scale-110 ${iconColors[iconColor]}`}
+          >
             <Icon size={17} />
           </div>
         )}

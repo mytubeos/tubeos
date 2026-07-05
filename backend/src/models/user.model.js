@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Email is required'],
       unique: true,
       lowercase: true,
-      match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Invalid email format'],
+      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Invalid email format'],
     },
     password: {
       type: String,
@@ -205,24 +205,24 @@ const userSchema = new mongoose.Schema(
 
     // ==================== USAGE TRACKING (monthly counters) ====================
     usage: {
-      uploadsUsed:      { type: Number, default: 0 },
-      aiRepliesUsed:    { type: Number, default: 0 },
-      aiContentUsed:    { type: Number, default: 0 },
-      bulkRepliesUsed:  { type: Number, default: 0 },
-      lastResetAt:      { type: Date, default: Date.now },
+      uploadsUsed: { type: Number, default: 0 },
+      aiRepliesUsed: { type: Number, default: 0 },
+      aiContentUsed: { type: Number, default: 0 },
+      bulkRepliesUsed: { type: Number, default: 0 },
+      lastResetAt: { type: Date, default: Date.now },
     },
 
     // ==================== WALLET (referral earnings + withdrawals) ====================
     wallet: {
-      balance:        { type: Number, default: 0 },   // available to withdraw (₹)
-      totalEarned:    { type: Number, default: 0 },   // lifetime earned (₹)
+      balance: { type: Number, default: 0 }, // available to withdraw (₹)
+      totalEarned: { type: Number, default: 0 }, // lifetime earned (₹)
       totalWithdrawn: { type: Number, default: 0 },
-      pendingPayout:  { type: Number, default: 0 },   // requested but not paid
-      upi:            { type: String, default: null },
+      pendingPayout: { type: Number, default: 0 }, // requested but not paid
+      upi: { type: String, default: null },
       bankAccount: {
         accountNumber: { type: String, default: null },
-        ifsc:          { type: String, default: null },
-        holderName:    { type: String, default: null },
+        ifsc: { type: String, default: null },
+        holderName: { type: String, default: null },
       },
     },
   },
@@ -289,17 +289,21 @@ userSchema.methods.incrementLoginCount = async function () {
 
 // ==================== USAGE LIMITS PER PLAN ====================
 const PLAN_LIMITS = {
-  free:    { uploads: 0,    aiReplies: 10,        aiContent: 20,    bulkReplies: 0 },
-  creator: { uploads: 5,    aiReplies: 500,       aiContent: 500,   bulkReplies: 0 },
-  pro:     { uploads: 20,   aiReplies: 1200,      aiContent: 2000,  bulkReplies: 100 },
-  agency:  { uploads: Infinity, aiReplies: Infinity, aiContent: Infinity, bulkReplies: Infinity },
+  free: { uploads: 0, aiReplies: 10, aiContent: 20, bulkReplies: 0 },
+  creator: { uploads: 5, aiReplies: 500, aiContent: 500, bulkReplies: 0 },
+  pro: { uploads: 20, aiReplies: 1200, aiContent: 2000, bulkReplies: 100 },
+  agency: { uploads: Infinity, aiReplies: Infinity, aiContent: Infinity, bulkReplies: Infinity },
 };
 
 // Reset monthly counters if a calendar month has passed since lastResetAt
 userSchema.methods.resetMonthlyUsageIfNeeded = async function () {
   const last = this.usage?.lastResetAt ? new Date(this.usage.lastResetAt) : null;
   const now = new Date();
-  if (!last || last.getUTCMonth() !== now.getUTCMonth() || last.getUTCFullYear() !== now.getUTCFullYear()) {
+  if (
+    !last ||
+    last.getUTCMonth() !== now.getUTCMonth() ||
+    last.getUTCFullYear() !== now.getUTCFullYear()
+  ) {
     this.usage = {
       uploadsUsed: 0,
       aiRepliesUsed: 0,
@@ -325,12 +329,12 @@ userSchema.methods.hasUsageLeft = function (type) {
 userSchema.methods.getUsageStats = function () {
   const limits = PLAN_LIMITS[this.plan] || PLAN_LIMITS.free;
   return {
-    uploads:     { used: this.usage?.uploadsUsed     || 0, limit: limits.uploads },
-    aiReplies:   { used: this.usage?.aiRepliesUsed   || 0, limit: limits.aiReplies },
-    aiContent:   { used: this.usage?.aiContentUsed   || 0, limit: limits.aiContent },
+    uploads: { used: this.usage?.uploadsUsed || 0, limit: limits.uploads },
+    aiReplies: { used: this.usage?.aiRepliesUsed || 0, limit: limits.aiReplies },
+    aiContent: { used: this.usage?.aiContentUsed || 0, limit: limits.aiContent },
     bulkReplies: { used: this.usage?.bulkRepliesUsed || 0, limit: limits.bulkReplies },
-    plan:        this.plan,
-    resetsAt:    this.usage?.lastResetAt,
+    plan: this.plan,
+    resetsAt: this.usage?.lastResetAt,
   };
 };
 

@@ -18,14 +18,18 @@ export const useChannelStore = create(
           const channels = res.data?.data || []
           console.log('[fetchChannels] status:', res.status, '| count:', channels.length)
           const active = get().activeChannel
-          const stillValid = channels.find(c => c._id === active?._id)
+          const stillValid = channels.find((c) => c._id === active?._id)
           set({
             channels,
-            activeChannel: stillValid || channels.find(c => c.isPrimary) || channels[0] || null,
+            activeChannel: stillValid || channels.find((c) => c.isPrimary) || channels[0] || null,
             isLoading: false,
           })
         } catch (err) {
-          console.error('[fetchChannels] ERROR:', err.response?.status, err.response?.data || err.message)
+          console.error(
+            '[fetchChannels] ERROR:',
+            err.response?.status,
+            err.response?.data || err.message
+          )
           set({ isLoading: false })
         }
       },
@@ -35,7 +39,7 @@ export const useChannelStore = create(
 
       // Add channel
       addChannel: (channel) => {
-        set(state => ({
+        set((state) => ({
           channels: [...state.channels, channel],
           activeChannel: state.activeChannel || channel,
         }))
@@ -43,24 +47,24 @@ export const useChannelStore = create(
 
       // Remove channel
       removeChannel: (channelId) => {
-        set(state => {
-          const channels = state.channels.filter(c => c._id !== channelId)
-          const active = state.activeChannel?._id === channelId
-            ? channels[0] || null
-            : state.activeChannel
+        set((state) => {
+          const channels = state.channels.filter((c) => c._id !== channelId)
+          const active =
+            state.activeChannel?._id === channelId ? channels[0] || null : state.activeChannel
           return { channels, activeChannel: active }
         })
       },
 
       // Update channel stats
       updateChannelStats: (channelId, stats) => {
-        set(state => ({
-          channels: state.channels.map(c =>
+        set((state) => ({
+          channels: state.channels.map((c) =>
             c._id === channelId ? { ...c, stats: { ...c.stats, ...stats } } : c
           ),
-          activeChannel: state.activeChannel?._id === channelId
-            ? { ...state.activeChannel, stats: { ...state.activeChannel.stats, ...stats } }
-            : state.activeChannel,
+          activeChannel:
+            state.activeChannel?._id === channelId
+              ? { ...state.activeChannel, stats: { ...state.activeChannel.stats, ...stats } }
+              : state.activeChannel,
         }))
       },
 

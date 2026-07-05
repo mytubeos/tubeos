@@ -4,9 +4,9 @@ import { Zap, Tag, LayoutDashboard, LogOut, ShieldCheck, Users } from 'lucide-re
 import { useAuthStore } from '../../store/authStore'
 
 const NAV = [
-  { to: '/admin',          label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/admin/users',    label: 'Users',     icon: Users },
-  { to: '/admin/coupons',  label: 'Coupons',   icon: Tag },
+  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/admin/users', label: 'Users', icon: Users },
+  { to: '/admin/coupons', label: 'Coupons', icon: Tag },
 ]
 
 export const AdminLayout = () => {
@@ -20,7 +20,6 @@ export const AdminLayout = () => {
 
   return (
     <div className="min-h-screen bg-base-900 flex">
-
       {/* Sidebar */}
       <aside className="w-60 shrink-0 border-r border-white/8 flex flex-col">
         {/* Logo */}
@@ -44,9 +43,7 @@ export const AdminLayout = () => {
               key={to}
               to={to}
               end={end}
-              className={({ isActive }) =>
-                `nav-item ${isActive ? 'active' : ''}`
-              }
+              className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
             >
               <Icon size={16} />
               {label}

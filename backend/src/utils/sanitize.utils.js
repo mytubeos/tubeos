@@ -17,7 +17,8 @@ const sanitizePromptInput = (text, maxLength = 4000) => {
   if (text == null) return '';
   let s = String(text);
 
-  // Strip ASCII control chars except \n, \r, \t
+  // Strip ASCII control chars except \n, \r, \t — matching control chars is the point here
+  // eslint-disable-next-line no-control-regex
   s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 
   // Neutralize known prompt-injection phrases

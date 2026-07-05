@@ -9,7 +9,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-≥18.0-339933?logo=node.js&logoColor=white)](https://nodejs.org)
 [![React](https://img.shields.io/badge/React-18.2-61DAFB?logo=react&logoColor=black)](https://react.dev)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white)](https://mongodb.com)
-[![Redis](https://img.shields.io/badge/Redis-BullMQ-DC382D?logo=redis&logoColor=white)](https://redis.io)
+[![Redis](https://img.shields.io/badge/Redis-Caching-DC382D?logo=redis&logoColor=white)](https://redis.io)
 [![License](https://img.shields.io/badge/License-Private-red)](.)
 
 </div>
@@ -24,7 +24,7 @@
 - [🔌 API Routes](#-api-routes)
 - [🗄️ Database Models](#️-database-models)
 - [🤖 AI Integration](#-ai-integration)
-- [📅 Job Queue (BullMQ)](#-job-queue-bullmq)
+- [📅 Job Scheduling](#-job-scheduling)
 - [📺 YouTube OAuth Setup](#-youtube-oauth-setup)
 - [🚢 Deployment](#-deployment)
 - [💰 Pricing Plans](#-pricing-plans)
@@ -98,14 +98,19 @@ tubeos3.0/
 │       │   ├── env.js            # Env validation + config object
 │       │   ├── db.js             # MongoDB connection
 │       │   ├── redis.js          # Redis connection (ioredis)
-│       │   ├── queue.config.js   # BullMQ queues — video-publish, analytics, email
-│       │   ├── ai.config.js      # AI model routing (Claude/Gemini) plan ke hisaab se
+│       │   ├── logger.js         # Winston structured logging (JSON in prod)
+│       │   ├── sentry.js         # Sentry error tracking (no-op if SENTRY_DSN unset)
+│       │   ├── queue.config.js   # BullMQ queue definitions — currently stubbed, see Job Scheduling section
+│       │   ├── ai.config.js      # AI model routing (Claude/Gemini/Groq) plan ke hisaab se
 │       │   └── youtube.config.js # YouTube OAuth2 helpers + API fetch wrapper
 │       │
 │       ├── controllers/          # Thin layer — request parse → service call → response
 │       │   ├── auth.controller.js
 │       │   ├── ai.controller.js
 │       │   ├── analytics.controller.js
+│       │   ├── admin.controller.js
+│       │   ├── payment.controller.js
+│       │   ├── referral.controller.js
 │       │   ├── schedule.controller.js
 │       │   ├── video.controller.js
 │       │   └── youtube.controller.js
@@ -117,56 +122,71 @@ tubeos3.0/
 │       │   ├── analytics.service.js
 │       │   ├── growth.service.js
 │       │   ├── heatmap.service.js
+│       │   ├── payment.service.js
+│       │   ├── coupon.service.js
+│       │   ├── referral.service.js
+│       │   ├── report.service.js       # Weekly email report data aggregation
 │       │   ├── schedule.service.js
+│       │   ├── storage.service.js      # GCS video staging (streams, never buffers whole file)
+│       │   ├── thumbnail.service.js    # Cloudinary thumbnail upload
 │       │   ├── video.service.js
 │       │   └── youtube.service.js
 │       │
-│       ├── models/               # Mongoose schemas (7 collections)
+│       ├── models/               # Mongoose schemas (9 files, 12 collections — some files export multiple models)
 │       │   ├── user.model.js
 │       │   ├── video.model.js
 │       │   ├── schedule.model.js
-│       │   ├── analytics.model.js
+│       │   ├── analytics.model.js     # exports ChannelAnalytics, VideoAnalytics, Heatmap
 │       │   ├── comment.model.js
-│       │   ├── growth.model.js
+│       │   ├── coupon.model.js
+│       │   ├── growth.model.js        # exports GrowthPrediction, Competitor, Trend
+│       │   ├── referral.model.js
 │       │   └── youtube-channel.model.js
 │       │
 │       ├── routes/
 │       │   ├── index.js          # Central route registry
-│       │   ├── auth.routes.js    # 12 endpoints
-│       │   ├── ai.routes.js      # 14 endpoints
-│       │   ├── analytics.routes.js # 18 endpoints
-│       │   ├── schedule.routes.js  # 9 endpoints
-│       │   ├── video.routes.js     # 8 endpoints
-│       │   └── youtube.routes.js   # 7 endpoints
+│       │   ├── auth.routes.js       # 12 endpoints
+│       │   ├── ai.routes.js         # 14 endpoints
+│       │   ├── analytics.routes.js  # 18 endpoints
+│       │   ├── admin.routes.js      # 9 endpoints (admin-only)
+│       │   ├── payment.routes.js    # 4 endpoints (Razorpay order/verify/webhook/coupon)
+│       │   ├── referral.routes.js   # 5 endpoints
+│       │   ├── schedule.routes.js   # 9 endpoints
+│       │   ├── video.routes.js      # 8 endpoints
+│       │   └── youtube.routes.js    # 7 endpoints
 │       │
 │       ├── middlewares/
 │       │   ├── auth.middleware.js       # protect, requirePlan, checkUsageLimit
+│       │   ├── admin.middleware.js      # adminProtect — requires req.user.isAdmin
 │       │   ├── error.middleware.js      # 404 + global error handler
+│       │   ├── upload.middleware.js     # Multer — streams video uploads straight to GCS
 │       │   └── rateLimiter.middleware.js # Per-route rate limits
 │       │
 │       ├── jobs/
-│       │   ├── index.js                # Worker registry — startWorkers()
-│       │   └── videoPublish.job.js     # BullMQ worker — YouTube upload
+│       │   ├── index.js                # Worker registry (BullMQ workers stubbed — see Job Scheduling section)
+│       │   └── cron.js                 # In-process setInterval scheduler — publish reaper, analytics sync, trend refresh, weekly reports
 │       │
 │       └── utils/
 │           ├── jwt.utils.js            # Token sign/verify helpers
-│           ├── email.utils.js          # OTP, password reset emails
-│           └── response.utils.js       # Standardized API response formats
+│           ├── email.utils.js          # Brevo HTTP API — OTP, password reset, weekly report emails
+│           ├── response.utils.js       # Standardized API response formats
+│           └── sanitize.utils.js       # Strips prompt-injection patterns before text reaches an LLM
 │
 └── frontend/
     ├── vite.config.js
     ├── tailwind.config.js
     ├── vercel.json               # SPA routing fix for Vercel
     └── src/
-        ├── App.jsx               # Root router + ProtectedRoute
+        ├── App.jsx               # Root router + ProtectedRoute + AdminRoute
         ├── api/                  # Axios instances per feature
         ├── store/                # Zustand — authStore, channelStore
         ├── hooks/                # useAuth, useAnalytics, useChannel
-        ├── pages/                # Full page components (21 pages)
+        ├── pages/                # Full page components (26 pages)
         ├── components/           # layout/, ui/, features/, charts/
         └── utils/
             ├── constants.js      # API_URL, PLANS, NAV_ITEMS
-            └── formatters.js     # formatNumber, formatDate, formatDuration
+            ├── formatters.js     # formatNumber, formatDate, formatDuration
+            └── sentry.js         # initSentry() — no-op if VITE_SENTRY_DSN unset
 ```
 
 ---
@@ -204,7 +224,7 @@ tubeos3.0/
 VITE_API_URL=http://localhost:8080/api/v1
 ```
 
-Production mein Vercel dashboard mein set karo: `VITE_API_URL=https://your-backend.run.app/api/v1`
+Production mein Vercel dashboard mein set karo: `VITE_API_URL=https://your-backend.onrender.com/api/v1`
 
 ---
 
@@ -260,7 +280,7 @@ Sab routes ka base URL: `/api/v1`
 |---|---|---|---|
 | `GET` | `/` | Private | Scheduled posts list |
 | `GET` | `/calendar` | Private | Month-wise calendar view |
-| `GET` | `/queue/stats` | Private | BullMQ queue status |
+| `GET` | `/queue/stats` | Private | Queue stats (currently always zeros — BullMQ is stubbed, see Job Scheduling) |
 | `GET` | `/best-time/:channelId` | Creator+ | AI best posting time |
 | `GET` | `/:videoId/status` | Private | Job status check |
 | `POST` | `/` | Private | Video schedule karo |
@@ -302,6 +322,41 @@ Sab routes ka base URL: `/api/v1`
 | `POST` | `/thumbnail/score` | Creator+ | Thumbnail CTR score |
 | `GET` | `/monetization/:channelId` | Pro+ | Monetization tips |
 
+### 💳 Payment — `/api/v1/payment/`
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/webhook` | Public (signature-verified) | Razorpay webhook — payment.captured events |
+| `POST` | `/create-order` | Private | Razorpay order create karo (plan + optional coupon) |
+| `POST` | `/verify` | Private | Payment signature verify + plan activate |
+| `POST` | `/validate-coupon` | Private | Coupon code validate karo checkout se pehle |
+
+### 🎁 Referral — `/api/v1/referral/`
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `GET` | `/stats` | Private | Referral code, tier, total referrals |
+| `GET` | `/earnings` | Private | Wallet balance + earning history |
+| `GET` | `/referrals` | Private | Referred users list |
+| `GET` | `/payouts` | Private | Payout request history |
+| `POST` | `/payout` | Private | Payout request karo |
+
+### 🛠️ Admin — `/api/v1/admin/`
+
+Requires `req.user.isAdmin` (see `admin.middleware.js`).
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/users/stats` | Platform-wide user stats |
+| `GET` | `/users` | Users list |
+| `PATCH` | `/users/:id/plan` | User ka plan change karo |
+| `PATCH` | `/users/:id/ban` | Ban/unban toggle |
+| `GET` | `/coupons/stats` | Coupon usage stats |
+| `GET` | `/coupons` | Coupons list |
+| `POST` | `/coupons` | Naya coupon banao |
+| `PATCH` | `/coupons/:id` | Coupon update karo |
+| `DELETE` | `/coupons/:id` | Coupon delete karo |
+
 ---
 
 ## 🗄️ Database Models
@@ -319,8 +374,8 @@ Video lifecycle management.
 Status: `draft → scheduled → uploading → processing → published | failed | cancelled`
 
 ### Schedule
-BullMQ job tracking.  
-Key fields: `scheduledAt`, `bullJobId`, `status`, `retryCount`
+Scheduled-publish tracking, reaped by `jobs/cron.js` (see Job Scheduling).  
+Key fields: `scheduledAt`, `bullJobId` (currently a stub value — BullMQ is disabled), `status`, `retryCount`
 
 ### ChannelAnalytics / VideoAnalytics (analytics.model.js)
 Daily snapshots + 7×24 Heatmap — sab ek hi file mein.
@@ -331,6 +386,14 @@ Key fields: `sentiment.label`, `aiReply`, `status` (unread/pending_reply/replied
 
 ### GrowthPrediction / Competitor / Trend (growth.model.js)
 30/90/365 day predictions, competitor tracking, keyword trends.
+
+### Coupon
+Discount codes for checkout.
+Key fields: `code`, `type` (internal/public), `discountType` (percent/fixed), `discountValue`, `validPlans`
+
+### Referral
+Per-payment commission ledger — separate from `User.referral.*` summary fields.
+Key fields: `referrerId`, `referredUserId`, `commissionRate`, `commissionAmount`, `billingCycleIndex` (1-6), `status` (credited/reversed)
 
 ---
 
@@ -351,37 +414,34 @@ Plan ke hisaab se automatic model routing:
 
 ---
 
-## 📅 Job Queue (BullMQ)
+## 📅 Job Scheduling
 
-4 queues Redis mein:
+**BullMQ is currently stubbed / disabled** (`queue.config.js`) — Upstash's free Redis plan blocks `evalsha` (the Lua scripts BullMQ needs), so every queue in that file is a no-op (`makeStubQueue`). `src/jobs/videoPublish.job.js`'s BullMQ worker is dead code as a result — it's never imported anywhere.
 
-| Queue | Purpose | Retries |
+**What actually runs scheduling today:** an in-process scheduler in `src/jobs/cron.js`, driven by plain `setInterval` (single Node process, fine on Render's current single-instance deploy):
+
+| Job | Interval | Purpose |
 |---|---|---|
-| `video-publish` | Scheduled video YouTube pe upload karo | 3 |
-| `analytics-sync` | Analytics data periodically sync karo | 5 |
-| `email` | OTP, password reset emails bhejo | 3 |
-| `weekly-report` | ⚠️ Not implemented yet | — |
+| `reapPublishedSchedules` | 60s | Flips `Schedule`/`Video` status to `published` once YouTube's own `publishAt` time passes |
+| `syncAllChannelsAnalytics` | 24h | Pulls YouTube Analytics + comments for every active channel |
+| `refreshTrends` | 12h | Refreshes the Trend Opportunity Scanner from YouTube's `mostPopular` chart |
+| `sendWeeklyReports` | 24h (fires only on Monday) | Sends the weekly performance email to opted-in users |
 
-### Video Publish Flow
+### Video Publish Flow (current, real)
 ```
-User schedules video
+User schedules video (privacy=private, publishAt=scheduledAt)
     ↓
-BullMQ delayed job create (delay = scheduledAt - now)
+video.service.js uploadVideo() streams the file: GCS staging → YouTube resumable upload
     ↓
-Job ID → Schedule.bullJobId + Video.scheduledJobId
+Video.youtubeVideoId set, Video.status = "scheduled"
     ↓
-[Time passes...]
+YouTube itself flips the video to public at publishAt (no polling needed for the flip)
     ↓
-Worker fires → YouTube token refresh (if expired)
-    ↓
-⚠️ BUG: File GCS se read karna chahiye (abhi memoryStorage use ho raha hai — fix needed)
-    ↓
-YouTube API → video upload
-    ↓
-Video.status = "published" + Video.youtubeVideoId set
+cron.js reapPublishedSchedules() (60s poll) notices scheduledAt has passed,
+updates Schedule.status/Video.status to "published" in our own DB
 ```
 
-> ⚠️ **Important:** Video file storage abhi in-memory hai. Production ke liye Google Cloud Storage integration required hai.
+> ⚠️ **Known limitation:** because scheduling runs as in-process `setInterval` rather than a distributed queue, it is **not safe if the backend ever scales to more than one instance** — every instance would run its own cron and duplicate work (double emails, double analytics syncs). Re-enabling BullMQ on a paid Redis plan (or an alternative like a distributed cron/queue) is required before horizontal scaling. See Roadmap.
 
 ---
 
@@ -396,8 +456,8 @@ Video.status = "published" + Video.youtubeVideoId set
 5. Application type: **Web application**
 6. Authorized redirect URIs mein add karo:
    ```
-   http://localhost:8080/api/v1/youtube/callback        ← development
-   https://your-backend.run.app/api/v1/youtube/callback ← production
+   http://localhost:8080/api/v1/youtube/callback           ← development
+   https://your-backend.onrender.com/api/v1/youtube/callback ← production
    ```
 7. Client ID aur Secret copy karke `.env` mein daal do
 
@@ -405,18 +465,16 @@ Video.status = "published" + Video.youtubeVideoId set
 
 ## 🚢 Deployment
 
-### Backend (Google Cloud Run)
+### Backend (Render — current production host)
 
-```bash
-# Docker image build karo
-docker build -t tubeos-backend .
+1. [Render](https://render.com) pe GitHub repo connect karo
+2. Root directory: `backend`
+3. Build command: `npm install`
+4. Start command: `npm start`
+5. Environment variables Render dashboard's **Environment** tab mein set karo (never commit `.env`)
+6. Render's free tier cold-starts and sleeps on idle — code already accounts for this (see `youtube.service.js`'s 30-minute OAuth state cache, sized for cold-start delay)
 
-# Ya Cloud Build use karo (auto-deploy on push)
-# cloudbuild.yaml already configured hai
-gcloud builds submit --config cloudbuild.yaml
-```
-
-Cloud Run mein environment variables **Settings → Variables & Secrets** mein set karo.
+A `Dockerfile` + `cloudbuild.yaml` also exist in the repo for a Google Cloud Run alternative (`gcloud builds submit --config cloudbuild.yaml`), but Render is what's actually running in production today (see the `.onrender.com` CORS allowance and `trust proxy` setting in `app.js`).
 
 ### Frontend (Vercel)
 
@@ -430,7 +488,7 @@ Vercel pe deploy:
 2. Root directory: `frontend`
 3. Build command: `npm run build`
 4. Output directory: `dist`
-5. Environment variable add karo: `VITE_API_URL = https://your-backend.run.app/api/v1`
+5. Environment variable add karo: `VITE_API_URL = https://your-backend.onrender.com/api/v1`
 
 `vercel.json` already hai — SPA routing automatically handle hogi.
 
@@ -440,9 +498,10 @@ Vercel pe deploy:
 |---|---|---|
 | MongoDB Atlas | 512MB free | [mongodb.com/atlas](https://mongodb.com/atlas) |
 | Upstash Redis | 10K commands/day free | [upstash.com](https://upstash.com) |
-| Google Cloud Run | 2M requests/month free | [cloud.google.com/run](https://cloud.google.com/run) |
+| Render | Free web service (cold starts on idle) | [render.com](https://render.com) |
 | Vercel | Unlimited hobby | [vercel.com](https://vercel.com) |
 | Brevo Email | 300 emails/day free | [brevo.com](https://brevo.com) |
+| Sentry | 5K errors/month free | [sentry.io](https://sentry.io) |
 
 ---
 
@@ -465,75 +524,71 @@ Vercel pe deploy:
 
 ## 🐛 Known Issues
 
-### 🔴 Critical — Launch se pehle fix karo
+All the critical/high/medium issues that used to be tracked here (video file persistence, `checkUsageLimit` `_id` bug, Cloudinary, email delivery, referral backend, payment gateway, AI prompt injection, trend data) are fixed — see the Roadmap below for what's still genuinely open.
 
-**1. Video File Persist Nahi Hoti**
-```
-Problem: multer memoryStorage use karta hai — file RAM mein sirf upload request tak hoti hai.
-         BullMQ job hours baad fire hota hai — tab file gone hoti hai. Scheduling fail hoga.
+**Currently open:**
 
-Fix:     Upload ke time file Google Cloud Storage mein save karo.
-         Video model mein gcsPath field add karo.
-         videoPublish.job.js mein GCS se file download karke YouTube pe upload karo.
-```
-
-**2. `checkUsageLimit` mein `_id` Bug**
-```
-Problem: auth.middleware.js mein User.findById(req.user._id) hai.
-         .lean() plain object deta hai jisme "id" hota hai, "_id" nahi.
-         Usage limits silently fail ho jaate hain.
-
-Fix:     req.user._id → req.user.id (~line 75 in auth.middleware.js)
-```
-
-### 🟡 High Priority
-
-- **Cloudinary missing** — `thumbnail.cloudinaryId` field hai model mein par package nahi
-- **Email config mismatch** — `BREVO_API_KEY` set hai par nodemailer SMTP credentials expect karta hai
-- **Referral backend missing** — Frontend page hai par `/api/v1/referral/*` routes exist nahi karte (404)
-
-### 🟠 Medium Priority
-
-- **Payment gateway nahi** — Plan upgrade karne ka koi mechanism nahi
-- **AI prompt injection** — User input directly prompts mein jaata hai, sanitize karo
-- **Trend data source nahi** — Trend model hai par populate karne wali koi service nahi
+- **Single-instance scheduling risk** — `jobs/cron.js` uses plain `setInterval`, which duplicates work (double emails, double analytics syncs) if the backend ever runs as more than one instance. Fine today (single Render instance); needs BullMQ back on a paid Redis plan (or an equivalent distributed scheduler) before horizontal scaling. See Roadmap Phase 3.
+- **Zero automated test coverage** — no test files exist anywhere in the repo yet.
+- **No CI pipeline** — nothing runs automatically on push/PR before code lands on `main`.
 
 ---
 
 ## 🗺️ Roadmap
 
-### Phase 1 — Critical Fixes
-- [x] Video file → Google Cloud Storage
+### Phase 1 — Critical Fixes ✅
+- [x] Video file → Google Cloud Storage (streamed, not buffered — including a later fix for a staging-file leak on early-exit error paths)
 - [x] `checkUsageLimit` `_id` bug fix
 - [x] `.dockerignore` add karo
-- [ ] Email service config fix (Brevo SMTP)
-- [ ] Referral backend banao (routes + controller + service)
-- [ ] `GEMINI_API_KEY` production mein set karo
+- [x] Email delivery (Brevo HTTP API — not SMTP/Nodemailer, which is why this used to look "misconfigured")
+- [x] Referral backend (routes + controller + service — fully built)
+- [ ] Confirm `GEMINI_API_KEY` is set in the production environment (Render) — can't be verified from code, needs a manual check
 
-### Phase 2 — Launch Ready
+### Phase 2 — Launch Ready ✅
 - [x] Payment gateway (Razorpay)
 - [x] Cloudinary thumbnail upload
-- [x] Admin dashboard
+- [x] Admin dashboard + `isAdmin`-gated routes
 - [x] Trend data source (YouTube Data API `mostPopular` chart)
-- [x] Error monitoring (Sentry)
-- [x] Weekly email reports implement karo
+- [x] Error monitoring (Sentry — backend + frontend)
+- [x] Weekly email reports
+- [x] Redis analytics caching (YouTube quota bachao — `analytics.service.js`, 30min-24hr TTLs)
+- [x] AI prompt injection sanitization (`sanitize.utils.js`, wired into every AI call site including untrusted YouTube comment text)
+- [x] Structured logging (Winston — JSON in prod, replaces raw `console.*`)
+- [x] CORS driven entirely by env config (no hardcoded origins)
 
-### Phase 3 — Scale
-- [ ] TypeScript migration
-- [ ] Test suite (Vitest + Testing Library)
-- [ ] Redis analytics caching (YouTube quota bachao)
-- [ ] YouTube comment webhooks (polling ki jagah)
+### Phase 3 — Scale (in progress)
+
+**3A — Hygiene**
+- [x] Full README audit (this pass)
+- [ ] Remove dead `jobs/videoPublish.job.js` (unreferenced, and broken if it were used — see Job Scheduling)
+- [ ] ESLint + Prettier (backend + frontend) — zero lint config currently exists
+- [ ] CI pipeline (`.github/workflows`) — lint (+ test once Phase 3B lands) on every push/PR
+
+**3B — Safety net**
+- [ ] Test suite (Vitest + Supertest backend, Testing Library frontend) — prioritize auth, payment verification, video upload, AI sanitization, cron reaper
+
+**3C — TypeScript migration** (paired with 3B, incremental — not a rewrite)
+- [ ] `allowJs + checkJs` + JSDoc types on the backend first, zero build-step change
+- [ ] Convert individual files to real `.ts` once covered by tests, starting with the services with the most implicit shapes (analytics/payment/video)
+- [ ] Frontend: `.jsx` → `.tsx` opportunistically via Vite's native TS support
+
+**3D — Feature / scale items**
+- [ ] YouTube comment webhooks (real-time, replaces polling, saves quota)
 - [ ] CSV / PDF analytics export
-- [ ] Mobile PWA
+- [ ] BullMQ re-enabled on a paid Redis plan — fixes the single-instance scheduling risk, required before any horizontal scaling
+- [ ] Mobile PWA (manifest.json + service worker — doesn't exist yet)
+- [ ] Play Store publish — final step, gated on the PWA work + store account/signing setup
 
 ---
 
 ## 🧑‍💻 Tech Stack
 
-**Backend:** Node.js 18+ · Express.js · MongoDB + Mongoose · Redis · BullMQ · JWT · bcryptjs · Multer · Nodemailer  
-**Frontend:** React 18 · Vite · Tailwind CSS · Zustand · Axios · Recharts · React Router DOM  
-**AI:** Anthropic Claude (Opus/Sonnet/Haiku) · Google Gemini  
-**Infra:** Google Cloud Run · Vercel · MongoDB Atlas · Upstash Redis · Brevo Email
+**Backend:** Node.js 18+ · Express.js · MongoDB + Mongoose · Redis (ioredis) · JWT · bcryptjs · Multer · Winston (logging) · Sentry (error tracking)  
+**Frontend:** React 18 · Vite · Tailwind CSS · Zustand · Axios · Recharts · React Router DOM · Sentry  
+**AI:** Anthropic Claude (Opus/Sonnet/Haiku) · Google Gemini · Groq (Llama 3.3, free-tier bulk replies)  
+**Infra:** Render (backend) · Vercel (frontend) · MongoDB Atlas · Upstash Redis · Google Cloud Storage (video staging) · Cloudinary (thumbnails) · Brevo (email, HTTP API) · Razorpay (payments)
+
+> **Note on BullMQ:** it's a listed dependency and the queue definitions still exist in code, but it's currently **disabled/stubbed** — Upstash's free Redis tier blocks the Lua scripts (`evalsha`) BullMQ needs. Real scheduling today runs on an in-process cron (`jobs/cron.js`). See [Job Scheduling](#-job-scheduling) and Phase 3D in the Roadmap.
 
 ---
 

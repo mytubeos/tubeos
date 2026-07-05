@@ -60,18 +60,17 @@ export const Settings = () => {
 
   const openCoupon = (planKey) =>
     setCoupon({ plan: planKey, code: '', validating: false, result: null })
-  const closeCoupon = () =>
-    setCoupon({ plan: null, code: '', validating: false, result: null })
+  const closeCoupon = () => setCoupon({ plan: null, code: '', validating: false, result: null })
 
   const applyCoupon = async (planKey) => {
     if (!coupon.code.trim()) return
-    setCoupon(s => ({ ...s, validating: true, result: null }))
+    setCoupon((s) => ({ ...s, validating: true, result: null }))
     try {
       const res = await paymentAPI.validateCoupon(coupon.code.trim(), planKey)
-      setCoupon(s => ({ ...s, validating: false, result: res.data.data }))
+      setCoupon((s) => ({ ...s, validating: false, result: res.data.data }))
     } catch (err) {
       toast.error(err.response?.data?.message || 'Invalid coupon')
-      setCoupon(s => ({ ...s, validating: false, result: null }))
+      setCoupon((s) => ({ ...s, validating: false, result: null }))
     }
   }
 
@@ -86,17 +85,20 @@ export const Settings = () => {
   // Notifications state — seeded from user preferences (saved in DB)
   const [notifications, setNotifications] = useState({
     emailNotifications: user?.preferences?.emailNotifications ?? true,
-    weeklyReport:       user?.preferences?.weeklyReport       ?? true,
-    reportFrequency:    user?.preferences?.reportFrequency    || 'weekly',
-    marketingEmails:    user?.preferences?.marketingEmails    ?? false,
+    weeklyReport: user?.preferences?.weeklyReport ?? true,
+    reportFrequency: user?.preferences?.reportFrequency || 'weekly',
+    marketingEmails: user?.preferences?.marketingEmails ?? false,
   })
   const [savingNotifications, setSavingNotifications] = useState(false)
 
   const handleSaveProfile = async () => {
-    if (!name.trim()) { toast.error('Name is required'); return }
+    if (!name.trim()) {
+      toast.error('Name is required')
+      return
+    }
     setSavingProfile(true)
     try {
-      const res = await authApi.updateMe({ name })
+      await authApi.updateMe({ name })
       updateUser({ name })
       toast.success('Profile updated!')
     } catch {
@@ -139,9 +141,9 @@ export const Settings = () => {
     try {
       const res = await authApi.updatePreferences({
         emailNotifications: notifications.emailNotifications,
-        weeklyReport:       notifications.weeklyReport,
-        reportFrequency:    notifications.reportFrequency,
-        marketingEmails:    notifications.marketingEmails,
+        weeklyReport: notifications.weeklyReport,
+        reportFrequency: notifications.reportFrequency,
+        marketingEmails: notifications.marketingEmails,
       })
       updateUser({ preferences: res.data.data?.preferences })
       toast.success('Preferences saved!')
@@ -158,7 +160,6 @@ export const Settings = () => {
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
-
       {/* Tab nav */}
       <div className="flex items-center glass rounded-xl p-1 overflow-x-auto no-scrollbar">
         {TABS.map(({ key, label, icon: Icon }) => (
@@ -167,9 +168,11 @@ export const Settings = () => {
             onClick={() => setActiveTab(key)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
                         whitespace-nowrap transition-all
-                        ${activeTab === key
-                          ? 'bg-brand text-white'
-                          : 'text-gray-400 hover:text-white'}`}
+                        ${
+                          activeTab === key
+                            ? 'bg-brand text-white'
+                            : 'text-gray-400 hover:text-white'
+                        }`}
           >
             <Icon size={15} />
             {label}
@@ -183,8 +186,10 @@ export const Settings = () => {
           <CardHeader title="Profile Settings" icon={User} />
           <div className="space-y-4">
             <div className="flex items-center gap-4 p-4 glass rounded-xl mb-2">
-              <div className="w-14 h-14 rounded-2xl bg-brand-gradient flex items-center justify-center
-                              text-white font-bold text-xl font-display shrink-0">
+              <div
+                className="w-14 h-14 rounded-2xl bg-brand-gradient flex items-center justify-center
+                              text-white font-bold text-xl font-display shrink-0"
+              >
                 {user?.name?.[0]?.toUpperCase()}
               </div>
               <div>
@@ -199,7 +204,7 @@ export const Settings = () => {
             <Input
               label="Full Name"
               value={name}
-              onChange={e => setName(e.target.value)}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Your name"
             />
             <Input
@@ -231,7 +236,7 @@ export const Settings = () => {
                 label={label}
                 type="password"
                 value={passwords[key]}
-                onChange={e => setPasswords(p => ({ ...p, [key]: e.target.value }))}
+                onChange={(e) => setPasswords((p) => ({ ...p, [key]: e.target.value }))}
                 placeholder="••••••••"
               />
             ))}
@@ -250,13 +255,13 @@ export const Settings = () => {
             <div className="flex items-center justify-between p-4 glass rounded-xl mb-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="font-display font-bold text-white text-xl capitalize">{plan} Plan</p>
+                  <p className="font-display font-bold text-white text-xl capitalize">
+                    {plan} Plan
+                  </p>
                   <PlanBadge plan={plan} />
                 </div>
                 <p className="text-sm text-gray-500">
-                  {plan === 'free'
-                    ? 'Free forever'
-                    : `₹${planConfig?.price?.inr}/month`}
+                  {plan === 'free' ? 'Free forever' : `₹${planConfig?.price?.inr}/month`}
                 </p>
               </div>
               {plan !== 'agency' && (
@@ -295,9 +300,11 @@ export const Settings = () => {
                     <div
                       key={key}
                       className={`p-4 rounded-xl border transition-all cursor-pointer
-                                  ${key === 'pro'
-                                    ? 'border-brand/40 bg-brand/5'
-                                    : 'glass hover:border-white/20'}`}
+                                  ${
+                                    key === 'pro'
+                                      ? 'border-brand/40 bg-brand/5'
+                                      : 'glass hover:border-white/20'
+                                  }`}
                     >
                       <div className="flex items-center justify-between mb-3">
                         <p className="font-display font-bold text-white capitalize">{key}</p>
@@ -316,7 +323,7 @@ export const Settings = () => {
                           `${config.channels} channel${config.channels > 1 ? 's' : ''}`,
                           `${config.aiReplies === -1 ? 'Unlimited' : config.aiReplies} AI replies`,
                           `${config.uploads === -1 ? 'Unlimited' : config.uploads} uploads/mo`,
-                        ].map(f => (
+                        ].map((f) => (
                           <div key={f} className="flex items-center gap-2 text-xs text-gray-400">
                             <Check size={11} className="text-emerald" />
                             {f}
@@ -331,8 +338,14 @@ export const Settings = () => {
                               className="input-field h-8 text-xs px-2 flex-1 uppercase"
                               placeholder="COUPON CODE"
                               value={coupon.code}
-                              onChange={e => setCoupon(s => ({ ...s, code: e.target.value.toUpperCase(), result: null }))}
-                              onKeyDown={e => e.key === 'Enter' && applyCoupon(key)}
+                              onChange={(e) =>
+                                setCoupon((s) => ({
+                                  ...s,
+                                  code: e.target.value.toUpperCase(),
+                                  result: null,
+                                }))
+                              }
+                              onKeyDown={(e) => e.key === 'Enter' && applyCoupon(key)}
                             />
                             <button
                               onClick={() => applyCoupon(key)}
@@ -340,7 +353,11 @@ export const Settings = () => {
                               className="px-2 h-8 bg-brand/20 border border-brand/30 rounded-lg text-brand text-xs
                                          hover:bg-brand/30 transition-colors disabled:opacity-50"
                             >
-                              {coupon.validating ? <Loader2 size={11} className="animate-spin" /> : 'Apply'}
+                              {coupon.validating ? (
+                                <Loader2 size={11} className="animate-spin" />
+                              ) : (
+                                'Apply'
+                              )}
                             </button>
                             <button
                               onClick={closeCoupon}
@@ -366,10 +383,11 @@ export const Settings = () => {
                             disabled={loadingPlan === key}
                             onClick={() => startCheckout(key, coupon.code.trim() || null)}
                           >
-                            {loadingPlan === key
-                              ? <Loader2 size={14} className="animate-spin mx-auto" />
-                              : 'Upgrade'
-                            }
+                            {loadingPlan === key ? (
+                              <Loader2 size={14} className="animate-spin mx-auto" />
+                            ) : (
+                              'Upgrade'
+                            )}
                           </Button>
                         </div>
                       ) : (
@@ -382,10 +400,11 @@ export const Settings = () => {
                             disabled={loadingPlan === key}
                             onClick={() => startCheckout(key)}
                           >
-                            {loadingPlan === key
-                              ? <Loader2 size={14} className="animate-spin mx-auto" />
-                              : 'Upgrade'
-                            }
+                            {loadingPlan === key ? (
+                              <Loader2 size={14} className="animate-spin mx-auto" />
+                            ) : (
+                              'Upgrade'
+                            )}
                           </Button>
                           <button
                             onClick={() => openCoupon(key)}
@@ -423,18 +442,23 @@ export const Settings = () => {
                   desc: 'New features, creator tips, and platform news',
                 },
               ].map(({ key, label, desc }) => (
-                <div key={key} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
+                <div
+                  key={key}
+                  className="flex items-center justify-between py-3 border-b border-white/5 last:border-0"
+                >
                   <div>
                     <p className="text-sm font-medium text-white">{label}</p>
                     <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
                   </div>
                   <button
-                    onClick={() => setNotifications(p => ({ ...p, [key]: !p[key] }))}
+                    onClick={() => setNotifications((p) => ({ ...p, [key]: !p[key] }))}
                     className={`w-11 h-6 rounded-full transition-all relative shrink-0
                                 ${notifications[key] ? 'bg-brand' : 'bg-white/10'}`}
                   >
-                    <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all
-                                      ${notifications[key] ? 'left-6' : 'left-1'}`} />
+                    <span
+                      className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all
+                                      ${notifications[key] ? 'left-6' : 'left-1'}`}
+                    />
                   </button>
                 </div>
               ))}
@@ -445,7 +469,8 @@ export const Settings = () => {
           <Card>
             <CardHeader title="Weekly Performance Report" icon={Bell} iconColor="brand" />
             <p className="text-xs text-gray-500 mb-4">
-              A personalised email every Monday with your channel's KPIs, top videos, AI insights, and action plan.
+              A personalised email every Monday with your channel's KPIs, top videos, AI insights,
+              and action plan.
             </p>
 
             {/* Toggle row */}
@@ -455,12 +480,14 @@ export const Settings = () => {
                 <p className="text-xs text-gray-500 mt-0.5">Sent every Monday at 9 AM UTC</p>
               </div>
               <button
-                onClick={() => setNotifications(p => ({ ...p, weeklyReport: !p.weeklyReport }))}
+                onClick={() => setNotifications((p) => ({ ...p, weeklyReport: !p.weeklyReport }))}
                 className={`w-11 h-6 rounded-full transition-all relative shrink-0
                             ${notifications.weeklyReport ? 'bg-brand' : 'bg-white/10'}`}
               >
-                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all
-                                  ${notifications.weeklyReport ? 'left-6' : 'left-1'}`} />
+                <span
+                  className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all
+                                  ${notifications.weeklyReport ? 'left-6' : 'left-1'}`}
+                />
               </button>
             </div>
 
@@ -472,14 +499,16 @@ export const Settings = () => {
                   <p className="text-xs text-gray-500 mt-0.5">How often you receive the report</p>
                 </div>
                 <div className="flex gap-2">
-                  {['weekly', 'monthly'].map(freq => (
+                  {['weekly', 'monthly'].map((freq) => (
                     <button
                       key={freq}
-                      onClick={() => setNotifications(p => ({ ...p, reportFrequency: freq }))}
+                      onClick={() => setNotifications((p) => ({ ...p, reportFrequency: freq }))}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all
-                                  ${notifications.reportFrequency === freq
-                                    ? 'bg-brand text-white'
-                                    : 'glass text-gray-400 hover:text-white'}`}
+                                  ${
+                                    notifications.reportFrequency === freq
+                                      ? 'bg-brand text-white'
+                                      : 'glass text-gray-400 hover:text-white'
+                                  }`}
                     >
                       {freq}
                     </button>
@@ -497,7 +526,8 @@ export const Settings = () => {
                 <div>
                   <p className="text-xs font-semibold text-white">What's included</p>
                   <p className="text-2xs text-gray-500 mt-1 leading-relaxed">
-                    Views · Watch Time · Subscribers · CTR · 7-day bar chart · Top 3 videos · AI insights · Best posting times · Milestones · 4-item action plan
+                    Views · Watch Time · Subscribers · CTR · 7-day bar chart · Top 3 videos · AI
+                    insights · Best posting times · Milestones · 4-item action plan
                   </p>
                 </div>
               </div>

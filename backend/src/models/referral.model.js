@@ -18,12 +18,12 @@ const referralEarningSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    plan:               { type: String, required: true },
-    paidAmount:         { type: Number, required: true },  // ₹ paid by referred user
-    commissionRate:     { type: Number, required: true },  // % at time of earning (10/12/15/20)
-    commissionAmount:   { type: Number, required: true },  // ₹ credited to wallet
-    razorpayPaymentId:  { type: String, default: null },
-    billingCycleIndex:  { type: Number, default: 1 },      // 1..6 (commission valid for 6 cycles)
+    plan: { type: String, required: true },
+    paidAmount: { type: Number, required: true }, // ₹ paid by referred user
+    commissionRate: { type: Number, required: true }, // % at time of earning (10/12/15/20)
+    commissionAmount: { type: Number, required: true }, // ₹ credited to wallet
+    razorpayPaymentId: { type: String, default: null },
+    billingCycleIndex: { type: Number, default: 1 }, // 1..6 (commission valid for 6 cycles)
     status: {
       type: String,
       enum: ['credited', 'reversed'],
@@ -44,22 +44,22 @@ const payoutRequestSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    amount:        { type: Number, required: true },
-    method:        { type: String, enum: ['upi', 'bank'], required: true },
-    upi:           { type: String, default: null },
+    amount: { type: Number, required: true },
+    method: { type: String, enum: ['upi', 'bank'], required: true },
+    upi: { type: String, default: null },
     bankAccount: {
       accountNumber: String,
-      ifsc:          String,
-      holderName:    String,
+      ifsc: String,
+      holderName: String,
     },
     status: {
       type: String,
       enum: ['pending', 'processing', 'paid', 'rejected'],
       default: 'pending',
     },
-    adminNote:     { type: String, default: null },
-    paidAt:        { type: Date, default: null },
-    transactionRef:{ type: String, default: null },
+    adminNote: { type: String, default: null },
+    paidAt: { type: Date, default: null },
+    transactionRef: { type: String, default: null },
   },
   { timestamps: true }
 );

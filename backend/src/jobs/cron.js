@@ -1,11 +1,11 @@
 // src/jobs/cron.js
 // Lightweight in-process scheduler. Replaces BullMQ where Upstash free
-// blocks evalsha. Uses setInterval — fine for a single Cloud Run instance.
+// blocks evalsha. Uses setInterval — fine for a single instance, but would
+// duplicate work (double emails/syncs) across multiple instances.
 
 const Schedule = require('../models/schedule.model');
 const Video = require('../models/video.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
-const { Trend } = require('../models/growth.model');
 const logger = require('../config/logger');
 
 let running = false;
@@ -80,9 +80,7 @@ const syncAllChannelsAnalytics = async () => {
   try {
     const { syncChannelAnalytics } = require('../services/analytics.service');
     const { syncComments } = require('../services/ai-comment.service');
-    const channels = await YoutubeChannel.find({ isActive: true })
-      .select('_id userId')
-      .lean();
+    const channels = await YoutubeChannel.find({ isActive: true }).select('_id userId').lean();
 
     logger.info(`[cron] daily analytics sync starting for ${channels.length} channel(s)`);
     let ok = 0;
@@ -142,7 +140,9 @@ const sendWeeklyReports = async () => {
     isEmailVerified: true,
     'preferences.weeklyReport': { $ne: false },
     youtubeChannels: { $exists: true, $not: { $size: 0 } },
-  }).select('name email preferences youtubeChannels').lean();
+  })
+    .select('name email preferences youtubeChannels')
+    .lean();
 
   logger.info(`[cron] weekly-report: sending to ${users.length} user(s)`);
   let sent = 0;
@@ -159,7 +159,7 @@ const sendWeeklyReports = async () => {
       sent++;
 
       // Brevo free tier rate limit: 300 emails/day — small gap between sends
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise((r) => setTimeout(r, 2000));
     } catch (err) {
       logger.error(`[cron] weekly-report failed for ${user.email}`, { error: err.message });
     }

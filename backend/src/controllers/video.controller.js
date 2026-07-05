@@ -3,11 +3,7 @@
 
 const videoService = require('../services/video.service');
 const thumbnailService = require('../services/thumbnail.service');
-const {
-  successResponse,
-  errorResponse,
-  paginatedResponse,
-} = require('../utils/response.utils');
+const { successResponse, errorResponse, paginatedResponse } = require('../utils/response.utils');
 
 // POST /api/v1/videos/draft
 const createDraft = async (req, res) => {
@@ -71,7 +67,11 @@ const deleteVideo = async (req, res) => {
   try {
     const deleteFromYouTube = req.query.youtube === 'true';
     // FIX: req.user.id
-    const result = await videoService.deleteVideo(req.user.id, req.params.videoId, deleteFromYouTube);
+    const result = await videoService.deleteVideo(
+      req.user.id,
+      req.params.videoId,
+      deleteFromYouTube
+    );
     return successResponse(res, 200, result.message);
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);

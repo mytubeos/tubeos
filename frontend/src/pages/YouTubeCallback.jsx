@@ -11,25 +11,19 @@ export const YouTubeCallback = () => {
 
   useEffect(() => {
     const connected = searchParams.get('youtube_connected')
-    const error     = searchParams.get('youtube_error')
-    const channel   = searchParams.get('channel')
+    const error = searchParams.get('youtube_error')
+    const channel = searchParams.get('channel')
 
     if (connected === 'true') {
       setStatus('success')
       // Parent window ko notify karo
       if (window.opener) {
-        window.opener.postMessage(
-          { type: 'YOUTUBE_CONNECTED', channel },
-          window.location.origin
-        )
+        window.opener.postMessage({ type: 'YOUTUBE_CONNECTED', channel }, window.location.origin)
       }
     } else if (error) {
       setStatus('error')
       if (window.opener) {
-        window.opener.postMessage(
-          { type: 'YOUTUBE_ERROR', error },
-          window.location.origin
-        )
+        window.opener.postMessage({ type: 'YOUTUBE_ERROR', error }, window.location.origin)
       }
     }
 
@@ -53,8 +47,18 @@ export const YouTubeCallback = () => {
         {status === 'success' && (
           <>
             <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg
+                className="w-8 h-8 text-green-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </div>
             <p className="text-green-400 font-semibold text-lg">Connected!</p>
@@ -64,8 +68,18 @@ export const YouTubeCallback = () => {
         {status === 'error' && (
           <>
             <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-8 h-8 text-red-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </div>
             <p className="text-red-400 font-semibold text-lg">Connection Failed</p>

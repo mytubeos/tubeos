@@ -81,7 +81,13 @@ export default function App() {
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/youtube-callback" element={<YouTubeCallback />} />
 
-      <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+      <Route
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/analytics/video/:videoId" element={<VideoAnalytics />} />
@@ -99,7 +105,13 @@ export default function App() {
       </Route>
 
       {/* Admin Panel */}
-      <Route element={<AdminRoute><AdminLayout /></AdminRoute>}>
+      <Route
+        element={
+          <AdminRoute>
+            <AdminLayout />
+          </AdminRoute>
+        }
+      >
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/coupons" element={<AdminCoupons />} />

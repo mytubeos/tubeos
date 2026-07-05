@@ -51,8 +51,8 @@ const growthPredictionSchema = new mongoose.Schema(
     // Milestones predictions
     milestones: [
       {
-        target: Number,      // e.g. 10000 subscribers
-        label: String,       // "10K subscribers"
+        target: Number, // e.g. 10000 subscribers
+        label: String, // "10K subscribers"
         estimatedDate: Date,
         daysAway: Number,
         probability: Number, // 0-100
@@ -62,11 +62,11 @@ const growthPredictionSchema = new mongoose.Schema(
     // Performance suggestions
     suggestions: [
       {
-        type: String,        // 'upload_frequency', 'best_time', 'content_type'
+        type: String, // 'upload_frequency', 'best_time', 'content_type'
         title: String,
         description: String,
-        impact: String,      // 'high', 'medium', 'low'
-        metric: String,      // 'views', 'subscribers', 'ctr'
+        impact: String, // 'high', 'medium', 'low'
+        metric: String, // 'views', 'subscribers', 'ctr'
       },
     ],
 

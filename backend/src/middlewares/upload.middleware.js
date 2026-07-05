@@ -18,7 +18,7 @@ function GcsStorageEngine() {}
 GcsStorageEngine.prototype._handleFile = function (req, file, cb) {
   // Namespaced by user so objects are easy to trace/clean up
   const userId = req.user?.id || 'anon';
-  const safeName = (file.originalname || 'video').replace(/[^\w.\-]/g, '_');
+  const safeName = (file.originalname || 'video').replace(/[^\w.-]/g, '_');
   const destination = `staging/${userId}/${randomUUID()}-${safeName}`;
 
   let uploaded = 0;

@@ -6,8 +6,8 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const User = require('../src/models/user.model');
 
-const ADMIN_EMAIL    = 'tubeos.saas@gmail.com';
-const ADMIN_NAME     = 'TubeOS Admin';
+const ADMIN_EMAIL = 'tubeos.saas@gmail.com';
+const ADMIN_NAME = 'TubeOS Admin';
 const ADMIN_PASSWORD = 'vibecore4admin';
 
 (async () => {
@@ -52,7 +52,7 @@ const ADMIN_PASSWORD = 'vibecore4admin';
   console.log('👉 Login karo aur /admin pe jao');
 
   process.exit(0);
-})().catch(err => {
+})().catch((err) => {
   console.error('❌ Error:', err.message);
   process.exit(1);
 });

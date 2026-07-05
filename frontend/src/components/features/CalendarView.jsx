@@ -1,10 +1,22 @@
 // src/components/features/CalendarView.jsx
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, Clock, Zap } from 'lucide-react'
-import { formatDate } from '../../utils/formatters'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+]
 
 const StatusDot = ({ status }) => {
   const colors = {
@@ -94,7 +106,7 @@ export const CalendarView = ({ calendar = {}, onDayClick, loading = false }) => 
 
       {/* Day headers */}
       <div className="grid grid-cols-7 mb-2">
-        {DAY_NAMES.map(d => (
+        {DAY_NAMES.map((d) => (
           <div key={d} className="text-center text-2xs font-semibold text-gray-600 uppercase py-2">
             {d}
           </div>
@@ -113,16 +125,24 @@ export const CalendarView = ({ calendar = {}, onDayClick, loading = false }) => 
                   key={di}
                   onClick={() => cell.currentMonth && cell.date && onDayClick?.(cell)}
                   className={`min-h-[72px] p-1.5 rounded-xl transition-all
-                              ${cell.currentMonth
-                                ? 'cursor-pointer hover:bg-white/[0.05]'
-                                : 'opacity-30'}
+                              ${
+                                cell.currentMonth
+                                  ? 'cursor-pointer hover:bg-white/[0.05]'
+                                  : 'opacity-30'
+                              }
                               ${cell.isToday ? 'ring-1 ring-brand/50 bg-brand/5' : 'bg-white/[0.02]'}
                               ${cell.schedules?.length > 0 ? 'border border-white/8' : ''}`}
                 >
-                  <div className={`text-xs font-medium mb-1.5 w-6 h-6 flex items-center justify-center rounded-full
-                                   ${cell.isToday
-                                     ? 'bg-brand text-white'
-                                     : cell.currentMonth ? 'text-gray-300' : 'text-gray-600'}`}>
+                  <div
+                    className={`text-xs font-medium mb-1.5 w-6 h-6 flex items-center justify-center rounded-full
+                                   ${
+                                     cell.isToday
+                                       ? 'bg-brand text-white'
+                                       : cell.currentMonth
+                                         ? 'text-gray-300'
+                                         : 'text-gray-600'
+                                   }`}
+                  >
                     {cell.day}
                   </div>
 

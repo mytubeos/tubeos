@@ -1,6 +1,6 @@
 // src/pages/referral/Referral.jsx
 import { useState, useEffect } from 'react'
-import { Gift, Copy, Check, Share2, Users, TrendingUp, Trophy, Zap } from 'lucide-react'
+import { Gift, Copy, Check, Users, TrendingUp, Trophy, Zap } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
@@ -61,22 +61,23 @@ export const Referral = () => {
   })
 
   useEffect(() => {
-    referralAPI.getStats()
-      .then(res => {
+    referralAPI
+      .getStats()
+      .then((res) => {
         const d = res.data?.data || res.data || {}
         setStats({
-          totalReferrals:  d.totalReferrals  ?? 0,
+          totalReferrals: d.totalReferrals ?? 0,
           activeReferrals: d.activeReferrals ?? 0,
-          totalEarned:     d.wallet?.totalEarned    ?? 0,
-          pendingPayout:   d.wallet?.pendingPayout  ?? 0,
-          balance:         d.wallet?.balance        ?? 0,
-          code:            d.code,
-          tier:            d.tier || 'Starter',
-          commissionRate:  d.commissionRate ?? 10,
-          minPayout:       d.minPayout ?? 200,
+          totalEarned: d.wallet?.totalEarned ?? 0,
+          pendingPayout: d.wallet?.pendingPayout ?? 0,
+          balance: d.wallet?.balance ?? 0,
+          code: d.code,
+          tier: d.tier || 'Starter',
+          commissionRate: d.commissionRate ?? 10,
+          minPayout: d.minPayout ?? 200,
         })
       })
-      .catch(err => console.error('[Referral] stats load failed:', err.message))
+      .catch((err) => console.error('[Referral] stats load failed:', err.message))
   }, [])
 
   const referralCode = stats.code || user?.referral?.myCode || user?.referralCode || 'LOADING'
@@ -96,7 +97,10 @@ export const Referral = () => {
 
   const shareOnTwitter = () => {
     const text = `I'm using TubeOS to grow my YouTube channel with AI. Use my code ${referralCode} for 10% off! 🚀`
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(referralLink)}`, '_blank')
+    window.open(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(referralLink)}`,
+      '_blank'
+    )
   }
 
   const shareOnWhatsApp = () => {
@@ -105,18 +109,24 @@ export const Referral = () => {
   }
 
   // Current tier based on referrals
-  const currentTierIndex = stats.totalReferrals >= 50 ? 3
-    : stats.totalReferrals >= 25 ? 2
-    : stats.totalReferrals >= 10 ? 1 : 0
+  const currentTierIndex =
+    stats.totalReferrals >= 50
+      ? 3
+      : stats.totalReferrals >= 25
+        ? 2
+        : stats.totalReferrals >= 10
+          ? 1
+          : 0
   const currentTier = TIERS[currentTierIndex]
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
-
       {/* Hero card */}
       <div className="relative overflow-hidden glass p-6 rounded-2xl border border-brand/20">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-brand/10 rounded-full
-                        blur-3xl translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+        <div
+          className="absolute top-0 right-0 w-64 h-64 bg-brand/10 rounded-full
+                        blur-3xl translate-x-1/2 -translate-y-1/2 pointer-events-none"
+        />
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 bg-brand/15 rounded-2xl flex items-center justify-center">
@@ -184,7 +194,9 @@ export const Referral = () => {
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <p className="font-display font-bold text-white text-xl">{currentTier.name}</p>
-              <Badge variant="amber" size="sm">{currentTier.commission} commission</Badge>
+              <Badge variant="amber" size="sm">
+                {currentTier.commission} commission
+              </Badge>
             </div>
             <p className="text-sm text-gray-400">{currentTier.range}</p>
             {currentTier.special && (
@@ -196,32 +208,38 @@ export const Referral = () => {
 
       {/* Tier progression */}
       <Card>
-        <CardHeader title="Commission Tiers" subtitle="More referrals = higher commission" icon={TrendingUp} />
+        <CardHeader
+          title="Commission Tiers"
+          subtitle="More referrals = higher commission"
+          icon={TrendingUp}
+        />
         <div className="space-y-3">
           {TIERS.map((tier, i) => (
             <div
               key={tier.name}
               className={`flex items-center gap-4 p-3 rounded-xl transition-all
-                          ${i === currentTierIndex
-                            ? 'bg-brand/10 border border-brand/25'
-                            : i < currentTierIndex
-                            ? 'opacity-50'
-                            : 'glass'}`}
+                          ${
+                            i === currentTierIndex
+                              ? 'bg-brand/10 border border-brand/25'
+                              : i < currentTierIndex
+                                ? 'opacity-50'
+                                : 'glass'
+                          }`}
             >
               <span className="text-2xl shrink-0">{tier.icon}</span>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-0.5">
                   <p className="text-sm font-semibold text-white">{tier.name}</p>
                   {i === currentTierIndex && (
-                    <Badge variant="brand" size="xs" dot>Current</Badge>
+                    <Badge variant="brand" size="xs" dot>
+                      Current
+                    </Badge>
                   )}
                 </div>
                 <p className="text-xs text-gray-500">{tier.range}</p>
               </div>
               <div className="text-right shrink-0">
-                <p className={`text-sm font-bold text-${tier.color}`}>
-                  {tier.commission}
-                </p>
+                <p className={`text-sm font-bold text-${tier.color}`}>{tier.commission}</p>
                 <p className="text-2xs text-gray-500">commission</p>
               </div>
             </div>
@@ -256,8 +274,10 @@ export const Referral = () => {
             },
           ].map(({ step, title, desc }) => (
             <div key={step} className="flex items-start gap-4">
-              <div className="w-8 h-8 rounded-xl bg-brand/15 text-brand text-sm font-bold
-                              flex items-center justify-center shrink-0 font-display mt-0.5">
+              <div
+                className="w-8 h-8 rounded-xl bg-brand/15 text-brand text-sm font-bold
+                              flex items-center justify-center shrink-0 font-display mt-0.5"
+              >
                 {step}
               </div>
               <div>
@@ -270,8 +290,9 @@ export const Referral = () => {
 
         <div className="mt-5 p-3 bg-brand/5 border border-brand/15 rounded-xl">
           <p className="text-xs text-gray-400">
-            <span className="text-brand font-medium">Note:</span> Referral code can't be used for self-referral.
-            Minimum 1 paid month before payout. Commission lasts for 6 billing cycles per referral.
+            <span className="text-brand font-medium">Note:</span> Referral code can't be used for
+            self-referral. Minimum 1 paid month before payout. Commission lasts for 6 billing cycles
+            per referral.
           </p>
         </div>
       </Card>

@@ -17,7 +17,15 @@ const getUserStats = async (req, res) => {
       User.countDocuments({ isBanned: true }),
     ]);
     const paid = creator + pro + agency;
-    return successResponse(res, 200, 'User stats', { total, free, paid, creator, pro, agency, banned });
+    return successResponse(res, 200, 'User stats', {
+      total,
+      free,
+      paid,
+      creator,
+      pro,
+      agency,
+      banned,
+    });
   } catch (err) {
     return errorResponse(res, 500, err.message);
   }
@@ -28,26 +36,30 @@ const listUsers = async (req, res) => {
   try {
     const { page = 1, limit = 20, plan, status, search } = req.query;
     const query = {};
-    if (plan && ['free','creator','pro','agency'].includes(plan)) query.plan = plan;
+    if (plan && ['free', 'creator', 'pro', 'agency'].includes(plan)) query.plan = plan;
     if (status === 'banned') query.isBanned = true;
     if (status === 'active') query.isBanned = false;
     if (search) {
       query.$or = [
-        { name:  { $regex: search, $options: 'i' } },
+        { name: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
       ];
     }
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const [users, total] = await Promise.all([
       User.find(query)
-        .select('name email plan isBanned isEmailVerified createdAt subscriptionExpiresAt lastLoginAt')
+        .select(
+          'name email plan isBanned isEmailVerified createdAt subscriptionExpiresAt lastLoginAt'
+        )
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
       User.countDocuments(query),
     ]);
     return paginatedResponse(res, 200, 'Users fetched', users, {
-      page: parseInt(page), limit: parseInt(limit), total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total,
     });
   } catch (err) {
     return errorResponse(res, 500, err.message);
@@ -58,11 +70,12 @@ const listUsers = async (req, res) => {
 const changeUserPlan = async (req, res) => {
   try {
     const { plan } = req.body;
-    if (!['free','creator','pro','agency'].includes(plan)) {
+    if (!['free', 'creator', 'pro', 'agency'].includes(plan)) {
       return errorResponse(res, 400, 'Invalid plan');
     }
     const now = new Date();
-    const expiresAt = new Date(now); expiresAt.setMonth(expiresAt.getMonth() + 1);
+    const expiresAt = new Date(now);
+    expiresAt.setMonth(expiresAt.getMonth() + 1);
     const user = await User.findByIdAndUpdate(
       req.params.id,
       {
@@ -86,7 +99,7 @@ const toggleBanUser = async (req, res) => {
     if (!user) return errorResponse(res, 404, 'User not found');
     user.isBanned = !user.isBanned;
     user.bannedAt = user.isBanned ? new Date() : null;
-    user.bannedReason = user.isBanned ? (req.body.reason || 'Admin action') : null;
+    user.bannedReason = user.isBanned ? req.body.reason || 'Admin action' : null;
     await user.save();
     return successResponse(res, 200, user.isBanned ? 'User banned' : 'User unbanned', {
       isBanned: user.isBanned,
@@ -113,7 +126,9 @@ const listCoupons = async (req, res) => {
     const result = await couponService.listCoupons({
       page: parseInt(page),
       limit: parseInt(limit),
-      type, status, search,
+      type,
+      status,
+      search,
     });
     return paginatedResponse(res, 200, 'Coupons fetched', result.coupons, {
       page: result.page,
@@ -156,6 +171,13 @@ const deleteCoupon = async (req, res) => {
 };
 
 module.exports = {
-  getUserStats, listUsers, changeUserPlan, toggleBanUser,
-  getCouponStats, listCoupons, createCoupon, updateCoupon, deleteCoupon,
+  getUserStats,
+  listUsers,
+  changeUserPlan,
+  toggleBanUser,
+  getCouponStats,
+  listCoupons,
+  createCoupon,
+  updateCoupon,
+  deleteCoupon,
 };

@@ -2,16 +2,15 @@
 import api from './axios'
 
 export const youtubeApi = {
-
   getAuthUrl: () => api.get('/youtube/auth'),
 
   // OAuth popup — postMessage se parent ko notify hoga
   connectChannel: (authUrl) => {
     return new Promise((resolve, reject) => {
-      const width  = 600
+      const width = 600
       const height = 700
-      const left   = window.screenX + (window.outerWidth  - width)  / 2
-      const top    = window.screenY + (window.outerHeight - height) / 2
+      const left = window.screenX + (window.outerWidth - width) / 2
+      const top = window.screenY + (window.outerHeight - height) / 2
 
       const popup = window.open(
         authUrl,
@@ -24,11 +23,14 @@ export const youtubeApi = {
         return
       }
 
-      const timeout = setTimeout(() => {
-        window.removeEventListener('message', onMessage)
-        if (!popup.closed) popup.close()
-        reject(new Error('OAuth timed out. Please try again.'))
-      }, 5 * 60 * 1000)
+      const timeout = setTimeout(
+        () => {
+          window.removeEventListener('message', onMessage)
+          if (!popup.closed) popup.close()
+          reject(new Error('OAuth timed out. Please try again.'))
+        },
+        5 * 60 * 1000
+      )
 
       const onMessage = (event) => {
         if (event.origin !== window.location.origin) return
@@ -64,10 +66,10 @@ export const youtubeApi = {
     })
   },
 
-  getChannels:          () => api.get('/youtube/channels'),
-  syncChannel:          (channelId) => api.post(`/youtube/channels/${channelId}/sync`),
-  disconnectChannel:    (channelId) => api.delete(`/youtube/channels/${channelId}`),
-  setPrimary:           (channelId) => api.patch(`/youtube/channels/${channelId}/primary`),
-  getQuota:             (channelId) => api.get(`/youtube/channels/${channelId}/quota`),
-  getAnalyticsAuthUrl:  (channelId) => api.get(`/youtube/channels/${channelId}/analytics-auth`),
+  getChannels: () => api.get('/youtube/channels'),
+  syncChannel: (channelId) => api.post(`/youtube/channels/${channelId}/sync`),
+  disconnectChannel: (channelId) => api.delete(`/youtube/channels/${channelId}`),
+  setPrimary: (channelId) => api.patch(`/youtube/channels/${channelId}/primary`),
+  getQuota: (channelId) => api.get(`/youtube/channels/${channelId}/quota`),
+  getAnalyticsAuthUrl: (channelId) => api.get(`/youtube/channels/${channelId}/analytics-auth`),
 }

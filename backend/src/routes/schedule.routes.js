@@ -1,7 +1,6 @@
 // src/routes/schedule.routes.js
 // All scheduling routes
 
-
 const express = require('express');
 const router = express.Router();
 const scheduleController = require('../controllers/schedule.controller');
@@ -62,12 +61,7 @@ router.post('/', protect, scheduleController.createSchedule);
  * @desc    Bulk schedule multiple videos
  * @access  Private (Pro plan+)
  */
-router.post(
-  '/bulk',
-  protect,
-  requirePlan('pro'),
-  scheduleController.bulkSchedule
-);
+router.post('/bulk', protect, requirePlan('pro'), scheduleController.bulkSchedule);
 
 /**
  * @route   PATCH /api/v1/schedule/:videoId/reschedule

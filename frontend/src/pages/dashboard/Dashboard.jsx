@@ -10,10 +10,9 @@ import { TopVideos } from '../../components/features/TopVideos'
 import { AreaLineChart } from '../../components/charts/LineChart'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
-import { Badge } from '../../components/ui/Badge'
 import { analyticsApi } from '../../api/analytics.api'
 import { scheduleApi } from '../../api/schedule.api'
-import { formatDate, formatNumber, timeAgo } from '../../utils/formatters'
+import { formatDate, formatNumber } from '../../utils/formatters'
 import { PERIODS } from '../../utils/constants'
 import { StatusBadge } from '../../components/ui/Badge'
 import toast from 'react-hot-toast'
@@ -32,16 +31,18 @@ export const Dashboard = () => {
 
   // Fetch upcoming scheduled videos
   useEffect(() => {
-    scheduleApi.getAll({ status: 'pending', limit: 3 })
-      .then(res => setUpcoming(res.data.data || []))
+    scheduleApi
+      .getAll({ status: 'pending', limit: 3 })
+      .then((res) => setUpcoming(res.data.data || []))
       .catch(() => {})
   }, [])
 
   // Fetch best time
   useEffect(() => {
     if (!activeChannel?._id) return
-    scheduleApi.getBestTime(activeChannel._id)
-      .then(res => setBestTime(res.data.data))
+    scheduleApi
+      .getBestTime(activeChannel._id)
+      .then((res) => setBestTime(res.data.data))
       .catch(() => {})
   }, [activeChannel?._id])
 
@@ -50,7 +51,7 @@ export const Dashboard = () => {
     if (!activeChannel?._id || autoSyncDone.current) return
     autoSyncDone.current = true
     const lastSync = activeChannel?.stats?.lastSyncedAt
-    const isStale = !lastSync || (Date.now() - new Date(lastSync).getTime() > 30 * 60 * 1000)
+    const isStale = !lastSync || Date.now() - new Date(lastSync).getTime() > 30 * 60 * 1000
     if (isStale) doSync(true)
   }, [activeChannel?._id])
 
@@ -82,7 +83,8 @@ export const Dashboard = () => {
           Connect your YouTube channel
         </h2>
         <p className="text-gray-500 text-sm max-w-sm mb-8">
-          Link your YouTube channel to start tracking analytics, scheduling videos and automating engagement.
+          Link your YouTube channel to start tracking analytics, scheduling videos and automating
+          engagement.
         </p>
         <Button onClick={() => navigate('/channels')} icon={Plus} size="lg">
           Connect Channel
@@ -93,7 +95,6 @@ export const Dashboard = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-
       {/* Header row */}
       <div className="flex items-center justify-between">
         <div>
@@ -101,45 +102,46 @@ export const Dashboard = () => {
             Welcome back, {user?.name?.split(' ')[0]} 👋
           </h2>
           <p className="text-gray-500 text-sm mt-0.5">
-            {activeChannel.channelName} · {formatNumber(activeChannel.stats?.subscriberCount)} subscribers
+            {activeChannel.channelName} · {formatNumber(activeChannel.stats?.subscriberCount)}{' '}
+            subscribers
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           {/* Period selector */}
           <div className="flex items-center glass rounded-xl p-1">
-            {PERIODS.slice(0, 3).map(p => (
+            {PERIODS.slice(0, 3).map((p) => (
               <button
                 key={p.value}
                 onClick={() => setPeriod(p.value)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all
-                            ${period === p.value
-                              ? 'bg-brand text-white shadow-lg'
-                              : 'text-gray-400 hover:text-white'}`}
+                            ${
+                              period === p.value
+                                ? 'bg-brand text-white shadow-lg'
+                                : 'text-gray-400 hover:text-white'
+                            }`}
               >
                 {p.label}
               </button>
             ))}
           </div>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={RefreshCw}
-            onClick={handleSync}
-            loading={syncing}
-          >
+          <Button variant="ghost" size="sm" icon={RefreshCw} onClick={handleSync} loading={syncing}>
             Sync
           </Button>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <KPIGrid overview={overview} loading={isLoading} channelStats={activeChannel?.stats} period={period} />
+      <KPIGrid
+        overview={overview}
+        loading={isLoading}
+        channelStats={activeChannel?.stats}
+        period={period}
+      />
 
       {/* Main chart + sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
         {/* Views chart */}
         <Card className="lg:col-span-2">
           <CardHeader
@@ -175,8 +177,14 @@ export const Dashboard = () => {
                                 ${i === 0 ? 'bg-emerald/10 border border-emerald/20' : 'glass'}`}
                   >
                     <div>
-                      <p className={`text-sm font-medium ${i === 0 ? 'text-emerald' : 'text-white'}`}>
-                        {new Date(slot.datetime).toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      <p
+                        className={`text-sm font-medium ${i === 0 ? 'text-emerald' : 'text-white'}`}
+                      >
+                        {new Date(slot.datetime).toLocaleDateString('en-IN', {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
                       </p>
                       <p className="text-xs text-gray-500">{slot.time || slot.hour}</p>
                     </div>
@@ -189,12 +197,7 @@ export const Dashboard = () => {
                   </div>
                 ))}
 
-              <Button
-                variant="ghost"
-                size="sm"
-                fullWidth
-                onClick={() => navigate('/heatmap')}
-              >
+              <Button variant="ghost" size="sm" fullWidth onClick={() => navigate('/heatmap')}>
                 View Full Heatmap
               </Button>
             </div>
@@ -209,7 +212,6 @@ export const Dashboard = () => {
 
       {/* Bottom row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
         {/* Top Videos */}
         <TopVideos videos={topVideos} loading={isLoading} />
 
@@ -230,12 +232,7 @@ export const Dashboard = () => {
           {upcoming.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-500 text-sm mb-4">No upcoming scheduled videos</p>
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={Plus}
-                onClick={() => navigate('/scheduler')}
-              >
+              <Button variant="ghost" size="sm" icon={Plus} onClick={() => navigate('/scheduler')}>
                 Schedule a video
               </Button>
             </div>
@@ -244,10 +241,15 @@ export const Dashboard = () => {
               {upcoming.map((s) => (
                 <div key={s._id} className="flex items-center gap-3 p-3 glass rounded-xl">
                   <div className="w-12 h-8 rounded-lg overflow-hidden bg-base-600 shrink-0">
-                    {s.videoId?.thumbnail?.url
-                      ? <img src={s.videoId.thumbnail.url} className="w-full h-full object-cover" alt="" />
-                      : <div className="w-full h-full bg-brand/20" />
-                    }
+                    {s.videoId?.thumbnail?.url ? (
+                      <img
+                        src={s.videoId.thumbnail.url}
+                        className="w-full h-full object-cover"
+                        alt=""
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-brand/20" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white truncate">

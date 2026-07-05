@@ -5,7 +5,7 @@ import { Upload, Sparkles, X, ArrowLeft, Image, Tag, Clock } from 'lucide-react'
 import { videoApi } from '../../api/video.api'
 import { aiApi } from '../../api/ai.api'
 import { useChannelStore } from '../../store/channelStore'
-import { Input, Textarea, Select } from '../../components/ui/Input'
+import { Textarea, Select } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { BestTimeWidget } from '../../components/features/BestTimeWidget'
 import { VIDEO_CATEGORIES } from '../../utils/constants'
@@ -18,7 +18,10 @@ const PRIVACY_OPTIONS = [
   { value: 'public', label: '🌍 Public' },
 ]
 
-const CATEGORY_OPTIONS = Object.entries(VIDEO_CATEGORIES).map(([value, label]) => ({ value, label }))
+const CATEGORY_OPTIONS = Object.entries(VIDEO_CATEGORIES).map(([value, label]) => ({
+  value,
+  label,
+}))
 
 export const VideoUpload = () => {
   const navigate = useNavigate()
@@ -44,17 +47,23 @@ export const VideoUpload = () => {
   const [generatingAI, setGeneratingAI] = useState({ title: false, tags: false, desc: false })
   const [errors, setErrors] = useState({})
 
-  const set = (k) => (e) => setForm(p => ({ ...p, [k]: e.target.value }))
+  const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }))
 
   const handleFile = (e) => {
     const f = e.target.files[0]
     if (!f) return
-    if (!f.type.startsWith('video/')) { toast.error('Please select a video file'); return }
-    if (f.size > 2 * 1024 * 1024 * 1024) { toast.error('File too large (max 2GB)'); return }
+    if (!f.type.startsWith('video/')) {
+      toast.error('Please select a video file')
+      return
+    }
+    if (f.size > 2 * 1024 * 1024 * 1024) {
+      toast.error('File too large (max 2GB)')
+      return
+    }
     setFile(f)
     // Auto-set title from filename
     if (!form.title) {
-      setForm(p => ({ ...p, title: f.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') }))
+      setForm((p) => ({ ...p, title: f.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') }))
     }
   }
 
@@ -70,7 +79,7 @@ export const VideoUpload = () => {
       toast.error('Enter a topic or description first')
       return
     }
-    setGeneratingAI(p => ({ ...p, title: true }))
+    setGeneratingAI((p) => ({ ...p, title: true }))
     try {
       const res = await aiApi.generateTitles({
         topic: form.title || form.description,
@@ -78,45 +87,51 @@ export const VideoUpload = () => {
       })
       const titles = res.data.data?.titles || []
       if (titles.length) {
-        setForm(p => ({ ...p, title: titles[0] }))
+        setForm((p) => ({ ...p, title: titles[0] }))
         toast.success(`${titles.length} titles generated! Using best one.`)
       }
     } catch {
       toast.error('Failed to generate titles')
     } finally {
-      setGeneratingAI(p => ({ ...p, title: false }))
+      setGeneratingAI((p) => ({ ...p, title: false }))
     }
   }
 
   const generateTags = async () => {
-    if (!form.title) { toast.error('Enter a title first'); return }
-    setGeneratingAI(p => ({ ...p, tags: true }))
+    if (!form.title) {
+      toast.error('Enter a title first')
+      return
+    }
+    setGeneratingAI((p) => ({ ...p, tags: true }))
     try {
       const res = await aiApi.generateTags({ title: form.title, description: form.description })
       const tags = res.data.data?.tags || []
-      setForm(p => ({ ...p, tags: tags.join(', ') }))
+      setForm((p) => ({ ...p, tags: tags.join(', ') }))
       toast.success(`${tags.length} tags generated!`)
     } catch {
       toast.error('Failed to generate tags')
     } finally {
-      setGeneratingAI(p => ({ ...p, tags: false }))
+      setGeneratingAI((p) => ({ ...p, tags: false }))
     }
   }
 
   const generateDesc = async () => {
-    if (!form.title) { toast.error('Enter a title first'); return }
-    setGeneratingAI(p => ({ ...p, desc: true }))
+    if (!form.title) {
+      toast.error('Enter a title first')
+      return
+    }
+    setGeneratingAI((p) => ({ ...p, desc: true }))
     try {
       const res = await aiApi.generateDescription({
         title: form.title,
-        tags: form.tags.split(',').map(t => t.trim()),
+        tags: form.tags.split(',').map((t) => t.trim()),
       })
-      setForm(p => ({ ...p, description: res.data.data?.description || '' }))
+      setForm((p) => ({ ...p, description: res.data.data?.description || '' }))
       toast.success('Description generated!')
     } catch {
       toast.error('Failed to generate description')
     } finally {
-      setGeneratingAI(p => ({ ...p, desc: false }))
+      setGeneratingAI((p) => ({ ...p, desc: false }))
     }
   }
 
@@ -132,7 +147,10 @@ export const VideoUpload = () => {
     if (!validate()) return
     setSavingDraft(true)
     try {
-      const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean)
+      const tags = form.tags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean)
       await videoApi.createDraft({
         channelId: activeChannel._id,
         title: form.title,
@@ -153,14 +171,20 @@ export const VideoUpload = () => {
 
   const handleUpload = async () => {
     if (!validate()) return
-    if (!file) { toast.error('Please select a video file'); return }
+    if (!file) {
+      toast.error('Please select a video file')
+      return
+    }
 
     setUploading(true)
     setUploadProgress(10)
 
     try {
       // 1. Create draft first
-      const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean)
+      const tags = form.tags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean)
       const draftRes = await videoApi.createDraft({
         channelId: activeChannel._id,
         title: form.title,
@@ -194,27 +218,32 @@ export const VideoUpload = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
-
       {/* Back */}
       <Button variant="ghost" size="sm" icon={ArrowLeft} onClick={() => navigate('/videos')}>
         Back to Videos
       </Button>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
         {/* Left — Form */}
         <div className="lg:col-span-2 space-y-5">
-
           {/* File drop zone */}
           <div
             onClick={() => fileRef.current?.click()}
             className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer
                          transition-all duration-200
-                         ${file
-                           ? 'border-brand/40 bg-brand/5'
-                           : 'border-white/15 hover:border-brand/40 hover:bg-brand/5'}`}
+                         ${
+                           file
+                             ? 'border-brand/40 bg-brand/5'
+                             : 'border-white/15 hover:border-brand/40 hover:bg-brand/5'
+                         }`}
           >
-            <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={handleFile} />
+            <input
+              ref={fileRef}
+              type="file"
+              accept="video/*"
+              className="hidden"
+              onChange={handleFile}
+            />
             {file ? (
               <div className="flex items-center justify-center gap-4">
                 <div className="w-12 h-12 bg-brand/15 rounded-xl flex items-center justify-center">
@@ -225,7 +254,10 @@ export const VideoUpload = () => {
                   <p className="text-sm text-gray-500">{formatFileSize(file.size)}</p>
                 </div>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setFile(null) }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setFile(null)
+                  }}
                   className="w-8 h-8 rounded-lg flex items-center justify-center
                              text-gray-500 hover:text-rose hover:bg-rose/10 transition-all"
                 >
@@ -357,16 +389,30 @@ export const VideoUpload = () => {
               className="flex items-center gap-4 p-3 glass rounded-xl cursor-pointer
                          hover:border-white/15 transition-all"
             >
-              <input ref={thumbRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnail} />
+              <input
+                ref={thumbRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleThumbnail}
+              />
               {thumbnailPreview ? (
                 <>
-                  <img src={thumbnailPreview} className="w-20 h-12 rounded-lg object-cover" alt="" />
+                  <img
+                    src={thumbnailPreview}
+                    className="w-20 h-12 rounded-lg object-cover"
+                    alt=""
+                  />
                   <div>
                     <p className="text-sm text-white">{thumbnail?.name}</p>
                     <p className="text-xs text-gray-500">{formatFileSize(thumbnail?.size)}</p>
                   </div>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setThumbnail(null); setThumbnailPreview(null) }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setThumbnail(null)
+                      setThumbnailPreview(null)
+                    }}
                     className="ml-auto text-gray-500 hover:text-rose"
                   >
                     <X size={16} />
@@ -389,7 +435,6 @@ export const VideoUpload = () => {
 
         {/* Right — Scheduling */}
         <div className="space-y-4">
-
           {/* Publish options */}
           <div className="glass p-4 rounded-xl space-y-3">
             <p className="text-sm font-semibold text-white">Publish Options</p>
@@ -408,7 +453,7 @@ export const VideoUpload = () => {
               />
               {form.scheduledAt && (
                 <button
-                  onClick={() => setForm(p => ({ ...p, scheduledAt: '' }))}
+                  onClick={() => setForm((p) => ({ ...p, scheduledAt: '' }))}
                   className="text-2xs text-gray-500 hover:text-rose mt-1 transition-colors"
                 >
                   Clear (publish now)
@@ -423,38 +468,32 @@ export const VideoUpload = () => {
                 <p className="text-xs text-gray-600">Under 60 seconds</p>
               </div>
               <button
-                onClick={() => setForm(p => ({ ...p, isShort: !p.isShort }))}
+                onClick={() => setForm((p) => ({ ...p, isShort: !p.isShort }))}
                 className={`w-10 h-6 rounded-full transition-all relative
                             ${form.isShort ? 'bg-brand' : 'bg-white/10'}`}
               >
-                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all
-                                  ${form.isShort ? 'left-5' : 'left-1'}`} />
+                <span
+                  className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all
+                                  ${form.isShort ? 'left-5' : 'left-1'}`}
+                />
               </button>
             </div>
           </div>
 
           {/* Best time widget */}
-          <BestTimeWidget onSelectTime={(time) => {
-            setForm(p => ({ ...p, scheduledAt: new Date(time).toISOString().slice(0, 16) }))
-            toast.success('Best time auto-filled!')
-          }} />
+          <BestTimeWidget
+            onSelectTime={(time) => {
+              setForm((p) => ({ ...p, scheduledAt: new Date(time).toISOString().slice(0, 16) }))
+              toast.success('Best time auto-filled!')
+            }}
+          />
 
           {/* Action buttons */}
           <div className="space-y-2">
-            <Button
-              fullWidth
-              onClick={handleUpload}
-              loading={uploading}
-              disabled={!file}
-            >
+            <Button fullWidth onClick={handleUpload} loading={uploading} disabled={!file}>
               {form.scheduledAt ? '📅 Schedule Upload' : '🚀 Upload Now'}
             </Button>
-            <Button
-              fullWidth
-              variant="ghost"
-              onClick={saveDraft}
-              loading={savingDraft}
-            >
+            <Button fullWidth variant="ghost" onClick={saveDraft} loading={savingDraft}>
               Save as Draft
             </Button>
           </div>

@@ -24,26 +24,18 @@ const generateRefreshToken = (payload) => {
 
 // Verify access token
 const verifyAccessToken = (token) => {
-  try {
-    return jwt.verify(token, config.jwt.accessSecret, {
-      issuer: 'tubeos',
-      audience: 'tubeos-client',
-    });
-  } catch (error) {
-    throw error;
-  }
+  return jwt.verify(token, config.jwt.accessSecret, {
+    issuer: 'tubeos',
+    audience: 'tubeos-client',
+  });
 };
 
 // Verify refresh token
 const verifyRefreshToken = (token) => {
-  try {
-    return jwt.verify(token, config.jwt.refreshSecret, {
-      issuer: 'tubeos',
-      audience: 'tubeos-client',
-    });
-  } catch (error) {
-    throw error;
-  }
+  return jwt.verify(token, config.jwt.refreshSecret, {
+    issuer: 'tubeos',
+    audience: 'tubeos-client',
+  });
 };
 
 // Generate both tokens for a user
@@ -52,19 +44,19 @@ const generateTokenPair = (userOrId, email, plan) => {
   let id, userEmail, userPlan, role;
 
   if (typeof userOrId === 'object' && userOrId !== null) {
-    id        = userOrId._id?.toString() || userOrId.id?.toString();
+    id = userOrId._id?.toString() || userOrId.id?.toString();
     userEmail = userOrId.email;
-    userPlan  = userOrId.plan;
-    role      = userOrId.role || 'user';
+    userPlan = userOrId.plan;
+    role = userOrId.role || 'user';
   } else {
-    id        = userOrId;
+    id = userOrId;
     userEmail = email;
-    userPlan  = plan;
-    role      = 'user';
+    userPlan = plan;
+    role = 'user';
   }
 
   const payload = { id, email: userEmail, plan: userPlan, role };
-  const accessToken  = generateAccessToken(payload);
+  const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken({ id });
 
   return { accessToken, refreshToken };

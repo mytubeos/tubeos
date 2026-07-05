@@ -3,9 +3,11 @@ import { TrendingUp, TrendingDown, RefreshCw, Trash2, ExternalLink } from 'lucid
 import { formatNumber, timeAgo } from '../../utils/formatters'
 
 export const CompetitorCard = ({ competitor, onSync, onRemove, syncing = false }) => {
-  const subGrowth = competitor.history?.length >= 2
-    ? competitor.stats.subscribers - competitor.history[competitor.history.length - 2]?.subscribers
-    : null
+  const subGrowth =
+    competitor.history?.length >= 2
+      ? competitor.stats.subscribers -
+        competitor.history[competitor.history.length - 2]?.subscribers
+      : null
 
   const isGrowing = subGrowth > 0
 
@@ -14,7 +16,10 @@ export const CompetitorCard = ({ competitor, onSync, onRemove, syncing = false }
       <div className="flex items-start gap-3">
         {/* Avatar */}
         <img
-          src={competitor.thumbnail || `https://ui-avatars.com/api/?name=${competitor.channelName}&background=141422&color=9CA3AF`}
+          src={
+            competitor.thumbnail ||
+            `https://ui-avatars.com/api/?name=${competitor.channelName}&background=141422&color=9CA3AF`
+          }
           alt={competitor.channelName}
           className="w-10 h-10 rounded-full object-cover ring-1 ring-white/10 shrink-0"
         />
@@ -61,21 +66,30 @@ export const CompetitorCard = ({ competitor, onSync, onRemove, syncing = false }
           {/* Stats */}
           <div className="grid grid-cols-3 gap-3 mt-3">
             <div>
-              <p className="text-xs font-bold text-white">{formatNumber(competitor.stats?.subscribers)}</p>
+              <p className="text-xs font-bold text-white">
+                {formatNumber(competitor.stats?.subscribers)}
+              </p>
               <p className="text-2xs text-gray-500">Subscribers</p>
               {subGrowth !== null && (
-                <div className={`flex items-center gap-0.5 text-2xs ${isGrowing ? 'text-emerald' : 'text-rose'}`}>
+                <div
+                  className={`flex items-center gap-0.5 text-2xs ${isGrowing ? 'text-emerald' : 'text-rose'}`}
+                >
                   {isGrowing ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                  {isGrowing ? '+' : ''}{formatNumber(subGrowth)}
+                  {isGrowing ? '+' : ''}
+                  {formatNumber(subGrowth)}
                 </div>
               )}
             </div>
             <div>
-              <p className="text-xs font-bold text-white">{formatNumber(competitor.stats?.videoCount)}</p>
+              <p className="text-xs font-bold text-white">
+                {formatNumber(competitor.stats?.videoCount)}
+              </p>
               <p className="text-2xs text-gray-500">Videos</p>
             </div>
             <div>
-              <p className="text-xs font-bold text-white">{formatNumber(competitor.stats?.totalViews)}</p>
+              <p className="text-xs font-bold text-white">
+                {formatNumber(competitor.stats?.totalViews)}
+              </p>
               <p className="text-2xs text-gray-500">Total Views</p>
             </div>
           </div>

@@ -12,23 +12,17 @@ const authAPI = {
       ...(referralCode && { referralCode }),
     }),
 
-  verifyEmail: (userId, otp) =>
-    api.post('/auth/verify-email', { userId, otp }),
+  verifyEmail: (userId, otp) => api.post('/auth/verify-email', { userId, otp }),
 
-  resendOTP: (email) =>
-    api.post('/auth/resend-otp', { email }),
+  resendOTP: (email) => api.post('/auth/resend-otp', { email }),
 
-  login: (email, password) =>
-    api.post('/auth/login', { email, password }),
+  login: (email, password) => api.post('/auth/login', { email, password }),
 
-  forgotPassword: (email) =>
-    api.post('/auth/forgot-password', { email }),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
 
-  resetPassword: (token, password) =>
-    api.post(`/auth/reset-password?token=${token}`, { password }),
+  resetPassword: (token, password) => api.post(`/auth/reset-password?token=${token}`, { password }),
 
-  refresh: (refreshToken) =>
-    api.post('/auth/refresh', { refreshToken }),
+  refresh: (refreshToken) => api.post('/auth/refresh', { refreshToken }),
 
   getMe: () => api.get('/auth/me'),
   getProfile: () => api.get('/auth/me'),

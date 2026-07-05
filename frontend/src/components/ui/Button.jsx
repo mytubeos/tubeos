@@ -2,10 +2,17 @@
 import { Spinner } from './Spinner'
 
 export const Button = ({
-  children, variant = 'brand', size = 'md',
-  loading = false, disabled = false,
-  className = '', icon: Icon, iconRight,
-  onClick, type = 'button', fullWidth = false,
+  children,
+  variant = 'brand',
+  size = 'md',
+  loading = false,
+  disabled = false,
+  className = '',
+  icon: Icon,
+  iconRight,
+  onClick,
+  type = 'button',
+  fullWidth = false,
 }) => {
   const base = `inline-flex items-center justify-center gap-2 font-body font-medium
                 transition-all duration-200 active:scale-95 select-none

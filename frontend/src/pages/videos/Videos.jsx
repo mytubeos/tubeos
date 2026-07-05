@@ -1,6 +1,6 @@
 // src/pages/videos/Videos.jsx
 import { useState, useEffect } from 'react'
-import { Plus, Search, Filter, Video } from 'lucide-react'
+import { Plus, Search, Video } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useChannelStore } from '../../store/channelStore'
 import { videoApi } from '../../api/video.api'
@@ -50,11 +50,15 @@ export const Videos = () => {
     }
   }
 
-  useEffect(() => { fetchVideos() }, [channelId, statusFilter, page])
+  useEffect(() => {
+    fetchVideos()
+  }, [channelId, statusFilter, page])
 
   // Debounced search
   useEffect(() => {
-    const timer = setTimeout(() => { if (channelId) fetchVideos() }, 400)
+    const timer = setTimeout(() => {
+      if (channelId) fetchVideos()
+    }, 400)
     return () => clearTimeout(timer)
   }, [search])
 
@@ -64,7 +68,7 @@ export const Videos = () => {
     try {
       await videoApi.delete(deleteId)
       toast.success('Video deleted')
-      setVideos(prev => prev.filter(v => v._id !== deleteId))
+      setVideos((prev) => prev.filter((v) => v._id !== deleteId))
     } catch {
       toast.error('Failed to delete video')
     } finally {
@@ -94,14 +98,13 @@ export const Videos = () => {
 
   return (
     <div className="space-y-5">
-
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="flex-1">
           <Input
             placeholder="Search videos..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             icon={Search}
           />
         </div>
@@ -112,14 +115,19 @@ export const Videos = () => {
 
       {/* Status filter tabs */}
       <div className="flex items-center glass rounded-xl p-1 w-fit">
-        {STATUS_FILTERS.map(f => (
+        {STATUS_FILTERS.map((f) => (
           <button
             key={f.value}
-            onClick={() => { setStatusFilter(f.value); setPage(1) }}
+            onClick={() => {
+              setStatusFilter(f.value)
+              setPage(1)
+            }}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all
-                        ${statusFilter === f.value
-                          ? 'bg-brand text-white shadow-lg'
-                          : 'text-gray-400 hover:text-white'}`}
+                        ${
+                          statusFilter === f.value
+                            ? 'bg-brand text-white shadow-lg'
+                            : 'text-gray-400 hover:text-white'
+                        }`}
           >
             {f.label}
           </button>
@@ -134,15 +142,17 @@ export const Videos = () => {
       {/* Grid */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {Array(8).fill(0).map((_, i) => (
-            <div key={i} className="rounded-xl overflow-hidden">
-              <div className="shimmer aspect-video" />
-              <div className="p-3 space-y-2">
-                <div className="shimmer h-4 rounded w-3/4" />
-                <div className="shimmer h-3 rounded w-1/2" />
+          {Array(8)
+            .fill(0)
+            .map((_, i) => (
+              <div key={i} className="rounded-xl overflow-hidden">
+                <div className="shimmer aspect-video" />
+                <div className="p-3 space-y-2">
+                  <div className="shimmer h-4 rounded w-3/4" />
+                  <div className="shimmer h-3 rounded w-1/2" />
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       ) : videos.length === 0 ? (
         <div className="text-center py-20 text-gray-500">
@@ -158,7 +168,7 @@ export const Videos = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {videos.map(video => (
+          {videos.map((video) => (
             <VideoCard
               key={video._id}
               video={video}
@@ -176,7 +186,7 @@ export const Videos = () => {
             variant="ghost"
             size="sm"
             disabled={page === 1}
-            onClick={() => setPage(p => p - 1)}
+            onClick={() => setPage((p) => p - 1)}
           >
             Previous
           </Button>
@@ -185,7 +195,7 @@ export const Videos = () => {
             variant="ghost"
             size="sm"
             disabled={videos.length < 12}
-            onClick={() => setPage(p => p + 1)}
+            onClick={() => setPage((p) => p + 1)}
           >
             Next
           </Button>

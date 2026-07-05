@@ -1,4 +1,3 @@
-
 // src/routes/auth.routes.js
 // FIXED: Complete auth routes with OTP verification, forgot password, reset password
 const express = require('express');
