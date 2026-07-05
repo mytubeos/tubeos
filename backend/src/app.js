@@ -1,6 +1,4 @@
 // src/app.js
-// FIX: CORS — env variable se URL lo, hardcode mat karo
-// FIX: credentials false since cross-origin cookies don't work on free hosting
 
 const express = require('express');
 const cors = require('cors');
@@ -25,14 +23,13 @@ app.use(helmet({
   crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
 }));
 
-// FIX: CORS — sab allowed origins env se lo
+// CORS — every allowed origin comes from env config, nothing hardcoded here.
 const allowedOrigins = [
-  config.cors.clientUrl,          // .env se CLIENT_URL
-  'http://localhost:3000',
-  'http://localhost:5173',
+  config.cors.clientUrl,        // .env CLIENT_URL
+  ...config.cors.extraOrigins,  // .env CORS_EXTRA_ORIGINS (defaults to local dev ports when unset in dev)
 ];
 
-// Extra Vercel URLs .env se add karo agar set hain
+// Vercel sets VERCEL_URL automatically at build/deploy time (not user-configured)
 if (process.env.VERCEL_URL) {
   allowedOrigins.push(`https://${process.env.VERCEL_URL}`);
 }
