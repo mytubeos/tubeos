@@ -112,6 +112,6 @@ scheduleSchema.virtual('minutesUntilPublish').get(function () {
   return Math.max(0, Math.round(diff / 1000 / 60));
 });
 
-const Schedule = mongoose.model('Schedule', scheduleSchema);
+const Schedule = mongoose.models.Schedule || mongoose.model('Schedule', scheduleSchema);
 
 module.exports = Schedule;

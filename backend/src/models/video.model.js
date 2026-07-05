@@ -219,6 +219,6 @@ videoSchema.virtual('isEditable').get(function () {
   return ['draft', 'scheduled', 'failed'].includes(this.status);
 });
 
-const Video = mongoose.model('Video', videoSchema);
+const Video = mongoose.models.Video || mongoose.model('Video', videoSchema);
 
 module.exports = Video;

@@ -194,4 +194,4 @@ const stopCron = () => {
   while (timers.length) clearInterval(timers.pop());
 };
 
-module.exports = { startCron, stopCron };
+module.exports = { startCron, stopCron, reapPublishedSchedules };

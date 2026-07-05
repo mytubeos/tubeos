@@ -115,5 +115,5 @@ commentSchema.index({ channelId: 1, publishedAt: -1 });
 commentSchema.index({ channelId: 1, 'sentiment.label': 1 });
 commentSchema.index({ youtubeVideoId: 1, publishedAt: -1 });
 
-const Comment = mongoose.model('Comment', commentSchema);
+const Comment = mongoose.models.Comment || mongoose.model('Comment', commentSchema);
 module.exports = Comment;

@@ -18,5 +18,21 @@ module.exports = [
       'no-empty': ['warn', { allowEmptyCatch: true }],
     },
   },
+  {
+    // Vitest test files use ESM `import`/`export` (see tests/integration/
+    // auth.service.test.js for why — Vitest's own package no longer
+    // supports require('vitest'), and vi.mock() needs static import syntax
+    // to hoist reliably).
+    files: ['tests/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: { ...globals.node },
+    },
+    rules: {
+      'no-unused-vars': ['warn', { args: 'none', varsIgnorePattern: '^_' }],
+      'no-empty': ['warn', { allowEmptyCatch: true }],
+    },
+  },
   prettierConfig,
 ];

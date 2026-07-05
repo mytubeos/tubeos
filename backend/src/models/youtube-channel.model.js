@@ -197,6 +197,7 @@ youtubeChannelSchema.methods.resetDailyQuotaIfNeeded = async function () {
   }
 };
 
-const YoutubeChannel = mongoose.model('YoutubeChannel', youtubeChannelSchema);
+const YoutubeChannel =
+  mongoose.models.YoutubeChannel || mongoose.model('YoutubeChannel', youtubeChannelSchema);
 
 module.exports = YoutubeChannel;

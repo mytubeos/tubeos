@@ -79,6 +79,21 @@ npm run dev
 Frontend: `http://localhost:5173`  
 Backend API: `http://localhost:8080/api/v1`
 
+### 4. Tests, Lint & Format
+
+```bash
+cd backend
+npm test              # Vitest — spins up an in-memory MongoDB automatically, no setup needed
+npm run lint
+npm run format:check
+
+cd frontend
+npm run lint
+npm run format:check
+```
+
+CI (`.github/workflows/ci.yml`) runs all of the above on every push/PR to `main`.
+
 ---
 
 ## 📁 Project Structure
@@ -91,13 +106,22 @@ tubeos3.0/
 ├── backend/
 │   ├── server.js                 # Entry point — DB, Redis, Express, Workers boot karta hai
 │   ├── .env.example              # Saare environment variables ka template
+│   ├── eslint.config.js          # ESLint flat config (Node/CommonJS)
+│   ├── vitest.config.js          # Vitest config — globalSetup spins up one shared in-memory Mongo
+│   ├── tests/
+│   │   ├── globalSetup.js        # Runs ONCE per test run — starts the shared MongoMemoryServer
+│   │   ├── setup.js              # Runs per test FILE — env vars, connects to a per-file logical DB
+│   │   ├── mocks/redis.mock.js   # In-memory fake Redis client (see auth.service.test.js for why
+│   │   │                         # it's injected via a test seam instead of vi.mock)
+│   │   ├── unit/                 # sanitize.utils, jwt.utils — no DB/network needed
+│   │   └── integration/          # auth, payment, video upload (GCS cleanup), cron reaper
 │   └── src/
 │       ├── app.js                # Express setup — CORS, helmet, sanitize, rate limiting
 │       │
 │       ├── config/
 │       │   ├── env.js            # Env validation + config object
 │       │   ├── db.js             # MongoDB connection
-│       │   ├── redis.js          # Redis connection (ioredis)
+│       │   ├── redis.js          # Redis connection (ioredis) + a test-only client-injection seam
 │       │   ├── logger.js         # Winston structured logging (JSON in prod)
 │       │   ├── sentry.js         # Sentry error tracking (no-op if SENTRY_DSN unset)
 │       │   ├── queue.config.js   # BullMQ queue definitions — currently stubbed, see Job Scheduling section
@@ -391,9 +415,10 @@ Key fields: `sentiment.label`, `aiReply`, `status` (unread/pending_reply/replied
 Discount codes for checkout.
 Key fields: `code`, `type` (internal/public), `discountType` (percent/fixed), `discountValue`, `validPlans`
 
-### Referral
-Per-payment commission ledger — separate from `User.referral.*` summary fields.
-Key fields: `referrerId`, `referredUserId`, `commissionRate`, `commissionAmount`, `billingCycleIndex` (1-6), `status` (credited/reversed)
+### ReferralEarning / PayoutRequest (referral.model.js)
+Per-payment commission ledger + withdrawal requests — separate from `User.referral.*` summary fields.
+`ReferralEarning` key fields: `referrerId`, `referredUserId`, `commissionRate`, `commissionAmount`, `billingCycleIndex` (1-6, max 6 cycles per referred user), `status` (credited/reversed).
+`PayoutRequest` key fields: `userId`, `status` (pending/paid), `adminNote`, `transactionRef`.
 
 ---
 
@@ -524,13 +549,13 @@ Vercel pe deploy:
 
 ## 🐛 Known Issues
 
-All the critical/high/medium issues that used to be tracked here (video file persistence, `checkUsageLimit` `_id` bug, Cloudinary, email delivery, referral backend, payment gateway, AI prompt injection, trend data) are fixed — see the Roadmap below for what's still genuinely open.
+All the critical/high/medium issues that used to be tracked here (video file persistence, `checkUsageLimit` `_id` bug, Cloudinary, email delivery, referral backend, payment gateway, AI prompt injection, trend data) are fixed — see the Roadmap below for what's still genuinely open. Also fixed while building out the test suite: the very first OTP after signup always failed verification (`register()` stored it via a raw Redis call without JSON-encoding it, while `verifyEmail()` always reads through `getCache()`, which JSON.parses — a bare numeric-looking OTP string round-tripped as a `number`, which never strictly-equals the `string` from the request body) and `CommentInbox.jsx`'s "Post Reply" button silently did nothing.
 
 **Currently open:**
 
 - **Single-instance scheduling risk** — `jobs/cron.js` uses plain `setInterval`, which duplicates work (double emails, double analytics syncs) if the backend ever runs as more than one instance. Fine today (single Render instance); needs BullMQ back on a paid Redis plan (or an equivalent distributed scheduler) before horizontal scaling. See Roadmap Phase 3.
-- **Zero automated test coverage** — no test files exist anywhere in the repo yet.
-- **No CI pipeline** — nothing runs automatically on push/PR before code lands on `main`.
+- **No frontend test coverage** — the backend has a Vitest suite (54 tests); the frontend doesn't yet.
+- **Orphaned `/verify-email` page** — `VerifyEmail.jsx` is unreachable (nothing navigates to it — the real flow is Signup.jsx's inline OTP form) and would be broken if it were reached (calls the verify API with the wrong argument shape). Needs a decision: delete it, or build a real link-based verification flow to back it.
 
 ---
 
@@ -558,14 +583,15 @@ All the critical/high/medium issues that used to be tracked here (video file per
 
 ### Phase 3 — Scale (in progress)
 
-**3A — Hygiene**
-- [x] Full README audit (this pass)
-- [ ] Remove dead `jobs/videoPublish.job.js` (unreferenced, and broken if it were used — see Job Scheduling)
-- [ ] ESLint + Prettier (backend + frontend) — zero lint config currently exists
-- [ ] CI pipeline (`.github/workflows`) — lint (+ test once Phase 3B lands) on every push/PR
+**3A — Hygiene** ✅
+- [x] Full README audit
+- [x] Remove dead `jobs/videoPublish.job.js`
+- [x] ESLint + Prettier (backend + frontend)
+- [x] CI pipeline (`.github/workflows/ci.yml`) — lint + format:check + test (backend), lint + format:check + build (frontend), on every push/PR to `main`
 
-**3B — Safety net**
-- [ ] Test suite (Vitest + Supertest backend, Testing Library frontend) — prioritize auth, payment verification, video upload, AI sanitization, cron reaper
+**3B — Safety net** ✅ (backend)
+- [x] Backend test suite (Vitest + mongodb-memory-server) — 54 tests across auth (register/verifyEmail/login/forgotPassword/resetPassword), payment (signature verification for both order-verify and webhook paths, coupon redemption, referral commission crediting), video upload (GCS staging-file cleanup on every exit path — success, early validation failure, and YouTube-upload failure), the cron publish reaper, and `sanitize.utils.js`'s prompt-injection patterns. Run with `npm test` in `backend/`.
+- [ ] Frontend test suite (Vitest + Testing Library) — not started yet
 
 **3C — TypeScript migration** (paired with 3B, incremental — not a rewrite)
 - [ ] `allowJs + checkJs` + JSDoc types on the backend first, zero build-step change

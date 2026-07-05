@@ -349,6 +349,6 @@ userSchema.methods.getPublicProfile = function () {
   return obj;
 };
 
-const User = mongoose.model('User', userSchema);
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 User.PLAN_LIMITS = PLAN_LIMITS;
 module.exports = User;

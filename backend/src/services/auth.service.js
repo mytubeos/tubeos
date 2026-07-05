@@ -73,11 +73,15 @@ const register = async ({ name, email, password, referralCode }) => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
   // Store OTP in Redis for 10 minutes with direct client for reliability
+  // (bypasses setCache() because setCache swallows errors — register() needs
+  // to actually throw on a Redis failure). Value must be JSON-encoded to
+  // match getCache()'s JSON.parse() on the read side in verifyEmail() —
+  // otherwise "482913" round-trips as the number 482913, which never
+  // strictly-equals the string OTP from the request body.
   const otpKey = `email_otp:${user._id.toString()}`;
   try {
-    const { getRedisClient } = require('../config/redis');
     const redisClient = getRedisClient();
-    await redisClient.set(otpKey, otp, 'EX', 600);
+    await redisClient.set(otpKey, JSON.stringify(otp), 'EX', 600);
     const stored = await redisClient.get(otpKey);
     logger.debug(`[register] OTP stored in Redis: ${stored ? 'YES' : 'FAILED'}`, { key: otpKey });
   } catch (redisErr) {

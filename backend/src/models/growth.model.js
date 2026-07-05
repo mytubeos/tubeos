@@ -181,8 +181,9 @@ trendSchema.index({ keyword: 1, region: 1 });
 trendSchema.index({ opportunityScore: -1 });
 trendSchema.index({ status: 1, detectedAt: -1 });
 
-const GrowthPrediction = mongoose.model('GrowthPrediction', growthPredictionSchema);
-const Competitor = mongoose.model('Competitor', competitorSchema);
-const Trend = mongoose.model('Trend', trendSchema);
+const GrowthPrediction =
+  mongoose.models.GrowthPrediction || mongoose.model('GrowthPrediction', growthPredictionSchema);
+const Competitor = mongoose.models.Competitor || mongoose.model('Competitor', competitorSchema);
+const Trend = mongoose.models.Trend || mongoose.model('Trend', trendSchema);
 
 module.exports = { GrowthPrediction, Competitor, Trend };

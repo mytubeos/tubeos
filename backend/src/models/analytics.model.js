@@ -213,8 +213,10 @@ const heatmapSchema = new mongoose.Schema(
 
 heatmapSchema.index({ channelId: 1 }, { unique: true });
 
-const ChannelAnalytics = mongoose.model('ChannelAnalytics', channelAnalyticsSchema);
-const VideoAnalytics = mongoose.model('VideoAnalytics', videoAnalyticsSchema);
-const Heatmap = mongoose.model('Heatmap', heatmapSchema);
+const ChannelAnalytics =
+  mongoose.models.ChannelAnalytics || mongoose.model('ChannelAnalytics', channelAnalyticsSchema);
+const VideoAnalytics =
+  mongoose.models.VideoAnalytics || mongoose.model('VideoAnalytics', videoAnalyticsSchema);
+const Heatmap = mongoose.models.Heatmap || mongoose.model('Heatmap', heatmapSchema);
 
 module.exports = { ChannelAnalytics, VideoAnalytics, Heatmap };

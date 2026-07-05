@@ -50,6 +50,13 @@ const getRedisClient = () => {
   return redisClient;
 };
 
+// Test-only seam: Vitest's vi.mock() can't intercept this module's internal
+// require()s from other plain-CommonJS files, so tests inject a fake client
+// directly instead. No-op risk in production — nothing calls this outside tests.
+const _setClientForTesting = (client) => {
+  redisClient = client;
+};
+
 // Helper: Set value with expiry
 const setCache = async (key, value, ttlSeconds = 3600) => {
   try {
@@ -96,4 +103,5 @@ module.exports = {
   getCache,
   deleteCache,
   existsCache,
+  _setClientForTesting,
 };

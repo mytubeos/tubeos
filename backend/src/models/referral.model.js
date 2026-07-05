@@ -66,7 +66,9 @@ const payoutRequestSchema = new mongoose.Schema(
 
 payoutRequestSchema.index({ userId: 1, createdAt: -1 });
 
-const ReferralEarning = mongoose.model('ReferralEarning', referralEarningSchema);
-const PayoutRequest = mongoose.model('PayoutRequest', payoutRequestSchema);
+const ReferralEarning =
+  mongoose.models.ReferralEarning || mongoose.model('ReferralEarning', referralEarningSchema);
+const PayoutRequest =
+  mongoose.models.PayoutRequest || mongoose.model('PayoutRequest', payoutRequestSchema);
 
 module.exports = { ReferralEarning, PayoutRequest };

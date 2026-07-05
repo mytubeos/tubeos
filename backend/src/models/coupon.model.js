@@ -60,4 +60,4 @@ const couponSchema = new mongoose.Schema(
 // code already indexed via unique:true — no duplicate needed
 couponSchema.index({ isActive: 1, type: 1 });
 
-module.exports = mongoose.model('Coupon', couponSchema);
+module.exports = mongoose.models.Coupon || mongoose.model('Coupon', couponSchema);
