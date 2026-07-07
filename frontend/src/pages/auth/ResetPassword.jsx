@@ -62,7 +62,7 @@ export const ResetPassword = () => {
 
       // Redirect to login after 2 seconds
       setTimeout(() => {
-        navigate('/auth/login')
+        navigate('/login')
       }, 2000)
     } else {
       setLocalError(result.error || 'Failed to reset password')
