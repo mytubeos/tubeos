@@ -10,6 +10,12 @@ const storageService = require('./storage.service');
 const logger = require('../config/logger');
 
 // ==================== CREATE DRAFT ====================
+/**
+ * @param {string} userId
+ * @param {string} channelId
+ * @param {{ title: string, description?: string, tags?: string[], category?: string, privacy?: string, scheduledAt?: Date|null, notes?: string|null, isShort?: boolean, thumbnailUrl?: string|null }} videoData
+ * @returns {Promise<{video: object, message: string}>}
+ */
 const createDraft = async (userId, channelId, videoData) => {
   // 1. Verify channel belongs to user
   const channel = await YoutubeChannel.findOne({
@@ -50,6 +56,13 @@ const createDraft = async (userId, channelId, videoData) => {
 // fileRef is either a Buffer (in-memory / dev fallback) or a GCS reference
 // { gcsPath, bucket, size } that we stream straight to YouTube without ever
 // holding the whole file in RAM.
+/**
+ * @param {string} userId
+ * @param {string} videoId
+ * @param {Buffer | {gcsPath: string, size?: number}} fileRef
+ * @param {string} mimeType
+ * @returns {Promise<{video: object, youtubeVideoId: string, message: string}>}
+ */
 const uploadVideo = async (userId, videoId, fileRef, mimeType) => {
   const gcsPath = fileRef && !Buffer.isBuffer(fileRef) ? fileRef.gcsPath : null;
 
@@ -279,6 +292,12 @@ const uploadThumbnailToYouTube = async (accessToken, youtubeVideoId, thumbnailUr
 };
 
 // ==================== UPDATE VIDEO METADATA ====================
+/**
+ * @param {string} userId
+ * @param {string} videoId
+ * @param {Partial<{title: string, description: string, tags: string[], category: string, privacy: string, scheduledAt: Date|null, notes: string|null, thumbnail: object}>} updates
+ * @returns {Promise<{video: object, message: string}>}
+ */
 const updateVideo = async (userId, videoId, updates) => {
   const video = await Video.findOne({ _id: videoId, userId });
   if (!video) {
@@ -347,6 +366,12 @@ const updateVideo = async (userId, videoId, updates) => {
 };
 
 // ==================== DELETE VIDEO ====================
+/**
+ * @param {string} userId
+ * @param {string} videoId
+ * @param {boolean} [deleteFromYouTube]
+ * @returns {Promise<{message: string}>}
+ */
 const deleteVideo = async (userId, videoId, deleteFromYouTube = false) => {
   const video = await Video.findOne({ _id: { $eq: videoId }, userId: { $eq: userId } });
   if (!video) {
@@ -377,6 +402,11 @@ const deleteVideo = async (userId, videoId, deleteFromYouTube = false) => {
 };
 
 // ==================== GET MY VIDEOS ====================
+/**
+ * @param {string} userId
+ * @param {{ page?: number, limit?: number, status?: string, channelId?: string, search?: string }} [filters]
+ * @returns {Promise<{videos: object[], total: number, page: number, totalPages: number}>}
+ */
 const getMyVideos = async (userId, filters = {}) => {
   const { page = 1, limit = 10, status, channelId, search } = filters;
 

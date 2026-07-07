@@ -2,6 +2,8 @@
 // Fetches + aggregates analytics data
 // Syncs from YouTube Analytics API + serves dashboard data
 
+/** @typedef {'7d' | '30d' | '90d' | '180d' | '365d'} Period */
+
 const { ChannelAnalytics, VideoAnalytics } = require('../models/analytics.model');
 const Video = require('../models/video.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
@@ -13,6 +15,12 @@ const logger = require('../config/logger');
 // ==================== SYNC CHANNEL VIDEOS ====================
 // Imports all existing YouTube channel videos into the Video collection.
 // Called on channel connect and every time user clicks Sync.
+/**
+ * @param {object} channel - YoutubeChannel document
+ * @param {string} accessToken
+ * @param {string} userId
+ * @returns {Promise<number>} Total videos synced
+ */
 const syncChannelVideos = async (channel, accessToken, userId) => {
   try {
     // 1. Get uploads playlist ID
@@ -132,6 +140,12 @@ const invalidateAnalyticsCache = async (channelId) => {
 
 // ==================== SYNC CHANNEL ANALYTICS ====================
 // Fetches last N days of analytics from YouTube API
+/**
+ * @param {string} channelId
+ * @param {string} userId
+ * @param {number} [days]
+ * @returns {Promise<{synced: number, message: string}>}
+ */
 const syncChannelAnalytics = async (channelId, userId, days = 30) => {
   const channel = await YoutubeChannel.findOne({ _id: channelId, userId, isActive: true }).select(
     '+oauth.accessToken +oauth.refreshToken +oauth.expiresAt'
@@ -536,6 +550,12 @@ const syncFromVideoStats = async (channel, accessToken, startDate, endDate, user
 };
 
 // ==================== GET OVERVIEW (Main Dashboard) ====================
+/**
+ * @param {string} userId
+ * @param {string} channelId
+ * @param {Period} [period]
+ * @returns {Promise<object>}
+ */
 const getOverview = async (userId, channelId, period = '30d') => {
   const cacheKey = `analytics:overview:${channelId}:${period}`;
   const cached = await getCache(cacheKey);
@@ -677,6 +697,13 @@ const getOverview = async (userId, channelId, period = '30d') => {
 };
 
 // ==================== GET DAILY GRAPH DATA ====================
+/**
+ * @param {string} userId
+ * @param {string} channelId
+ * @param {Period} [period]
+ * @param {string} [metric]
+ * @returns {Promise<object>}
+ */
 const getDailyGraph = async (userId, channelId, period = '30d', metric = 'views') => {
   const cacheKey = `analytics:daily:${channelId}:${period}:${metric}`;
   const cached = await getCache(cacheKey);
@@ -720,6 +747,12 @@ const getDailyGraph = async (userId, channelId, period = '30d', metric = 'views'
 
 // ==================== GET DAY-WISE PERFORMANCE ====================
 // Aggregates performance by day of week
+/**
+ * @param {string} userId
+ * @param {string} channelId
+ * @param {Period} [period]
+ * @returns {Promise<object>}
+ */
 const getDayWisePerformance = async (userId, channelId, period = '90d') => {
   const cacheKey = `analytics:daywise:${channelId}:${period}`;
   const cached = await getCache(cacheKey);
@@ -786,6 +819,13 @@ const getDayWisePerformance = async (userId, channelId, period = '90d') => {
 };
 
 // ==================== GET TOP VIDEOS ====================
+/**
+ * @param {string} userId
+ * @param {string} channelId
+ * @param {number} [limit]
+ * @param {string} [sortBy]
+ * @returns {Promise<object>}
+ */
 const getTopVideos = async (userId, channelId, limit = 10, sortBy = 'views') => {
   const cacheKey = `analytics:topvideos:${channelId}:${limit}:${sortBy}`;
   const cached = await getCache(cacheKey);
@@ -825,6 +865,11 @@ const getTopVideos = async (userId, channelId, limit = 10, sortBy = 'views') => 
 };
 
 // ==================== GET PER VIDEO BREAKDOWN ====================
+/**
+ * @param {string} userId
+ * @param {string} videoId
+ * @returns {Promise<object>}
+ */
 const getVideoBreakdown = async (userId, videoId) => {
   const cacheKey = `analytics:video:${videoId}`;
   const cached = await getCache(cacheKey);
@@ -924,6 +969,12 @@ const getVideoBreakdown = async (userId, videoId) => {
 };
 
 // ==================== GET TRAFFIC SOURCES ====================
+/**
+ * @param {string} userId
+ * @param {string} channelId
+ * @param {Period} [period]
+ * @returns {Promise<object>}
+ */
 const getTrafficSources = async (userId, channelId, period = '30d') => {
   const days = parsePeriod(period);
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);

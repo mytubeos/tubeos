@@ -63,7 +63,7 @@ const KPI_CONFIG = {
   },
 }
 
-export const KPICard = ({ type, value, change, subtitle, loading = false }) => {
+export const KPICard = ({ type, value, change = undefined, subtitle, loading = false }) => {
   const config = KPI_CONFIG[type] || KPI_CONFIG.views
 
   return (
@@ -71,6 +71,7 @@ export const KPICard = ({ type, value, change, subtitle, loading = false }) => {
       label={config.label}
       value={value !== undefined && value !== null ? config.format(value) : '—'}
       change={change}
+      trend={undefined}
       icon={config.icon}
       iconColor={config.iconColor}
       subtitle={subtitle}

@@ -1,4 +1,7 @@
 // src/services/payment.service.js
+
+/** @typedef {'creator' | 'pro' | 'agency'} PlanName */
+
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const { config } = require('../config/env');
@@ -24,6 +27,12 @@ const getRazorpayInstance = () => {
 };
 
 // Create a Razorpay order — optional coupon support
+/**
+ * @param {string} userId
+ * @param {PlanName} plan
+ * @param {string|null} [couponCode]
+ * @returns {Promise<{orderId: string, amount: number, currency: string, plan: PlanName, label: string, keyId: string, userName: string, userEmail: string, couponApplied: string|null, originalAmount: number}>}
+ */
 const createOrder = async (userId, plan, couponCode = null) => {
   if (!PLAN_PRICES[plan]) {
     const err = new Error('Invalid plan selected');
@@ -78,6 +87,11 @@ const createOrder = async (userId, plan, couponCode = null) => {
 };
 
 // Verify payment signature and activate plan
+/**
+ * @param {string} userId
+ * @param {{ razorpayOrderId: string, razorpayPaymentId: string, razorpaySignature: string, plan: PlanName, couponCode?: string }} params
+ * @returns {Promise<{plan: PlanName, subscriptionStartedAt: Date, subscriptionExpiresAt: Date}>}
+ */
 const verifyPayment = async (
   userId,
   { razorpayOrderId, razorpayPaymentId, razorpaySignature, plan, couponCode }
@@ -140,6 +154,11 @@ const verifyPayment = async (
 };
 
 // Handle Razorpay webhook events
+/**
+ * @param {string} rawBody
+ * @param {string} signature
+ * @returns {Promise<void>}
+ */
 const handleWebhook = async (rawBody, signature) => {
   if (!config.razorpay.webhookSecret) return;
 

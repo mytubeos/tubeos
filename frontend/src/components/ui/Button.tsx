@@ -8,10 +8,10 @@ export const Button = ({
   loading = false,
   disabled = false,
   className = '',
-  icon: Icon,
-  iconRight,
+  icon: Icon = null,
+  iconRight = null,
   onClick,
-  type = 'button',
+  type = 'button' as 'button' | 'submit' | 'reset',
   fullWidth = false,
 }) => {
   const base = `inline-flex items-center justify-center gap-2 font-body font-medium

@@ -9,6 +9,8 @@ export default [
   { ignores: ['dist/**', 'node_modules/**'] },
   js.configs.recommended,
   {
+    // .tsx files are type-checked by `npm run typecheck` (tsc), not ESLint.
+    // ESLint only covers .js/.jsx where Espree's parser is sufficient.
     files: ['**/*.{js,jsx}'],
     languageOptions: {
       ecmaVersion: 2022,
