@@ -1,11 +1,13 @@
+// @ts-check
 // src/services/payment.service.js
 
 /** @typedef {'creator' | 'pro' | 'agency'} PlanName */
 
-const Razorpay = require('razorpay');
+// Cast to any: mongoose v8 Model<any> union overloads cause TS2349 in @ts-check JS files.
+const Razorpay = /** @type {any} */ (require('razorpay'));
 const crypto = require('crypto');
 const { config } = require('../config/env');
-const User = require('../models/user.model');
+const User = /** @type {any} */ (require('../models/user.model'));
 const { validateCoupon, redeemCoupon } = require('./coupon.service');
 const { recordEarningFromPayment } = require('./referral.service');
 const logger = require('../config/logger');

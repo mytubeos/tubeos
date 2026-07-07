@@ -1,12 +1,16 @@
+// @ts-check
 // src/services/analytics.service.js
 // Fetches + aggregates analytics data
 // Syncs from YouTube Analytics API + serves dashboard data
 
 /** @typedef {'7d' | '30d' | '90d' | '180d' | '365d'} Period */
 
-const { ChannelAnalytics, VideoAnalytics } = require('../models/analytics.model');
-const Video = require('../models/video.model');
-const YoutubeChannel = require('../models/youtube-channel.model');
+// Cast to any: mongoose v8 Model<any> has union overloads that TS can't
+// disambiguate in @ts-check JS files (TS2349). Casting the require result
+// to any sidesteps the issue while keeping type safety on our own code.
+const { ChannelAnalytics, VideoAnalytics } = /** @type {any} */ (require('../models/analytics.model'));
+const Video = /** @type {any} */ (require('../models/video.model'));
+const YoutubeChannel = /** @type {any} */ (require('../models/youtube-channel.model'));
 const { getValidAccessToken, invalidateChannelCache } = require('./youtube.service');
 const { youtubeRequest } = require('../config/youtube.config');
 const { setCache, getCache, deleteCache } = require('../config/redis');
@@ -564,7 +568,7 @@ const getOverview = async (userId, channelId, period = '30d') => {
   const days = parsePeriod(period);
   const endDate = new Date();
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-  const prevStartDate = new Date(startDate - days * 24 * 60 * 60 * 1000);
+  const prevStartDate = new Date(startDate.getTime() - days * 24 * 60 * 60 * 1000);
 
   const [current, previous] = await Promise.all([
     ChannelAnalytics.aggregate([

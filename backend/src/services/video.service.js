@@ -1,9 +1,11 @@
+// @ts-check
 // src/services/video.service.js
 // Video upload to YouTube + video management
 
-const Video = require('../models/video.model');
-const YoutubeChannel = require('../models/youtube-channel.model');
-const User = require('../models/user.model');
+// Cast to any: mongoose v8 Model<any> union overloads cause TS2349 in @ts-check JS files.
+const Video = /** @type {any} */ (require('../models/video.model'));
+const YoutubeChannel = /** @type {any} */ (require('../models/youtube-channel.model'));
+const User = /** @type {any} */ (require('../models/user.model'));
 const { getValidAccessToken } = require('./youtube.service');
 const { youtubeRequest, QUOTA_COSTS } = require('../config/youtube.config');
 const storageService = require('./storage.service');
@@ -405,7 +407,7 @@ const deleteVideo = async (userId, videoId, deleteFromYouTube = false) => {
 /**
  * @param {string} userId
  * @param {{ page?: number, limit?: number, status?: string, channelId?: string, search?: string }} [filters]
- * @returns {Promise<{videos: object[], total: number, page: number, totalPages: number}>}
+ * @returns {Promise<{videos: object[], pagination: {page: number, limit: number, total: number}}>}
  */
 const getMyVideos = async (userId, filters = {}) => {
   const { page = 1, limit = 10, status, channelId, search } = filters;
@@ -432,11 +434,16 @@ const getMyVideos = async (userId, filters = {}) => {
 
   return {
     videos,
-    pagination: { page: parseInt(page), limit: parseInt(limit), total },
+    pagination: { page: Number(page), limit: Number(limit), total },
   };
 };
 
 // ==================== GET SINGLE VIDEO ====================
+/**
+ * @param {string} userId
+ * @param {string} videoId
+ * @returns {Promise<{video: object}>}
+ */
 const getVideo = async (userId, videoId) => {
   const video = await Video.findOne({ _id: { $eq: videoId }, userId: { $eq: userId } }).populate(
     'channelId',
@@ -453,6 +460,10 @@ const getVideo = async (userId, videoId) => {
 };
 
 // ==================== GET UPCOMING SCHEDULED ====================
+/**
+ * @param {string} userId
+ * @returns {Promise<{videos: object[]}>}
+ */
 const getUpcomingVideos = async (userId) => {
   const videos = await Video.find({
     userId,
@@ -467,6 +478,11 @@ const getUpcomingVideos = async (userId) => {
 };
 
 // ==================== CANCEL SCHEDULED VIDEO ====================
+/**
+ * @param {string} userId
+ * @param {string} videoId
+ * @returns {Promise<{video: object, message: string}>}
+ */
 const cancelScheduled = async (userId, videoId) => {
   const video = await Video.findOne({
     _id: { $eq: videoId },
