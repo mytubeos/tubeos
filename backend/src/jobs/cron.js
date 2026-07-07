@@ -264,4 +264,14 @@ const stopCron = () => {
   while (timers.length) clearInterval(timers.pop());
 };
 
-module.exports = { startCron, stopCron, reapPublishedSchedules };
+module.exports = {
+  startCron,
+  stopCron,
+  // Individual job functions — also called by BullMQ worker (src/jobs/index.js)
+  reapPublishedSchedules,
+  syncAllChannelsAnalytics,
+  refreshTrends,
+  sendWeeklyReports,
+  sendMonthlyReports,
+  renewPubSubSubscriptions,
+};

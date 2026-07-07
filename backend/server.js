@@ -33,20 +33,30 @@ const startServer = async () => {
       logger.warn('Redis connectRedis not found, skipping...');
     }
 
-    // 4. Start BullMQ Workers (skip if Upstash free plan blocks evalsha)
+    // 4. Job scheduling — BullMQ if Redis supports evalsha, setInterval cron as fallback.
+    //    BullMQ ensures only ONE instance processes each job (safe for multi-instance Render).
+    //    setInterval fallback runs on every instance (acceptable for single-instance free plan).
+    let bullmqRunning = false;
     try {
       const { startWorkers } = require('./src/jobs/index');
-      startWorkers();
+      await startWorkers();
+      bullmqRunning = true;
+      logger.info('Job scheduling: BullMQ active (distributed, multi-instance safe)');
     } catch (err) {
-      logger.warn('BullMQ workers skipped (Upstash free plan limitation)', { error: err.message });
+      logger.warn('BullMQ unavailable — falling back to in-process setInterval cron', {
+        reason: err.message,
+        note: 'Upgrade to Upstash Pay-As-You-Go or a dedicated Redis to enable BullMQ',
+      });
     }
 
-    // 4b. Start in-process cron (always — replaces BullMQ where stubbed)
-    try {
-      const { startCron } = require('./src/jobs/cron');
-      startCron();
-    } catch (err) {
-      logger.warn('In-process cron failed to start', { error: err.message });
+    if (!bullmqRunning) {
+      try {
+        const { startCron } = require('./src/jobs/cron');
+        startCron();
+        logger.info('Job scheduling: setInterval cron active (single-instance only)');
+      } catch (err) {
+        logger.warn('In-process cron failed to start', { error: err.message });
+      }
     }
 
     // 5. Start Express server
@@ -62,6 +72,23 @@ const startServer = async () => {
     // ==================== GRACEFUL SHUTDOWN ====================
     const shutdown = async (signal) => {
       logger.info(`${signal} received. Graceful shutdown starting...`);
+
+      // Stop BullMQ workers first so no new jobs start during drain
+      if (bullmqRunning) {
+        try {
+          const { stopWorkers } = require('./src/jobs/index');
+          await stopWorkers();
+        } catch (err) {
+          logger.warn('BullMQ shutdown error', { error: err.message });
+        }
+      } else {
+        try {
+          const { stopCron } = require('./src/jobs/cron');
+          stopCron();
+        } catch {
+          /* ignore */
+        }
+      }
 
       server.close(async () => {
         logger.info('HTTP server closed');
