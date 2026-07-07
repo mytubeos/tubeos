@@ -275,9 +275,21 @@ const sendWeeklyReportEmail = async (user, reportData) => {
   if (!user?.email || !reportData) return;
 
   const { generateSubjectLine } = require('../services/report.service');
+  const { buildReportPdf } = require('../services/export.service');
   const subject = generateSubjectLine(user.name, reportData.kpis, reportData.weekRange);
-
   const html = buildWeeklyReportHtml(user, reportData);
+
+  // Build PDF attachment (best-effort — email still sends if PDF fails)
+  let attachment;
+  try {
+    const pdfBuf = await buildReportPdf(reportData, user);
+    const date = new Date().toISOString().slice(0, 10);
+    attachment = [{ content: pdfBuf.toString('base64'), name: `tubeos-weekly-report-${date}.pdf` }];
+  } catch (pdfErr) {
+    logger.warn('[sendWeeklyReportEmail] PDF generation failed, sending without attachment', {
+      error: pdfErr.message,
+    });
+  }
 
   try {
     await axios.post(
@@ -288,14 +300,77 @@ const sendWeeklyReportEmail = async (user, reportData) => {
         subject,
         htmlContent: html,
         replyTo: { email: EMAIL_FROM },
+        ...(attachment ? { attachment } : {}),
       },
       {
         headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json' },
       }
     );
-    logger.info('[sendWeeklyReportEmail] sent', { email: user.email });
+    logger.info('[sendWeeklyReportEmail] sent', { email: user.email, hasPdf: !!attachment });
   } catch (err) {
     logger.error(`[sendWeeklyReportEmail] failed for ${user.email}`, {
+      error: err.response?.data?.message || err.message,
+    });
+  }
+};
+
+// ==================== SEND MONTHLY REPORT EMAIL ====================
+const sendMonthlyReportEmail = async (user, reportData) => {
+  if (!isBrevoConfigured()) {
+    logger.warn('[sendMonthlyReportEmail] Brevo not configured, skipping');
+    return;
+  }
+  if (!user?.email || !reportData) return;
+
+  const { buildReportPdf } = require('../services/export.service');
+  const kpis = reportData.kpis;
+  const firstName = user.name?.split(' ')[0] || 'Creator';
+  const views = kpis?.views?.value || 0;
+  const subs = kpis?.subscribers?.gained || 0;
+  const subject =
+    subs >= 50
+      ? `${firstName}, you gained ${subs} subscribers in ${reportData.weekRange}! 🎉`
+      : views > 0
+        ? `Your monthly report: ${views >= 1000 ? `${(views / 1000).toFixed(1)}K` : views} views this month 📊`
+        : `Your monthly TubeOS report — ${reportData.weekRange}`;
+
+  // Reuse the weekly HTML builder (same data shape — title says "Monthly" via reportType)
+  const html = buildWeeklyReportHtml(user, {
+    ...reportData,
+    weekRange: `Monthly · ${reportData.weekRange}`,
+  });
+
+  let attachment;
+  try {
+    const pdfBuf = await buildReportPdf(reportData, user);
+    const date = new Date().toISOString().slice(0, 10);
+    attachment = [
+      { content: pdfBuf.toString('base64'), name: `tubeos-monthly-report-${date}.pdf` },
+    ];
+  } catch (pdfErr) {
+    logger.warn('[sendMonthlyReportEmail] PDF generation failed, sending without attachment', {
+      error: pdfErr.message,
+    });
+  }
+
+  try {
+    await axios.post(
+      BREVO_API_URL,
+      {
+        sender: { email: EMAIL_FROM, name: 'TubeOS Reports' },
+        to: [{ email: user.email, name: user.name }],
+        subject,
+        htmlContent: html,
+        replyTo: { email: EMAIL_FROM },
+        ...(attachment ? { attachment } : {}),
+      },
+      {
+        headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json' },
+      }
+    );
+    logger.info('[sendMonthlyReportEmail] sent', { email: user.email, hasPdf: !!attachment });
+  } catch (err) {
+    logger.error(`[sendMonthlyReportEmail] failed for ${user.email}`, {
       error: err.response?.data?.message || err.message,
     });
   }
@@ -580,5 +655,6 @@ module.exports = {
   sendPasswordResetEmail,
   sendWelcomeEmail,
   sendWeeklyReportEmail,
+  sendMonthlyReportEmail,
   isBrevoConfigured,
 };

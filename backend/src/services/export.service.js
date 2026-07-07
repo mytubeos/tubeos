@@ -317,4 +317,246 @@ const buildPdf = (rows, channelName, period) => {
   });
 };
 
-module.exports = { getExportData, buildCsv, buildPdf, periodLabel, fmtDate };
+// ===================== REPORT PDF =====================
+
+/**
+ * Build a PDF for the weekly/monthly email report.
+ * reportData is the object returned by gatherReportData / gatherMonthlyReportData.
+ * @param {object} reportData
+ * @param {object} user  — { name, email }
+ * @returns {Promise<Buffer>}
+ */
+const buildReportPdf = (reportData, user) => {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    const chunks = [];
+    doc.on('data', (c) => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const W = doc.page.width - 100;
+    const { channel, kpis, topVideos, insights, actionItems, healthScore, weekRange, reportType } =
+      reportData;
+    const firstName = user?.name?.split(' ')[0] || 'Creator';
+    const typeLabel = reportType === 'monthly' ? 'Monthly' : 'Weekly';
+
+    // ---- Header ----
+    doc.rect(50, 30, W, 75).fill('#1a1033');
+    doc.fillColor('white').font('Helvetica-Bold').fontSize(22).text('⚡ TubeOS', 65, 44);
+    doc
+      .fillColor('#a78bfa')
+      .font('Helvetica')
+      .fontSize(11)
+      .text(`${typeLabel} Creator Report`, 65, 72);
+    doc
+      .fillColor('rgba(255,255,255,0.5)')
+      .fontSize(9)
+      .text(`${channel?.name || ''} · ${weekRange}`, 65, 90);
+
+    // ---- Greeting ----
+    const greetY = 125;
+    doc
+      .fillColor('#111827')
+      .font('Helvetica-Bold')
+      .fontSize(14)
+      .text(
+        kpis.subscribers.gained > 0
+          ? `Great ${typeLabel.toLowerCase()}, ${firstName}! You gained +${kpis.subscribers.gained} subscribers.`
+          : `Here's your ${typeLabel.toLowerCase()} summary, ${firstName}.`,
+        50,
+        greetY,
+        { width: W }
+      );
+
+    // ---- KPI boxes ----
+    const kpiY = greetY + 36;
+    const kpiList = [
+      {
+        label: 'Views',
+        value: fmtNum(kpis.views.value),
+        change: kpis.views.change,
+      },
+      {
+        label: 'Watch Time',
+        value: `${Math.round(kpis.watchTime?.value || 0)}h`,
+        change: kpis.watchTime?.change,
+      },
+      {
+        label: 'Subs Gained',
+        value: `+${kpis.subscribers.gained}`,
+        change: kpis.subscribers.change,
+      },
+      {
+        label: 'CTR',
+        value: `${kpis.ctr.value}%`,
+        change: kpis.ctr.change,
+      },
+    ];
+    const kpiBoxW = (W - 15) / 4;
+    kpiList.forEach((k, i) => {
+      const x = 50 + i * (kpiBoxW + 5);
+      doc.rect(x, kpiY, kpiBoxW, 56).fill('#F5F3FF');
+      doc
+        .fillColor(BRAND)
+        .font('Helvetica-Bold')
+        .fontSize(15)
+        .text(k.value, x + 8, kpiY + 8, {
+          width: kpiBoxW - 16,
+        });
+      doc
+        .fillColor(GRAY)
+        .font('Helvetica')
+        .fontSize(8)
+        .text(k.label, x + 8, kpiY + 32, {
+          width: kpiBoxW - 16,
+        });
+      if (k.change != null) {
+        const chgClr = k.change > 0 ? '#16a34a' : k.change < 0 ? '#dc2626' : GRAY;
+        const arrow = k.change > 0 ? '↑' : k.change < 0 ? '↓' : '→';
+        doc
+          .fillColor(chgClr)
+          .fontSize(8)
+          .text(`${arrow} ${Math.abs(k.change)}%`, x + 8, kpiY + 42, { width: kpiBoxW - 16 });
+      }
+    });
+
+    // ---- Top Videos ----
+    let y = kpiY + 70;
+    doc.fillColor(DARK).font('Helvetica-Bold').fontSize(11).text('🏆 Top Performing Videos', 50, y);
+    doc
+      .moveTo(50, y + 16)
+      .lineTo(50 + W, y + 16)
+      .strokeColor(BRAND)
+      .lineWidth(0.5)
+      .stroke();
+    y += 22;
+
+    const vids = (topVideos || []).slice(0, 5);
+    vids.forEach((v, i) => {
+      doc
+        .fillColor('#374151')
+        .font('Helvetica-Bold')
+        .fontSize(9)
+        .text(`${i + 1}.`, 50, y, { width: 18 });
+      doc
+        .fillColor('#111827')
+        .font('Helvetica')
+        .fontSize(9)
+        .text((v.title || '').slice(0, 65), 68, y, { width: W - 100 });
+      doc
+        .fillColor(GRAY)
+        .fontSize(8)
+        .text(
+          `👁 ${fmtNum(v.performance?.views || 0)} views  ·  👍 ${fmtNum(v.performance?.likes || 0)} likes`,
+          68,
+          y + 12,
+          { width: W - 100 }
+        );
+      y += 28;
+    });
+
+    if (!vids.length) {
+      doc.fillColor(GRAY).font('Helvetica').fontSize(9).text('No published videos yet.', 50, y);
+      y += 20;
+    }
+
+    // ---- AI Insights ----
+    y += 8;
+    if (y > doc.page.height - 150) {
+      doc.addPage();
+      y = 50;
+    }
+    doc.fillColor(DARK).font('Helvetica-Bold').fontSize(11).text('✨ AI Insights', 50, y);
+    doc
+      .moveTo(50, y + 16)
+      .lineTo(50 + W, y + 16)
+      .strokeColor(BRAND)
+      .lineWidth(0.5)
+      .stroke();
+    y += 22;
+
+    const insClr = { accent: '#3b82f6', success: '#16a34a', warning: '#d97706' };
+    (insights || []).forEach((ins) => {
+      if (y > doc.page.height - 100) {
+        doc.addPage();
+        y = 50;
+      }
+      const clr = insClr[ins.color] || GRAY;
+      doc.rect(50, y, 3, 38).fill(clr);
+      doc
+        .fillColor('#111827')
+        .font('Helvetica-Bold')
+        .fontSize(9)
+        .text(ins.title || '', 60, y, { width: W - 10 });
+      doc
+        .fillColor('#4b5563')
+        .font('Helvetica')
+        .fontSize(8)
+        .text(ins.body || '', 60, y + 14, { width: W - 10 });
+      y += 48;
+    });
+
+    // ---- Action Items ----
+    y += 4;
+    if (y > doc.page.height - 130) {
+      doc.addPage();
+      y = 50;
+    }
+    doc.fillColor(DARK).font('Helvetica-Bold').fontSize(11).text('📋 Action Plan', 50, y);
+    doc
+      .moveTo(50, y + 16)
+      .lineTo(50 + W, y + 16)
+      .strokeColor(BRAND)
+      .lineWidth(0.5)
+      .stroke();
+    y += 22;
+
+    (actionItems || []).forEach((item) => {
+      doc.fillColor(BRAND).font('Helvetica-Bold').fontSize(10).text('✓', 50, y, { width: 16 });
+      doc
+        .fillColor('#374151')
+        .font('Helvetica')
+        .fontSize(9)
+        .text(item, 66, y, { width: W - 16 });
+      y += 18;
+    });
+
+    // ---- Health Score ----
+    y += 10;
+    if (y > doc.page.height - 60) {
+      doc.addPage();
+      y = 50;
+    }
+    const healthClr = healthScore >= 70 ? '#16a34a' : healthScore >= 40 ? '#d97706' : '#dc2626';
+    doc.rect(50, y, W, 40).fill('#F9FAFB');
+    doc
+      .fillColor('#6b7280')
+      .font('Helvetica')
+      .fontSize(9)
+      .text('Channel Health Score', 60, y + 8);
+    doc
+      .fillColor(healthClr)
+      .font('Helvetica-Bold')
+      .fontSize(14)
+      .text(`${healthScore}/100`, 60, y + 20);
+    const barW = Math.round((healthScore / 100) * (W - 120));
+    doc.rect(W - 60, y + 14, barW, 12).fill(healthClr);
+
+    // ---- Footer ----
+    const footerY = doc.page.height - 35;
+    doc
+      .fillColor(GRAY)
+      .font('Helvetica')
+      .fontSize(8)
+      .text(
+        `Generated by TubeOS  •  ${new Date().toDateString()}  •  ${user?.email || ''}`,
+        50,
+        footerY,
+        { align: 'center', width: W }
+      );
+
+    doc.end();
+  });
+};
+
+module.exports = { getExportData, buildCsv, buildPdf, buildReportPdf, periodLabel, fmtDate };

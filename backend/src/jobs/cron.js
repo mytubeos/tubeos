@@ -123,7 +123,7 @@ const refreshTrends = async () => {
 
 // ---------- Weekly report ----------
 // Runs every 24h; fires real emails only on Monday (UTC).
-// Sends to every active user who has preferences.weeklyReport === true.
+// Sends to users with weeklyReport=true AND reportFrequency='weekly' (or unset).
 const sendWeeklyReports = async () => {
   const day = new Date().getUTCDay(); // 0=Sun 1=Mon
   if (day !== 1) return;
@@ -139,6 +139,8 @@ const sendWeeklyReports = async () => {
     isBanned: false,
     isEmailVerified: true,
     'preferences.weeklyReport': { $ne: false },
+    // Only send weekly to users who want weekly (or haven't set a preference — default weekly)
+    'preferences.reportFrequency': { $in: ['weekly', null, undefined] },
     youtubeChannels: { $exists: true, $not: { $size: 0 } },
   })
     .select('name email preferences youtubeChannels')
@@ -152,13 +154,13 @@ const sendWeeklyReports = async () => {
     if (!channelId) continue;
 
     try {
-      const reportData = await gatherReportData(user._id.toString(), channelId.toString());
+      const reportData = await gatherReportData(user._id.toString(), channelId.toString(), 7);
       if (!reportData) continue;
 
       await sendWeeklyReportEmail(user, reportData);
       sent++;
 
-      // Brevo free tier rate limit: 300 emails/day — small gap between sends
+      // Brevo free tier: 300 emails/day — small gap between sends
       await new Promise((r) => setTimeout(r, 2000));
     } catch (err) {
       logger.error(`[cron] weekly-report failed for ${user.email}`, { error: err.message });
@@ -166,6 +168,53 @@ const sendWeeklyReports = async () => {
   }
 
   logger.info(`[cron] weekly-report done: ${sent}/${users.length} emails sent`);
+};
+
+// ---------- Monthly report ----------
+// Runs every 24h; fires real emails only on the 1st of each month (UTC).
+// Sends to users with weeklyReport=true AND reportFrequency='monthly'.
+const sendMonthlyReports = async () => {
+  const date = new Date().getUTCDate(); // 1–31
+  if (date !== 1) return;
+
+  logger.info('[cron] monthly-report: starting 1st-of-month send');
+
+  const User = require('../models/user.model');
+  const { gatherMonthlyReportData } = require('../services/report.service');
+  const { sendMonthlyReportEmail } = require('../utils/email.utils');
+
+  const users = await User.find({
+    isActive: true,
+    isBanned: false,
+    isEmailVerified: true,
+    'preferences.weeklyReport': { $ne: false },
+    'preferences.reportFrequency': 'monthly',
+    youtubeChannels: { $exists: true, $not: { $size: 0 } },
+  })
+    .select('name email preferences youtubeChannels')
+    .lean();
+
+  logger.info(`[cron] monthly-report: sending to ${users.length} user(s)`);
+  let sent = 0;
+
+  for (const user of users) {
+    const channelId = user.youtubeChannels?.[0];
+    if (!channelId) continue;
+
+    try {
+      const reportData = await gatherMonthlyReportData(user._id.toString(), channelId.toString());
+      if (!reportData) continue;
+
+      await sendMonthlyReportEmail(user, reportData);
+      sent++;
+
+      await new Promise((r) => setTimeout(r, 2000));
+    } catch (err) {
+      logger.error(`[cron] monthly-report failed for ${user.email}`, { error: err.message });
+    }
+  }
+
+  logger.info(`[cron] monthly-report done: ${sent}/${users.length} emails sent`);
 };
 
 // ---------- PubSubHubbub subscription renewal ----------
@@ -193,8 +242,11 @@ const startCron = () => {
   // Every 24h: daily analytics snapshot sync (dashboard/analytics/growth foundation)
   timers.push(setInterval(syncAllChannelsAnalytics, 24 * 60 * 60 * 1000));
 
-  // Every 24h: weekly report check
+  // Every 24h: weekly report check (fires Monday only)
   timers.push(setInterval(sendWeeklyReports, 24 * 60 * 60 * 1000));
+
+  // Every 24h: monthly report check (fires on 1st of month only)
+  timers.push(setInterval(sendMonthlyReports, 24 * 60 * 60 * 1000));
 
   // Every 7 days: renew PubSubHubbub subscriptions (9-day lease, renew before expiry)
   timers.push(setInterval(renewPubSubSubscriptions, 7 * 24 * 60 * 60 * 1000));

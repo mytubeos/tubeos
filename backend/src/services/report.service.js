@@ -1,25 +1,27 @@
 // src/services/report.service.js
-// Weekly performance report — gathers analytics, generates AI insights + action items.
-// Called by cron every Monday. Data flows: YouTube API → MongoDB → this service → email.
+// Weekly + monthly performance report — gathers analytics, generates AI insights + action items.
+// Called by cron every Monday (weekly) and 1st of month (monthly).
+// Data flows: YouTube API → MongoDB → this service → email (with PDF attachment).
 
 const { ChannelAnalytics } = require('../models/analytics.model');
 const Video = require('../models/video.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
 
 // ==================== MAIN: GATHER REPORT DATA ====================
-const gatherReportData = async (userId, channelId) => {
+// days=7 → weekly report, days=30 → monthly report
+const gatherReportData = async (userId, channelId, days = 7) => {
   const now = new Date();
-  const weekAgo = new Date(now - 7 * 86400000);
-  const twoWkAgo = new Date(now - 14 * 86400000);
+  const since = new Date(now - days * 86400000);
+  const prevSince = new Date(now - days * 2 * 86400000);
 
-  // Parallel fetch — channel info + this week + last week analytics
+  // Parallel fetch — channel info + current period + previous period analytics
   const [channel, thisWeek, lastWeek, dailyRows, topVideos] = await Promise.all([
     YoutubeChannel.findOne({ _id: channelId, userId, isActive: true }).select(
       'channelName thumbnail stats'
     ),
 
     ChannelAnalytics.aggregate([
-      { $match: { channelId: toObjId(channelId), date: { $gte: weekAgo, $lte: now } } },
+      { $match: { channelId: toObjId(channelId), date: { $gte: since, $lte: now } } },
       {
         $group: {
           _id: null,
@@ -36,7 +38,7 @@ const gatherReportData = async (userId, channelId) => {
     ]),
 
     ChannelAnalytics.aggregate([
-      { $match: { channelId: toObjId(channelId), date: { $gte: twoWkAgo, $lt: weekAgo } } },
+      { $match: { channelId: toObjId(channelId), date: { $gte: prevSince, $lt: since } } },
       {
         $group: {
           _id: null,
@@ -48,14 +50,14 @@ const gatherReportData = async (userId, channelId) => {
       },
     ]),
 
-    ChannelAnalytics.find({ channelId: toObjId(channelId), date: { $gte: weekAgo } })
+    ChannelAnalytics.find({ channelId: toObjId(channelId), date: { $gte: since } })
       .sort({ date: 1 })
       .select('date metrics.views')
       .lean(),
 
     Video.find({ userId, channelId, status: 'published' })
       .sort({ 'performance.views': -1 })
-      .limit(3)
+      .limit(5)
       .select('title thumbnail youtubeVideoId publishedAt performance isShort')
       .lean(),
   ]);
@@ -104,13 +106,13 @@ const gatherReportData = async (userId, channelId) => {
     },
   };
 
-  // Daily bar chart data (7 values, fill missing days with 0)
-  const dailyViews = buildDailyArray(dailyRows, weekAgo);
+  // Daily bar chart data (fill missing days with 0)
+  const dailyViews = buildDailyArray(dailyRows, since, days);
 
-  // Best posting day this week
+  // Best posting day in the period
   const bestDayIndex = dailyViews.indexOf(Math.max(...dailyViews));
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const bestDayName = dayNames[(new Date(weekAgo).getDay() + bestDayIndex) % 7];
+  const bestDayName = dayNames[(new Date(since).getDay() + bestDayIndex) % 7];
 
   // Channel health score (0–100)
   const healthScore = calcHealthScore(kpis, prev);
@@ -149,9 +151,13 @@ const gatherReportData = async (userId, channelId) => {
     bestTimes,
     milestones,
     healthScore,
-    weekRange: formatWeekRange(),
+    weekRange: days <= 7 ? formatWeekRange() : formatDateRange(days),
+    reportType: days <= 7 ? 'weekly' : 'monthly',
   };
 };
+
+// Thin wrapper for monthly — 30-day period, used by monthly cron
+const gatherMonthlyReportData = (userId, channelId) => gatherReportData(userId, channelId, 30);
 
 // ==================== INSIGHTS GENERATOR ====================
 const generateInsights = ({ kpis, prev, topVideos, bestDayName, channel }) => {
@@ -321,13 +327,13 @@ const pctChange = (curr = 0, prev = 0) => {
   return parseFloat((((curr - prev) / prev) * 100).toFixed(1));
 };
 
-const buildDailyArray = (rows, weekAgo) => {
+const buildDailyArray = (rows, since, days = 7) => {
   const map = {};
   rows.forEach((r) => {
     map[r.date.toISOString().split('T')[0]] = r.metrics?.views || 0;
   });
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(weekAgo.getTime() + i * 86400000).toISOString().split('T')[0];
+  return Array.from({ length: days }, (_, i) => {
+    const d = new Date(since.getTime() + i * 86400000).toISOString().split('T')[0];
     return map[d] || 0;
   });
 };
@@ -364,6 +370,13 @@ const formatWeekRange = () => {
   return `${start.toLocaleDateString('en-IN', opts)} – ${end.toLocaleDateString('en-IN', opts)}`;
 };
 
+const formatDateRange = (days) => {
+  const end = new Date();
+  const start = new Date(end - (days - 1) * 86400000);
+  const opts = { month: 'short', day: 'numeric' };
+  return `${start.toLocaleDateString('en-IN', opts)} – ${end.toLocaleDateString('en-IN', opts)}`;
+};
+
 const fmtNum = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : `${n}`);
 
-module.exports = { gatherReportData, generateSubjectLine };
+module.exports = { gatherReportData, gatherMonthlyReportData, generateSubjectLine };
