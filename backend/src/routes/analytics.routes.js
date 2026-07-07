@@ -29,6 +29,9 @@ router.get('/:channelId/traffic-sources', protect, analyticsController.getTraffi
 // GET /api/v1/analytics/video/:videoId
 router.get('/video/:videoId', protect, analyticsController.getVideoBreakdown);
 
+// GET /api/v1/analytics/:channelId/export?period=30d&format=csv|pdf
+router.get('/:channelId/export', protect, analyticsController.exportAnalytics);
+
 // ==================== TIME INTELLIGENCE ====================
 
 // GET /api/v1/analytics/:channelId/heatmap

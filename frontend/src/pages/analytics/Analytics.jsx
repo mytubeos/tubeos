@@ -1,6 +1,6 @@
 // src/pages/analytics/Analytics.jsx
 import { useState, useEffect } from 'react'
-import { BarChart3, RefreshCw, TrendingUp } from 'lucide-react'
+import { BarChart3, RefreshCw, TrendingUp, Download } from 'lucide-react'
 import { useChannelStore } from '../../store/channelStore'
 import { analyticsApi } from '../../api/analytics.api'
 import { KPIGrid } from '../../components/features/KPICard'
@@ -28,6 +28,7 @@ export const Analytics = () => {
   const [period, setPeriod] = useState('30d')
   const [activeMetric, setActiveMetric] = useState('views')
   const [syncing, setSyncing] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const [overview, setOverview] = useState(null)
   const [graphData, setGraphData] = useState(null)
@@ -72,6 +73,28 @@ export const Analytics = () => {
   // Pull enough history for the selected tab (incl. its previous-period delta where cheap)
   const SYNC_DAYS = { '7d': 60, '30d': 90, '90d': 180, '365d': 365 }
 
+  const handleExport = async (format) => {
+    if (!channelId || exporting) return
+    setExporting(true)
+    try {
+      const res = await analyticsApi.exportReport(channelId, period, format)
+      const url = URL.createObjectURL(res.data)
+      const a = document.createElement('a')
+      a.href = url
+      const date = new Date().toISOString().slice(0, 10)
+      a.download = `tubeos-analytics-${period}-${date}.${format}`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      toast.success(`${format.toUpperCase()} downloaded!`)
+    } catch {
+      toast.error('Export failed')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const handleSync = async () => {
     if (!channelId) return
     setSyncing(true)
@@ -112,9 +135,32 @@ export const Analytics = () => {
           ))}
         </div>
 
-        <Button variant="ghost" size="sm" icon={RefreshCw} onClick={handleSync} loading={syncing}>
-          Sync Data
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Export dropdown */}
+          <div className="relative group">
+            <Button variant="ghost" size="sm" icon={Download} loading={exporting}>
+              Export
+            </Button>
+            <div className="absolute right-0 top-full mt-1 hidden group-hover:flex flex-col glass rounded-xl shadow-lg z-20 min-w-[110px] overflow-hidden">
+              <button
+                onClick={() => handleExport('csv')}
+                className="px-4 py-2.5 text-xs text-left text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+              >
+                Download CSV
+              </button>
+              <button
+                onClick={() => handleExport('pdf')}
+                className="px-4 py-2.5 text-xs text-left text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+              >
+                Download PDF
+              </button>
+            </div>
+          </div>
+
+          <Button variant="ghost" size="sm" icon={RefreshCw} onClick={handleSync} loading={syncing}>
+            Sync Data
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards */}

@@ -4,6 +4,7 @@
 const analyticsService = require('../services/analytics.service');
 const heatmapService = require('../services/heatmap.service');
 const growthService = require('../services/growth.service');
+const exportService = require('../services/export.service');
 const { successResponse, errorResponse } = require('../utils/response.utils');
 
 // ==================== ANALYTICS ====================
@@ -214,6 +215,37 @@ const removeCompetitor = async (req, res) => {
   }
 };
 
+// ==================== EXPORT ====================
+
+// GET /api/v1/analytics/:channelId/export?period=30d&format=csv|pdf
+const exportAnalytics = async (req, res) => {
+  try {
+    const { period = '30d', format = 'csv' } = req.query;
+    const { rows, channelName } = await exportService.getExportData(
+      req.params.channelId,
+      req.user.id,
+      period
+    );
+
+    if (format === 'pdf') {
+      const buf = await exportService.buildPdf(rows, channelName, period);
+      const filename = `tubeos-analytics-${period}-${exportService.fmtDate(new Date())}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      return res.send(buf);
+    }
+
+    // default: CSV
+    const csv = exportService.buildCsv(rows, channelName, period);
+    const filename = `tubeos-analytics-${period}-${exportService.fmtDate(new Date())}.csv`;
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(csv);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
 module.exports = {
   syncAnalytics,
   getOverview,
@@ -233,4 +265,5 @@ module.exports = {
   getCompetitors,
   syncCompetitor,
   removeCompetitor,
+  exportAnalytics,
 };

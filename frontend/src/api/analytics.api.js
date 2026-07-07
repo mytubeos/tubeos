@@ -28,4 +28,8 @@ export const analyticsApi = {
     api.post(`/analytics/${channelId}/competitors`, { youtubeChannelId }),
   syncCompetitor: (competitorId) => api.post(`/analytics/competitors/${competitorId}/sync`),
   removeCompetitor: (competitorId) => api.delete(`/analytics/competitors/${competitorId}`),
+  exportReport: (channelId, period, format) =>
+    api.get(`/analytics/${channelId}/export?period=${period}&format=${format}`, {
+      responseType: 'blob',
+    }),
 }
