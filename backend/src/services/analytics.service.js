@@ -8,7 +8,9 @@
 // Cast to any: mongoose v8 Model<any> has union overloads that TS can't
 // disambiguate in @ts-check JS files (TS2349). Casting the require result
 // to any sidesteps the issue while keeping type safety on our own code.
-const { ChannelAnalytics, VideoAnalytics } = /** @type {any} */ (require('../models/analytics.model'));
+const { ChannelAnalytics, VideoAnalytics } = /** @type {any} */ (
+  require('../models/analytics.model')
+);
 const Video = /** @type {any} */ (require('../models/video.model'));
 const YoutubeChannel = /** @type {any} */ (require('../models/youtube-channel.model'));
 const { getValidAccessToken, invalidateChannelCache } = require('./youtube.service');

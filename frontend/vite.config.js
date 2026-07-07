@@ -11,7 +11,8 @@ export default defineConfig({
       manifest: {
         name: 'TubeOS — Creator Command Center',
         short_name: 'TubeOS',
-        description: 'AI-powered YouTube creator management platform. Upload, schedule, analyze, and automate your channel growth.',
+        description:
+          'AI-powered YouTube creator management platform. Upload, schedule, analyze, and automate your channel growth.',
         theme_color: '#06060A',
         background_color: '#06060A',
         display: 'standalone',
