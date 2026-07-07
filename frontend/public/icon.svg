@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="#06060A"/>
+
+  <!-- Gradient definitions -->
+  <defs>
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#818CF8"/>
+      <stop offset="100%" style="stop-color:#4F46E5"/>
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4F46E5;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#4F46E5;stop-opacity:0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Subtle glow circle -->
+  <circle cx="256" cy="256" r="200" fill="url(#glowGrad)"/>
+
+  <!-- Play button shape (rounded triangle) -->
+  <path d="M 180 155 L 180 357 L 362 256 Z"
+        fill="url(#brandGrad)"
+        rx="12"/>
+
+  <!-- Lightning bolt overlay (TubeOS AI mark) -->
+  <path d="M 248 148 L 208 272 L 248 272 L 224 364 L 308 228 L 264 228 L 296 148 Z"
+        fill="white"
+        opacity="0.92"/>
+</svg>

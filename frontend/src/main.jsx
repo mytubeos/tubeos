@@ -1,12 +1,48 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
-import { Toaster } from 'react-hot-toast'
+import { Toaster, toast } from 'react-hot-toast'
+import { registerSW } from 'virtual:pwa-register'
 import App from './App'
 import { initSentry, Sentry } from './utils/sentry'
 import './index.css'
 
 initSentry()
+
+// PWA service worker — auto-updates silently, notifies user when new version is ready
+registerSW({
+  onNeedRefresh() {
+    toast(
+      (t) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 13 }}>New version available!</span>
+          <button
+            onClick={() => {
+              toast.dismiss(t.id)
+              window.location.reload()
+            }}
+            style={{
+              background: '#4F46E5',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              padding: '4px 12px',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Update
+          </button>
+        </div>
+      ),
+      { duration: Infinity, id: 'pwa-update' }
+    )
+  },
+  onOfflineReady() {
+    toast.success('App ready for offline use', { id: 'pwa-offline' })
+  },
+})
 
 const ErrorFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-base-900 text-center px-5">
