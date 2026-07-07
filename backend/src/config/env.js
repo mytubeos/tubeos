@@ -85,6 +85,14 @@ const config = {
     redirectUri: process.env.YOUTUBE_REDIRECT_URI,
   },
 
+  // YouTube PubSubHubbub webhooks
+  // BACKEND_URL: public URL of this server (e.g. https://tubeos-api.onrender.com)
+  // Required for YouTube to call our webhook endpoint. If unset, subscriptions are skipped.
+  webhook: {
+    backendUrl: process.env.BACKEND_URL || '',
+    verifyToken: process.env.WEBHOOK_VERIFY_TOKEN || '',
+  },
+
   // Google Cloud Storage — used to stage video uploads instead of RAM.
   // Optional: if bucket is unset, uploads fall back to in-memory (dev only).
   gcs: {

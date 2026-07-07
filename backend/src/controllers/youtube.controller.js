@@ -7,6 +7,7 @@
 // 3. Redirect paths /dashboard → /channels (tumhari routes ke hisaab se)
 
 const youtubeService = require('../services/youtube.service');
+const { subscribeChannel, unsubscribeChannel } = require('../services/pubsub.service');
 const { successResponse, errorResponse } = require('../utils/response.utils');
 const { config } = require('../config/env');
 const logger = require('../config/logger');
@@ -38,6 +39,14 @@ const handleCallback = async (req, res) => {
     }
 
     const result = await youtubeService.handleOAuthCallback(code, state);
+
+    // Subscribe to PubSubHubbub for real-time new-video notifications.
+    // Fire-and-forget — subscription failure must not break the OAuth callback.
+    if (process.env.BACKEND_URL) {
+      subscribeChannel(result.channel.channelId).catch((err) =>
+        logger.warn('[youtube] pubsub subscribe failed after connect', { error: err.message })
+      );
+    }
 
     return res.redirect(
       `${config.cors.clientUrl}/youtube-callback?youtube_connected=true&channel=${encodeURIComponent(result.channel.channelName)}`
@@ -87,7 +96,14 @@ const syncChannel = async (req, res) => {
 // DELETE /api/v1/youtube/channels/:channelId
 const disconnectChannel = async (req, res) => {
   try {
-    const result = await youtubeService.disconnectChannel(req.params.channelId, req.user.id);
+    const ytChannelId = req.params.channelId;
+    const result = await youtubeService.disconnectChannel(ytChannelId, req.user.id);
+    // Best-effort unsubscribe — don't block the response
+    if (process.env.BACKEND_URL) {
+      unsubscribeChannel(ytChannelId).catch((err) =>
+        logger.warn('[youtube] pubsub unsubscribe failed after disconnect', { error: err.message })
+      );
+    }
     return successResponse(res, 200, result.message);
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);

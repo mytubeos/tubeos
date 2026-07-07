@@ -168,6 +168,19 @@ const sendWeeklyReports = async () => {
   logger.info(`[cron] weekly-report done: ${sent}/${users.length} emails sent`);
 };
 
+// ---------- PubSubHubbub subscription renewal ----------
+// Renews YouTube webhook subscriptions (9-day lease) for all active channels.
+// Runs every 7 days. Channels expiring within 3 days are re-subscribed.
+// No-ops silently if BACKEND_URL is not set (local dev without ngrok).
+const renewPubSubSubscriptions = async () => {
+  try {
+    const { renewExpiringSubscriptions } = require('../services/pubsub.service');
+    await renewExpiringSubscriptions();
+  } catch (err) {
+    logger.warn('[cron] pubsub renewal error', { error: err.message });
+  }
+};
+
 const startCron = () => {
   logger.info('In-process cron started');
 
@@ -183,11 +196,16 @@ const startCron = () => {
   // Every 24h: weekly report check
   timers.push(setInterval(sendWeeklyReports, 24 * 60 * 60 * 1000));
 
+  // Every 7 days: renew PubSubHubbub subscriptions (9-day lease, renew before expiry)
+  timers.push(setInterval(renewPubSubSubscriptions, 7 * 24 * 60 * 60 * 1000));
+
   // Fire once on boot (best-effort)
   setTimeout(reapPublishedSchedules, 5_000);
   setTimeout(refreshTrends, 10_000);
   // Delay the first analytics sync so boot isn't slowed and quota isn't hit at startup
   setTimeout(syncAllChannelsAnalytics, 30_000);
+  // Subscribe all channels on boot (picks up any that missed their renewal window)
+  setTimeout(renewPubSubSubscriptions, 15_000);
 };
 
 const stopCron = () => {

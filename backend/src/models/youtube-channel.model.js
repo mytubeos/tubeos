@@ -146,6 +146,15 @@ const youtubeChannelSchema = new mongoose.Schema(
       default: null,
     },
 
+    // --- PubSubHubbub Subscription ---
+    // YouTube pushes new-video notifications to our webhook while subscribed.
+    // Subscriptions expire (we use 9-day lease); cron renews every 7 days.
+    pubsub: {
+      subscribedAt: { type: Date, default: null },
+      leaseSeconds: { type: Number, default: null },
+      expiresAt: { type: Date, default: null },
+    },
+
     // --- Best Time Data (calculated by Time Intelligence System) ---
     bestTimeData: {
       lastCalculatedAt: { type: Date, default: null },

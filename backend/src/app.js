@@ -63,9 +63,12 @@ app.use(
 app.set('trust proxy', 1);
 
 // ==================== BODY PARSING ====================
-// Capture raw body for Razorpay webhook signature verification
+// Capture raw body for:
+//  - Razorpay webhook signature verification (JSON)
+//  - YouTube PubSubHubbub notifications (Atom XML)
 app.use((req, res, next) => {
-  if (req.originalUrl === '/api/v1/payment/webhook') {
+  const url = req.originalUrl;
+  if (url === '/api/v1/payment/webhook' || url === '/api/v1/webhooks/youtube') {
     let data = '';
     req.setEncoding('utf8');
     req.on('data', (chunk) => {
@@ -73,7 +76,9 @@ app.use((req, res, next) => {
     });
     req.on('end', () => {
       req.rawBody = data;
-      req.body = JSON.parse(data || '{}');
+      if (url === '/api/v1/payment/webhook') {
+        req.body = JSON.parse(data || '{}');
+      }
       next();
     });
   } else {
