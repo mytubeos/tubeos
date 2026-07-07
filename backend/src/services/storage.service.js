@@ -35,9 +35,13 @@ const isConfigured = () => !!(Storage && bucketName());
 const getClient = () => {
   if (!isConfigured()) return null;
   if (!_client) {
-    _client = new Storage(
-      process.env.GCS_PROJECT_ID ? { projectId: process.env.GCS_PROJECT_ID } : {}
-    );
+    const opts = {};
+    if (process.env.GCS_PROJECT_ID) opts.projectId = process.env.GCS_PROJECT_ID;
+    // On Render (no filesystem), paste the service-account JSON into GCS_CREDENTIALS_JSON
+    if (process.env.GCS_CREDENTIALS_JSON) {
+      opts.credentials = JSON.parse(process.env.GCS_CREDENTIALS_JSON);
+    }
+    _client = new Storage(opts);
   }
   return _client;
 };
