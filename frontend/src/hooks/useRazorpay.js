@@ -68,6 +68,9 @@ export const useRazorpay = ({ onSuccess } = {}) => {
         setLoadingPlan(null)
       })
       rzp.open()
+      // Do NOT clear loadingPlan here — modal is async. It clears via
+      // ondismiss, payment.failed, or the handler's success/error path.
+      return
     } catch (err) {
       toast.error(err.response?.data?.message || 'Kuch galat ho gaya')
     } finally {

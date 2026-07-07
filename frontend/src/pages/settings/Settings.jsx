@@ -23,7 +23,8 @@ const TABS = [
 
 const UsageBar = ({ label, used, limit }) => {
   const isUnlimited = limit === -1
-  const pct = isUnlimited ? 0 : Math.min(100, Math.round((used / limit) * 100))
+  const isUnavailable = limit === 0
+  const pct = isUnlimited || isUnavailable ? 0 : Math.min(100, Math.round((used / limit) * 100))
   const isHigh = pct >= 80
 
   return (
@@ -31,10 +32,14 @@ const UsageBar = ({ label, used, limit }) => {
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-sm text-gray-400">{label}</span>
         <span className={`text-xs font-medium ${isHigh ? 'text-rose' : 'text-gray-400'}`}>
-          {isUnlimited ? '∞ Unlimited' : `${formatNumber(used)} / ${formatNumber(limit)}`}
+          {isUnlimited
+            ? '∞ Unlimited'
+            : isUnavailable
+              ? 'Not available'
+              : `${formatNumber(used)} / ${formatNumber(limit)}`}
         </span>
       </div>
-      {!isUnlimited && (
+      {!isUnlimited && !isUnavailable && (
         <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-500
@@ -123,10 +128,7 @@ export const Settings = () => {
     }
     setSavingPassword(true)
     try {
-      await authApi.changePassword({
-        currentPassword: passwords.current,
-        newPassword: passwords.new,
-      })
+      await authApi.changePassword(passwords.current, passwords.new)
       setPasswords({ current: '', new: '', confirm: '' })
       toast.success('Password changed!')
     } catch (err) {

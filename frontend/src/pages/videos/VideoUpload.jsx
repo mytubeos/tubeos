@@ -198,12 +198,17 @@ export const VideoUpload = () => {
       const videoId = draftRes.data.data?._id
       setUploadProgress(30)
 
-      // 2. Upload file
+      // 2. Upload video file
       const formData = new FormData()
       formData.append('video', file)
-      if (thumbnail) formData.append('thumbnail', thumbnail)
-
       await videoApi.upload(videoId, formData)
+
+      // 3. Upload thumbnail separately (dedicated endpoint)
+      if (thumbnail) {
+        const thumbData = new FormData()
+        thumbData.append('thumbnail', thumbnail)
+        await videoApi.uploadThumbnail(videoId, thumbData)
+      }
       setUploadProgress(100)
 
       toast.success(form.scheduledAt ? 'Video scheduled!' : 'Video uploaded to YouTube!')

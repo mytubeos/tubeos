@@ -10,6 +10,10 @@ export const videoApi = {
     api.post(`/videos/${videoId}/upload`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
+  uploadThumbnail: (videoId, formData) =>
+    api.post(`/videos/${videoId}/thumbnail`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
   update: (id, data) => api.patch(`/videos/${id}`, data),
   delete: (id, fromYoutube = false) => api.delete(`/videos/${id}?youtube=${fromYoutube}`),
   cancel: (id) => api.post(`/videos/${id}/cancel`),

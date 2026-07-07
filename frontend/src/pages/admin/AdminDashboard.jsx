@@ -1,5 +1,6 @@
 // src/pages/admin/AdminDashboard.jsx
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Users, Tag, CheckCircle, MousePointerClick, Crown, TrendingUp, UserX } from 'lucide-react'
 import { MetricCard } from '../../components/ui/Card'
 import adminAPI from '../../api/admin.api'
@@ -73,18 +74,18 @@ export const AdminDashboard = () => {
           Quick Actions
         </p>
         <div className="flex gap-3">
-          <a
-            href="/admin/users"
+          <Link
+            to="/admin/users"
             className="flex items-center gap-2 px-4 py-2 bg-brand/10 border border-brand/20 rounded-lg text-brand text-sm hover:bg-brand/20 transition-colors"
           >
             <Users size={14} /> Manage Users
-          </a>
-          <a
-            href="/admin/coupons"
+          </Link>
+          <Link
+            to="/admin/coupons"
             className="flex items-center gap-2 px-4 py-2 bg-cyan/10 border border-cyan/20 rounded-lg text-cyan text-sm hover:bg-cyan/20 transition-colors"
           >
             <Tag size={14} /> Manage Coupons
-          </a>
+          </Link>
         </div>
       </div>
     </div>

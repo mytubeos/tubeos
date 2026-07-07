@@ -232,7 +232,7 @@ export const AdminUsers = () => {
         ...(search && { search }),
       })
       setUsers(res.data.data)
-      setTotal(res.data.meta.pagination.total)
+      setTotal(res.data.meta?.pagination?.total || 0)
     } catch {
       toast.error('Failed to load users')
     } finally {

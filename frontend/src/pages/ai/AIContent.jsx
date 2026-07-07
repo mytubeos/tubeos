@@ -120,29 +120,34 @@ export const AIContent = () => {
   ]
 
   const handleGenerate = async () => {
+    if (activeTab === 'titles' && !titleTopic) {
+      toast.error('Enter a topic')
+      return
+    }
+    if (activeTab === 'tags' && !tagTitle) {
+      toast.error('Enter a title')
+      return
+    }
+    if (activeTab === 'description' && !descTitle) {
+      toast.error('Enter a title')
+      return
+    }
+    if (activeTab === 'thumbnail' && !thumbTopic) {
+      toast.error('Enter a topic')
+      return
+    }
+
     setLoading(true)
     try {
       if (activeTab === 'titles') {
-        if (!titleTopic) {
-          toast.error('Enter a topic')
-          return
-        }
         const res = await aiApi.generateTitles({ topic: titleTopic, count: 6 })
         setTitles(res.data.data?.titles || [])
         toast.success('6 titles generated!')
       } else if (activeTab === 'tags') {
-        if (!tagTitle) {
-          toast.error('Enter a title')
-          return
-        }
         const res = await aiApi.generateTags({ title: tagTitle })
         setTags(res.data.data?.tags || [])
         toast.success(`${res.data.data?.tags?.length} tags generated!`)
       } else if (activeTab === 'description') {
-        if (!descTitle) {
-          toast.error('Enter a title')
-          return
-        }
         const res = await aiApi.generateDescription({ title: descTitle })
         setDescription(res.data.data?.description || '')
         toast.success('Description generated!')
@@ -155,10 +160,6 @@ export const AIContent = () => {
         setIdeas(res.data.data?.ideas || [])
         toast.success('10 content ideas generated!')
       } else if (activeTab === 'thumbnail') {
-        if (!thumbTopic) {
-          toast.error('Enter a topic')
-          return
-        }
         const res = await aiApi.generateTitles({
           topic: `thumbnail ideas for: ${thumbTopic}`,
           count: 5,
