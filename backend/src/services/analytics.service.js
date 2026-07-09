@@ -179,8 +179,6 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
     'likes',
     'comments',
     'shares',
-    'impressions',
-    'impressionsCtr',
   ];
 
   const buildAnalyticsUrl = (metrics) => {
@@ -395,8 +393,6 @@ const syncVideoAnalyticsBatch = async (
           'likes',
           'comments',
           'shares',
-          'impressions',
-          'impressionsCtr',
         ].join(',')
       );
       url.searchParams.set('dimensions', 'day');
