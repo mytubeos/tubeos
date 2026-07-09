@@ -18,7 +18,7 @@ const apiLimiter = rateLimit({
 // Strict limiter for auth routes (prevent brute force)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Only 10 login attempts per 15 min
+  max: 25, // 25 login attempts per 15 min
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Don't count successful logins

@@ -476,27 +476,14 @@ const syncFromVideoStats = async (channel, accessToken, startDate, endDate, user
     });
     await invalidateChannelCache(userId);
 
-    const today = new Date().toISOString().split('T')[0];
+    // In basic mode we only have all-time totals — writing them as daily rows causes
+    // the overview to SUM them across days and inflate views (e.g. 1.6K × 2 syncs = 3.2K).
+    // Delete any stale basic-mode rows so the video-aggregate fallback in getOverview runs cleanly.
+    await ChannelAnalytics.deleteMany({ channelId: channel._id });
 
-    if (!uploadsId) {
-      // At minimum write channel-level subscriber count
-      await ChannelAnalytics.findOneAndUpdate(
-        { channelId: channel._id, date: new Date(today) },
-        {
-          $set: {
-            userId,
-            channelId: channel._id,
-            date: new Date(today),
-            'metrics.views': parseInt(channelStats.viewCount) || 0,
-            'metrics.subscribersGained': parseInt(channelStats.subscriberCount) || 0,
-          },
-        },
-        { upsert: true }
-      );
-      return 1;
-    }
+    if (!uploadsId) return 1;
 
-    // 2. Fetch ALL videos from uploads playlist (no date filter — old code was wrong here)
+    // 2. Fetch ALL videos from uploads playlist
     const playlistData = await youtubeRequest(
       `/playlistItems?part=contentDetails&playlistId=${uploadsId}&maxResults=50`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -504,16 +491,11 @@ const syncFromVideoStats = async (channel, accessToken, startDate, endDate, user
 
     const allItems = playlistData.items || [];
 
-    // 3. Get stats for all videos
+    // 3. Update per-video stats in the Video collection so the fallback aggregate is accurate
     const videoIds = allItems
       .map((i) => i.contentDetails.videoId)
       .filter(Boolean)
       .slice(0, 50);
-
-    let totalViews = 0,
-      totalLikes = 0,
-      totalComments = 0,
-      totalEstimatedMinutes = 0;
 
     if (videoIds.length > 0) {
       const statsData = await youtubeRequest(
@@ -521,32 +503,22 @@ const syncFromVideoStats = async (channel, accessToken, startDate, endDate, user
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
-      for (const video of statsData.items || []) {
-        const views = parseInt(video.statistics?.viewCount) || 0;
-        const durationSec = parseDuration(video.contentDetails?.duration || 'PT0S');
-        totalViews += views;
-        totalLikes += parseInt(video.statistics?.likeCount) || 0;
-        totalComments += parseInt(video.statistics?.commentCount) || 0;
-        totalEstimatedMinutes += Math.round(views * (durationSec / 60) * 0.4);
-      }
-    }
-
-    // 4. Write aggregate into today's ChannelAnalytics row
-    await ChannelAnalytics.findOneAndUpdate(
-      { channelId: channel._id, date: new Date(today) },
-      {
-        $set: {
-          userId,
-          channelId: channel._id,
-          date: new Date(today),
-          'metrics.views': totalViews,
-          'metrics.likes': totalLikes,
-          'metrics.comments': totalComments,
-          'metrics.estimatedMinutesWatched': totalEstimatedMinutes,
+      const bulkOps = (statsData.items || []).map((video) => ({
+        updateOne: {
+          filter: { youtubeVideoId: video.id, channelId: channel._id },
+          update: {
+            $set: {
+              'performance.views': parseInt(video.statistics?.viewCount) || 0,
+              'performance.likes': parseInt(video.statistics?.likeCount) || 0,
+              'performance.comments': parseInt(video.statistics?.commentCount) || 0,
+              'performance.lastSyncedAt': new Date(),
+            },
+          },
         },
-      },
-      { upsert: true }
-    );
+      }));
+
+      if (bulkOps.length > 0) await Video.bulkWrite(bulkOps);
+    }
 
     return 1;
   } catch (err) {
@@ -1034,7 +1006,7 @@ const parsePeriod = (period) => {
 };
 
 const calcChange = (current = 0, previous = 0) => {
-  if (!previous) return current > 0 ? 100 : 0;
+  if (!previous) return null; // no previous period data — don't show misleading %
   return parseFloat((((current - previous) / previous) * 100).toFixed(1));
 };
 

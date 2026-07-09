@@ -29,8 +29,7 @@ Rules:
 - Mix clickbait-y and informative styles
 - Make them specific, not generic
 - Channel niche: ${channelNiche || channel?.description || 'general'}
-Return ONLY valid JSON array: ["title1","title2","title3"]
-No explanation, no markdown.`;
+Return ONLY a valid JSON array with exactly ${count} strings. No explanation, no markdown.`;
 
   const content = `Topic: ${topic}
 ${description ? `Description: ${description}` : ''}

@@ -69,14 +69,14 @@ export const TrafficDonut = ({ data = [] }) => {
               <div className="flex items-center justify-between gap-2">
                 <span className="text-gray-400 text-xs truncate">{item.name}</span>
                 <span className="text-white text-xs font-medium shrink-0">
-                  {item.percentage || Math.round((item.value / total) * 100)}%
+                  {item.percentage != null ? item.percentage : (total > 0 ? Math.round((item.value / total) * 100) : 0)}%
                 </span>
               </div>
               <div className="h-1 bg-white/5 rounded-full mt-1 overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-700"
                   style={{
-                    width: `${item.percentage || Math.round((item.value / total) * 100)}%`,
+                    width: `${item.percentage != null ? item.percentage : (total > 0 ? Math.round((item.value / total) * 100) : 0)}%`,
                     background: COLORS[idx % COLORS.length],
                   }}
                 />
