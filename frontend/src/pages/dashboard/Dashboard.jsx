@@ -151,11 +151,21 @@ export const Dashboard = () => {
           />
           {isLoading ? (
             <div className="shimmer h-52 rounded-xl" />
+          ) : !graphData?.data?.length ? (
+            <div className="h-52 flex flex-col items-center justify-center text-center gap-2">
+              <Zap size={28} className="text-brand opacity-30" />
+              <p className="text-gray-500 text-sm">No daily data yet</p>
+              <p className="text-gray-600 text-xs">Enable Analytics on your channel for detailed charts</p>
+            </div>
           ) : (
             <AreaLineChart
-              data={graphData?.data || []}
+              data={graphData.data.reduce((acc, point) => {
+                const prev = acc.length > 0 ? acc[acc.length - 1].value : 0
+                acc.push({ ...point, value: prev + point.value })
+                return acc
+              }, [])}
               dataKey="value"
-              label="Views"
+              label="Total Views"
               color="#4F46E5"
               height={220}
               xKey="date"

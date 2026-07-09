@@ -14,13 +14,13 @@ import { formatNumber, formatWatchTime, formatCurrency, formatPct } from '../../
 
 const KPI_CONFIG = {
   views: {
-    label: 'Views',
+    label: 'Total Views',
     icon: Eye,
     iconColor: 'brand',
     format: formatNumber,
   },
   subscribers: {
-    label: 'New Subscribers',
+    label: 'Total Subscribers',
     icon: Users,
     iconColor: 'cyan',
     format: formatNumber,
@@ -91,8 +91,10 @@ export const KPIGrid = ({ overview, loading = false, channelStats = null, period
   const metrics = overview?.metrics || {}
   const periodLabel = PERIOD_LABEL[period] || 'this period'
 
+  // Detect basic mode: no daily analytics data, only video aggregate totals
+  const isBasicMode = metrics.views?.change == null && !metrics.watchTime?.value
+
   // Show period-based gained/lost only when we have real Analytics API data
-  // In fallback mode (youtube.readonly only), gained/lost are both 0 — show total instead
   const hasRealSubData =
     (metrics.subscribers?.gained || 0) > 0 || (metrics.subscribers?.lost || 0) > 0
   const subValue = hasRealSubData ? metrics.subscribers?.net : channelStats?.subscriberCount
@@ -105,21 +107,21 @@ export const KPIGrid = ({ overview, loading = false, channelStats = null, period
       <KPICard
         type="views"
         value={metrics.views?.value}
-        change={metrics.views?.change}
-        subtitle={periodLabel}
+        change={metrics.views?.change ?? undefined}
+        subtitle={isBasicMode ? 'Total views (all videos)' : periodLabel}
         loading={loading}
       />
       <KPICard
         type="subscribers"
         value={subValue}
-        change={hasRealSubData ? metrics.subscribers?.change : undefined}
+        change={hasRealSubData ? (metrics.subscribers?.change ?? undefined) : undefined}
         subtitle={subSubtitle}
         loading={loading}
       />
       <KPICard
         type="watchTime"
         value={metrics.watchTime?.value}
-        change={metrics.watchTime?.change}
+        change={metrics.watchTime?.change ?? undefined}
         subtitle={periodLabel}
         loading={loading}
       />
