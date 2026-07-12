@@ -73,8 +73,9 @@ api.interceptors.response.use(
             { refreshToken },
             { withCredentials: false }
           )
-          const { accessToken } = res.data.data
+          const { accessToken, refreshToken: newRefreshToken } = res.data.data
           localStorage.setItem('accessToken', accessToken)
+          if (newRefreshToken) localStorage.setItem('refreshToken', newRefreshToken)
           api.defaults.headers.common.Authorization = `Bearer ${accessToken}`
           processQueue(null, accessToken)
           originalRequest.headers.Authorization = `Bearer ${accessToken}`
