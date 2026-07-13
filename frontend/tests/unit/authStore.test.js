@@ -141,6 +141,28 @@ describe('authStore.refreshUser', () => {
     expect(useAuthStore.getState().user).toBeNull()
     expect(useAuthStore.getState().isAuthenticated).toBe(false)
   })
+
+  it('keeps the existing session on a transient error (network/5xx/timeout)', async () => {
+    useAuthStore.setState({ user: { _id: 'u1' }, isAuthenticated: true })
+    authApi.getMe.mockRejectedValueOnce({ response: { status: 500 } })
+
+    await useAuthStore.getState().refreshUser()
+
+    expect(useAuthStore.getState().user).toEqual({ _id: 'u1' })
+    expect(useAuthStore.getState().isAuthenticated).toBe(true)
+    expect(authApi.logout).not.toHaveBeenCalled()
+  })
+
+  it('keeps the existing session when getMe rejects with no response (network error)', async () => {
+    useAuthStore.setState({ user: { _id: 'u1' }, isAuthenticated: true })
+    authApi.getMe.mockRejectedValueOnce(new Error('Network Error'))
+
+    await useAuthStore.getState().refreshUser()
+
+    expect(useAuthStore.getState().user).toEqual({ _id: 'u1' })
+    expect(useAuthStore.getState().isAuthenticated).toBe(true)
+    expect(authApi.logout).not.toHaveBeenCalled()
+  })
 })
 
 describe('authStore.updateUser', () => {
