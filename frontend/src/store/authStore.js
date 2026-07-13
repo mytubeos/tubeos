@@ -85,14 +85,8 @@ export const useAuthStore = create(
         try {
           const res = await authApi.getMe()
           set({ user: res.data.data, isAuthenticated: true })
-        } catch (err) {
-          // FIX: only clear a valid session on a genuine 401 (axios interceptor already
-          // tried refreshing and failed). Transient failures (network blip, 500, cold
-          // start, timeout) must NOT wipe perfectly valid tokens — that was forcing
-          // surprise logouts unrelated to the access-token TTL.
-          if (err?.response?.status === 401) {
-            get().logout()
-          }
+        } catch {
+          get().logout()
         }
       },
 
