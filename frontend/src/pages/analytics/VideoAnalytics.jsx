@@ -6,6 +6,7 @@ import { analyticsApi } from '../../api/analytics.api'
 import { AreaLineChart } from '../../components/charts/LineChart'
 import { Card, CardHeader, MetricCard } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { StatusBadge } from '../../components/ui/Badge'
 import { formatNumber, formatDate, formatDuration, formatPct } from '../../utils/formatters'
 
 export const VideoAnalytics = () => {
@@ -90,8 +91,15 @@ export const VideoAnalytics = () => {
             )}
           </div>
           <div className="flex items-center gap-3 mt-2">
+            <StatusBadge status={video.status} />
             <p className="text-gray-500 text-sm">
-              {video.channel?.channelName} · Published {formatDate(video.publishedAt, 'medium')}
+              {video.channel?.channelName}
+              {video.status === 'published' &&
+                video.publishedAt &&
+                ` · Published ${formatDate(video.publishedAt, 'medium')}`}
+              {video.status === 'scheduled' &&
+                video.scheduledAt &&
+                ` · Scheduled for ${formatDate(video.scheduledAt, 'medium')}`}
             </p>
           </div>
         </div>

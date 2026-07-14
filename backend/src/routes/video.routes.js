@@ -66,6 +66,7 @@ router.post(
   uploadLimiter,
   checkUsageLimit('upload'),
   parseVideoUpload,
+  videoController.handleUploadStreamError,
   videoController.uploadVideo
 );
 

@@ -4,6 +4,7 @@
 const videoService = require('../services/video.service');
 const thumbnailService = require('../services/thumbnail.service');
 const { successResponse, errorResponse, paginatedResponse } = require('../utils/response.utils');
+const logger = require('../config/logger');
 
 // POST /api/v1/videos/draft
 const createDraft = async (req, res) => {
@@ -49,6 +50,33 @@ const uploadVideo = async (req, res) => {
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);
   }
+};
+
+// Error-handling middleware mounted right after the upload multer middleware.
+// Fires only if the multer/GCS streaming layer failed (client disconnect,
+// GCS write error, oversized file) — i.e. before videoService.uploadVideo()
+// ever got a chance to run and mark the video 'failed' itself. Without this,
+// the draft created by the earlier /draft call was left stuck at 'draft'
+// forever with the user never able to tell anything went wrong.
+const handleUploadStreamError = async (err, req, res, next) => {
+  if (!err) return next();
+
+  const { videoId } = req.params;
+  if (req.user?.id && videoId) {
+    try {
+      await videoService.markUploadFailed(req.user.id, videoId, {
+        message: err.message,
+        code: err.code,
+      });
+    } catch (dbErr) {
+      logger.error('[uploadVideo] failed to mark video failed after stream error', {
+        error: dbErr.message,
+        videoId,
+      });
+    }
+  }
+
+  return errorResponse(res, err.statusCode || 400, err.message || 'Video upload failed');
 };
 
 // PATCH /api/v1/videos/:videoId
@@ -151,6 +179,7 @@ const deleteThumbnail = async (req, res) => {
 module.exports = {
   createDraft,
   uploadVideo,
+  handleUploadStreamError,
   updateVideo,
   deleteVideo,
   getMyVideos,

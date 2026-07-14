@@ -917,7 +917,9 @@ const getVideoBreakdown = async (userId, videoId) => {
       title: video.title,
       thumbnail: video.thumbnail,
       youtubeVideoId: video.youtubeVideoId,
+      status: video.status,
       publishedAt: video.publishedAt,
+      scheduledAt: video.scheduledAt,
       channel: video.channelId,
     },
     totals: {

@@ -54,6 +54,33 @@ const createDraft = async (userId, channelId, videoData) => {
   return { video, message: 'Draft saved successfully' };
 };
 
+// ==================== MARK UPLOAD FAILED (pre-service failure) ====================
+// Used when the upload fails before uploadVideo() itself ever runs — e.g. the
+// multer/GCS streaming layer errors out (client disconnect, GCS write failure,
+// oversized file). Without this, those failures never touch the video document
+// at all, leaving it stuck in 'draft' forever with no record anything went wrong.
+/**
+ * @param {string} userId
+ * @param {string} videoId
+ * @param {{message?: string, code?: string}} errInfo
+ */
+const markUploadFailed = async (userId, videoId, errInfo) => {
+  await Video.findOneAndUpdate(
+    { _id: videoId, userId, status: { $in: ['draft', 'uploading', 'failed'] } },
+    {
+      $set: {
+        status: 'failed',
+        lastError: {
+          message: errInfo.message || 'Video upload failed',
+          code: errInfo.code || 'UPLOAD_STREAM_FAILED',
+          occurredAt: new Date(),
+        },
+      },
+      $inc: { retryCount: 1 },
+    }
+  );
+};
+
 // ==================== UPLOAD VIDEO TO YOUTUBE ====================
 // fileRef is either a Buffer (in-memory / dev fallback) or a GCS reference
 // { gcsPath, bucket, size } that we stream straight to YouTube without ever
@@ -508,6 +535,7 @@ const cancelScheduled = async (userId, videoId) => {
 module.exports = {
   createDraft,
   uploadVideo,
+  markUploadFailed,
   updateVideo,
   deleteVideo,
   getMyVideos,
