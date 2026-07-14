@@ -6,7 +6,7 @@ describe('KPICard', () => {
   it("formats the value using the KPI type's formatter", () => {
     render(<KPICard type="views" value={1500} />)
     expect(screen.getByText('1.5K')).toBeInTheDocument()
-    expect(screen.getByText('Views')).toBeInTheDocument()
+    expect(screen.getByText('Total Views')).toBeInTheDocument()
   })
 
   it('formats revenue as USD currency regardless of the app default (INR)', () => {
@@ -41,7 +41,7 @@ describe('KPICard', () => {
 
   it('falls back to the "views" config for an unknown KPI type', () => {
     render(<KPICard type="not-a-real-type" value={2000} />)
-    expect(screen.getByText('Views')).toBeInTheDocument()
+    expect(screen.getByText('Total Views')).toBeInTheDocument()
   })
 })
 
