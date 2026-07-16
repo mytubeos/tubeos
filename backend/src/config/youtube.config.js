@@ -9,6 +9,11 @@ const YOUTUBE_SCOPES = [
   'https://www.googleapis.com/auth/youtube',
   'https://www.googleapis.com/auth/youtube.upload',
   'https://www.googleapis.com/auth/youtube.readonly',
+  // Comment sync/reply (commentThreads.list with allThreadsRelatedToChannelId,
+  // comments.insert, comments.setModerationStatus) all 403 with "insufficient
+  // authentication scopes" on youtube/youtube.readonly alone — force-ssl is
+  // the scope YouTube's API actually enforces for these calls.
+  'https://www.googleapis.com/auth/youtube.force-ssl',
   'https://www.googleapis.com/auth/yt-analytics.readonly',
   'https://www.googleapis.com/auth/yt-analytics-monetary.readonly',
   'https://www.googleapis.com/auth/userinfo.email',

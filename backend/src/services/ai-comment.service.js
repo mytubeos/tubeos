@@ -44,9 +44,26 @@ const syncComments = async (userId, channelId, youtubeVideoId = null, options = 
   do {
     if (pageToken) params.set('pageToken', pageToken);
 
-    const data = await youtubeRequest(`/commentThreads?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    let data;
+    try {
+      data = await youtubeRequest(`/commentThreads?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+    } catch (err) {
+      // Channels connected before youtube.force-ssl was added to YOUTUBE_SCOPES
+      // hold a token that predates the scope grant — this 403 is the only way
+      // that surfaces, and the raw Google message ("insufficient authentication
+      // scopes") gives the user no idea what to actually do about it.
+      if (err.statusCode === 403) {
+        const scopeErr = new Error(
+          'Comment sync needs an additional YouTube permission that this channel hasn’t granted yet. Please reconnect this channel to enable it.'
+        );
+        scopeErr.statusCode = 403;
+        scopeErr.code = 'COMMENTS_SCOPE_MISSING';
+        throw scopeErr;
+      }
+      throw err;
+    }
 
     const items = data.items || [];
     pageToken = data.nextPageToken || null;
