@@ -14,22 +14,22 @@ const AI_MODELS = {
     costPer1M: 0, // free tier
   },
   sonnet: {
-    name: 'claude-sonnet-4-5',
+    name: 'claude-sonnet-5',
     provider: 'anthropic',
     maxTokens: 1000,
     costPer1M: 3,
   },
   opus: {
-    name: 'claude-opus-4-5',
+    name: 'claude-opus-4-8',
     provider: 'anthropic',
     maxTokens: 2000,
-    costPer1M: 15,
+    costPer1M: 5,
   },
   haiku: {
     name: 'claude-haiku-4-5-20251001',
     provider: 'anthropic',
     maxTokens: 500,
-    costPer1M: 0.25,
+    costPer1M: 1,
   },
 };
 
@@ -113,6 +113,12 @@ const callClaudeVision = async (
     body: JSON.stringify({
       model: modelName,
       max_tokens: maxTokens,
+      // Sonnet 5 / Opus 4.8 turn adaptive thinking on by default when this is
+      // omitted, and thinking shares the max_tokens budget with the visible
+      // response — at these small token budgets (500-2000, non-streaming)
+      // that risks truncating or blanking the actual output. None of these
+      // scoring/content calls need extended reasoning.
+      thinking: { type: 'disabled' },
       system: systemPrompt,
       messages: [
         {
@@ -178,6 +184,9 @@ const callClaude = async (modelName, messages, systemPrompt, maxTokens = 1000) =
     body: JSON.stringify({
       model: modelName,
       max_tokens: maxTokens,
+      // See callClaudeVision — adaptive thinking defaults on for Sonnet 5 /
+      // Opus 4.8 and shares this small max_tokens budget with the response.
+      thinking: { type: 'disabled' },
       system: systemPrompt,
       messages,
     }),
