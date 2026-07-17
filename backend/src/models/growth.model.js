@@ -62,7 +62,12 @@ const growthPredictionSchema = new mongoose.Schema(
     // Performance suggestions
     suggestions: [
       {
-        type: String, // 'upload_frequency', 'best_time', 'content_type'
+        // `type` is a reserved key in Mongoose schema paths — a bare `type: String`
+        // here makes Mongoose treat the whole object as a SchemaType descriptor
+        // (collapsing this to `[String]` and silently dropping title/description/
+        // impact/metric), which then throws a CastError when real objects are saved.
+        // Wrapping in `{ type: String }` disambiguates it as an actual field.
+        type: { type: String }, // 'upload_frequency', 'best_time', 'content_type'
         title: String,
         description: String,
         impact: String, // 'high', 'medium', 'low'
