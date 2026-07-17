@@ -2,10 +2,11 @@
 // AI Content Engine
 // Generates titles, tags, descriptions, content ideas, Shorts scripts
 
-const { callAI, callAIVision } = require('../config/ai.config');
+const { callAI, callAIVision, callGeminiImageGen } = require('../config/ai.config');
 const User = require('../models/user.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
 const Video = require('../models/video.model');
+const { uploadGeneratedThumbnail } = require('./thumbnail.service');
 const { setCache, getCache } = require('../config/redis');
 const { sanitizePromptInput, sanitizePromptArray } = require('../utils/sanitize.utils');
 const logger = require('../config/logger');
@@ -334,6 +335,32 @@ Return ONLY valid JSON:
   return JSON.parse(clean);
 };
 
+// ==================== GENERATE THUMBNAIL IMAGE ====================
+const THUMBNAIL_STYLES = {
+  bold: 'bold, high-contrast, dramatic lighting, saturated vibrant colors',
+  minimal: 'clean, minimal, lots of negative space, modern flat design',
+  dramatic: 'cinematic, intense emotion, dark moody lighting with one bright focal highlight',
+};
+
+const generateThumbnailImage = async (userId, { title, niche, style }) => {
+  title = sanitizePromptInput(title, 200);
+  niche = sanitizePromptInput(niche, 100);
+  style = THUMBNAIL_STYLES[style] ? style : 'bold';
+
+  const prompt = `Create a professional, eye-catching YouTube thumbnail image (16:9 widescreen) for a video titled "${title}"${niche ? ` in the ${niche} niche` : ''}.
+Style: ${THUMBNAIL_STYLES[style]}.
+Composition: rule-of-thirds, one clear focal point, bold enough to read at small size, no watermarks or logos.
+Leave clean, uncluttered space in the frame — do not render any title text baked into the image, since the creator will add their own text overlay afterward.`;
+
+  const { base64, mimeType } = await callGeminiImageGen(prompt);
+  const buffer = Buffer.from(base64, 'base64');
+
+  const { url } = await uploadGeneratedThumbnail(userId, buffer, mimeType);
+
+  await User.findByIdAndUpdate(userId, { $inc: { 'usage.thumbnailGenUsed': 1 } });
+  return { imageUrl: url, title, niche, style };
+};
+
 // ==================== MONETIZATION TIPS ====================
 const getMonetizationTips = async (userId, channelId) => {
   const user = await User.findById(userId);
@@ -382,5 +409,6 @@ module.exports = {
   generateShortsScript,
   repurposeToShorts,
   scoreThumbnail,
+  generateThumbnailImage,
   getMonetizationTips,
 };

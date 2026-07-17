@@ -92,6 +92,38 @@ const uploadThumbnail = async (userId, videoId, fileBuffer, mimeType) => {
   return { thumbnail: video.thumbnail, message: 'Thumbnail uploaded' };
 };
 
+// Uploads an AI-generated image (not tied to an existing Video record —
+// used by the AI Tools thumbnail generator, which works on a title/topic,
+// not a specific video). Returns the hosted URL only; caller decides what
+// to do with it (e.g. attach to a video later via uploadThumbnail).
+const uploadGeneratedThumbnail = async (userId, imageBuffer, mimeType = 'image/png') => {
+  if (!isConfigured()) {
+    const err = new Error('Thumbnail generation requires Cloudinary to be configured');
+    err.statusCode = 503;
+    throw err;
+  }
+
+  if (!imageBuffer || imageBuffer.length === 0) {
+    const err = new Error('Generated image was empty');
+    err.statusCode = 502;
+    throw err;
+  }
+
+  const result = await new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: `tubeos/ai-thumbnails/${userId}`,
+        resource_type: 'image',
+        transformation: [{ width: 1280, height: 720, crop: 'limit', quality: 'auto:good' }],
+      },
+      (err, res) => (err ? reject(err) : resolve(res))
+    );
+    stream.end(imageBuffer);
+  });
+
+  return { url: result.secure_url, publicId: result.public_id };
+};
+
 const deleteThumbnail = async (userId, videoId) => {
   const video = await Video.findOne({ _id: videoId, userId });
   if (!video) {
@@ -113,4 +145,4 @@ const deleteThumbnail = async (userId, videoId) => {
   return { message: 'Thumbnail removed' };
 };
 
-module.exports = { uploadThumbnail, deleteThumbnail, isConfigured };
+module.exports = { uploadThumbnail, uploadGeneratedThumbnail, deleteThumbnail, isConfigured };

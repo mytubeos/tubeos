@@ -1,6 +1,16 @@
 // src/pages/ai/AIContent.jsx
 import { useState } from 'react'
-import { Sparkles, Type, Tag, FileText, Lightbulb, Copy, Check, Image } from 'lucide-react'
+import {
+  Sparkles,
+  Type,
+  Tag,
+  FileText,
+  Lightbulb,
+  Copy,
+  Check,
+  Image,
+  Download,
+} from 'lucide-react'
 import { aiApi } from '../../api/ai.api'
 import { useChannelStore } from '../../store/channelStore'
 import { Card, CardHeader } from '../../components/ui/Card'
@@ -108,15 +118,23 @@ export const AIContent = () => {
   const [ideas, setIdeas] = useState([])
 
   // Thumbnail state
-  const [thumbTopic, setThumbTopic] = useState('')
-  const [thumbIdeas, setThumbIdeas] = useState([])
+  const [thumbTitle, setThumbTitle] = useState('')
+  const [thumbNiche, setThumbNiche] = useState('')
+  const [thumbStyle, setThumbStyle] = useState('bold')
+  const [thumbImageUrl, setThumbImageUrl] = useState(null)
+
+  const THUMB_STYLES = [
+    { key: 'bold', label: 'Bold' },
+    { key: 'minimal', label: 'Minimal' },
+    { key: 'dramatic', label: 'Dramatic' },
+  ]
 
   const TABS = [
     { key: 'titles', label: 'Titles', icon: Type },
     { key: 'tags', label: 'Tags', icon: Tag },
     { key: 'description', label: 'Description', icon: FileText },
     { key: 'ideas', label: 'Content Ideas', icon: Lightbulb },
-    { key: 'thumbnail', label: 'Thumbnail Ideas', icon: Image },
+    { key: 'thumbnail', label: 'AI Thumbnail', icon: Image },
   ]
 
   const handleGenerate = async () => {
@@ -132,8 +150,8 @@ export const AIContent = () => {
       toast.error('Enter a title')
       return
     }
-    if (activeTab === 'thumbnail' && !thumbTopic) {
-      toast.error('Enter a topic')
+    if (activeTab === 'thumbnail' && !thumbTitle) {
+      toast.error('Enter a video title')
       return
     }
 
@@ -160,13 +178,13 @@ export const AIContent = () => {
         setIdeas(res.data.data?.ideas || [])
         toast.success('10 content ideas generated!')
       } else if (activeTab === 'thumbnail') {
-        const res = await aiApi.generateTitles({
-          topic: `thumbnail ideas for: ${thumbTopic}`,
-          count: 5,
+        const res = await aiApi.generateThumbnail({
+          title: thumbTitle,
+          niche: thumbNiche,
+          style: thumbStyle,
         })
-        // Use thumbnail-specific endpoint if available, else titles endpoint
-        setThumbIdeas(res.data.data?.titles || [])
-        toast.success('Thumbnail ideas generated!')
+        setThumbImageUrl(res.data.data?.imageUrl || null)
+        toast.success('Thumbnail generated!')
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Generation failed')
@@ -298,29 +316,73 @@ export const AIContent = () => {
           {activeTab === 'thumbnail' && (
             <>
               <CardHeader
-                title="Thumbnail Strategy Ideas"
-                subtitle="Text-based visual strategy"
+                title="AI Thumbnail Generator"
+                subtitle="Real image generation"
                 icon={Image}
                 iconColor="cyan"
               />
               <div className="space-y-4">
                 <Input
-                  label="Video Topic"
+                  label="Video Title"
                   placeholder="e.g. I tried 30 days of waking up at 5AM"
-                  value={thumbTopic}
-                  onChange={(e) => setThumbTopic(e.target.value)}
+                  value={thumbTitle}
+                  onChange={(e) => setThumbTitle(e.target.value)}
                 />
+                <Input
+                  label="Niche (optional)"
+                  placeholder="e.g. Fitness, Tech, Gaming"
+                  value={thumbNiche}
+                  onChange={(e) => setThumbNiche(e.target.value)}
+                />
+                <div>
+                  <label className="text-sm font-medium text-gray-300 mb-1.5 block">Style</label>
+                  <div className="flex items-center gap-2">
+                    {THUMB_STYLES.map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => setThumbStyle(key)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all
+                                    ${
+                                      thumbStyle === key
+                                        ? 'bg-brand text-white'
+                                        : 'glass text-gray-400 hover:text-white'
+                                    }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <Button fullWidth icon={Sparkles} loading={loading} onClick={handleGenerate}>
-                  Generate Ideas
+                  Generate Thumbnail
                 </Button>
                 <div className="p-3 bg-amber/5 border border-amber/15 rounded-xl">
-                  <p className="text-xs text-amber font-medium mb-1">What you'll get:</p>
                   <p className="text-xs text-gray-400">
-                    Background colors, face placement, text suggestions, emoji recommendations, and
-                    CTR psychology tips. No image generation — pure strategy! 🎯
+                    Generates a real AI image (16:9). Title text isn't baked in — add your own
+                    overlay after downloading for the crispest result. 🎨
                   </p>
                 </div>
-                <ResultBox items={thumbIdeas} type="list" />
+                {thumbImageUrl && (
+                  <div className="mt-2 space-y-2">
+                    <img
+                      src={thumbImageUrl}
+                      alt="Generated thumbnail"
+                      className="w-full rounded-xl border border-white/8"
+                    />
+                    {/* Cloudinary is a different origin, so a plain `download` attribute
+                        gets ignored and the browser just opens the image instead —
+                        fl_attachment forces a real Content-Disposition: attachment. */}
+                    <a
+                      href={thumbImageUrl.replace('/upload/', '/upload/fl_attachment/')}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Button fullWidth variant="ghost" icon={Download}>
+                        Download
+                      </Button>
+                    </a>
+                  </div>
+                )}
               </div>
             </>
           )}

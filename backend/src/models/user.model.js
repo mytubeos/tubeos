@@ -209,6 +209,7 @@ const userSchema = new mongoose.Schema(
       aiRepliesUsed: { type: Number, default: 0 },
       aiContentUsed: { type: Number, default: 0 },
       bulkRepliesUsed: { type: Number, default: 0 },
+      thumbnailGenUsed: { type: Number, default: 0 },
       lastResetAt: { type: Date, default: Date.now },
     },
 
@@ -288,11 +289,20 @@ userSchema.methods.incrementLoginCount = async function () {
 };
 
 // ==================== USAGE LIMITS PER PLAN ====================
+// thumbnailGen kept separate from aiContent — image generation costs far more
+// per call than text generation, so it needs its own (much lower) cap to
+// protect margins even though both are gated behind the same Creator+ plans.
 const PLAN_LIMITS = {
-  free: { uploads: 0, aiReplies: 10, aiContent: 20, bulkReplies: 0 },
-  creator: { uploads: 5, aiReplies: 500, aiContent: 500, bulkReplies: 0 },
-  pro: { uploads: 20, aiReplies: 1200, aiContent: 2000, bulkReplies: 100 },
-  agency: { uploads: Infinity, aiReplies: Infinity, aiContent: Infinity, bulkReplies: Infinity },
+  free: { uploads: 0, aiReplies: 10, aiContent: 20, bulkReplies: 0, thumbnailGen: 0 },
+  creator: { uploads: 5, aiReplies: 500, aiContent: 500, bulkReplies: 0, thumbnailGen: 5 },
+  pro: { uploads: 20, aiReplies: 1200, aiContent: 2000, bulkReplies: 100, thumbnailGen: 15 },
+  agency: {
+    uploads: Infinity,
+    aiReplies: Infinity,
+    aiContent: Infinity,
+    bulkReplies: Infinity,
+    thumbnailGen: 50,
+  },
 };
 
 // Reset monthly counters if a calendar month has passed since lastResetAt
@@ -309,6 +319,7 @@ userSchema.methods.resetMonthlyUsageIfNeeded = async function () {
       aiRepliesUsed: 0,
       aiContentUsed: 0,
       bulkRepliesUsed: 0,
+      thumbnailGenUsed: 0,
       lastResetAt: now,
     };
     await this.save();
@@ -333,6 +344,7 @@ userSchema.methods.getUsageStats = function () {
     aiReplies: { used: this.usage?.aiRepliesUsed || 0, limit: limits.aiReplies },
     aiContent: { used: this.usage?.aiContentUsed || 0, limit: limits.aiContent },
     bulkReplies: { used: this.usage?.bulkRepliesUsed || 0, limit: limits.bulkReplies },
+    thumbnailGen: { used: this.usage?.thumbnailGenUsed || 0, limit: limits.thumbnailGen },
     plan: this.plan,
     resetsAt: this.usage?.lastResetAt,
   };

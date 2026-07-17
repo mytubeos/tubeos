@@ -147,6 +147,20 @@ router.post(
 router.post('/thumbnail/score', protect, requirePlan('creator'), aiController.scoreThumbnail);
 
 /**
+ * @route   POST /api/v1/ai/thumbnail/generate
+ * @desc    AI-generate a YouTube thumbnail image (Gemini image-gen + Cloudinary)
+ * @access  Private (Creator+)
+ * @body    { title, niche?, style?: 'bold'|'minimal'|'dramatic' }
+ */
+router.post(
+  '/thumbnail/generate',
+  protect,
+  requirePlan('creator'),
+  checkUsageLimit('thumbnailGen'),
+  aiController.generateThumbnailImage
+);
+
+/**
  * @route   GET /api/v1/ai/monetization/:channelId
  * @desc    Get AI monetization tips for channel
  * @access  Private (Pro+)

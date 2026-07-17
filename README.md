@@ -237,7 +237,8 @@ tubeos3.0/
 | Variable | Description |
 |---|---|
 | `ANTHROPIC_API_KEY` | Claude AI — Creator/Pro/Agency plans ke liye |
-| `GEMINI_API_KEY` | Google Gemini — Free plan ke liye (set karo taaki free users ko AI mile) |
+| `GEMINI_API_KEY` | Google Gemini — Free plan ke text AI ke liye, aur AI Thumbnail Generator (image generation, Creator+) ke liye bhi same key use hoti hai |
+| `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` | Thumbnail image hosting — manual thumbnail upload aur AI Thumbnail Generator dono ke liye zaroori. Free tier: cloudinary.com |
 | `BREVO_API_KEY` | Email delivery — nahi hai to emails skip ho jaate hain |
 | `EMAIL_FROM_ADDRESS` | Sender email address |
 | `YOUTUBE_API_KEY` | YouTube Data API v3 key (no OAuth) — Growth tab ke Trend Opportunity Scanner ke liye. Iske bina Trends hamesha static curated list dikhayega. |

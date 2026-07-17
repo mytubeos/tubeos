@@ -232,6 +232,52 @@ const callGroq = async (modelName, messages, systemPrompt, maxTokens = 1000) => 
   return data.choices?.[0]?.message?.content || '';
 };
 
+// Gemini's dedicated image-generation model — same GEMINI_API_KEY as text/vision,
+// no separate provider/key needed. Returns base64 image bytes, not text.
+const IMAGE_GEN_MODEL = 'gemini-2.5-flash-image';
+
+const callGeminiImageGen = async (prompt) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_GEN_MODEL}:generateContent?key=${apiKey}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseModalities: ['IMAGE'],
+        imageConfig: { aspectRatio: '16:9' },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Gemini image-gen error: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  if (data.promptFeedback?.blockReason) {
+    throw new Error(`Image generation blocked: ${data.promptFeedback.blockReason}`);
+  }
+
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  const imagePart = parts.find((p) => p.inlineData?.data);
+  if (!imagePart) {
+    const textPart = parts.find((p) => p.text)?.text;
+    throw new Error(textPart || 'Gemini did not return an image');
+  }
+
+  return {
+    base64: imagePart.inlineData.data,
+    mimeType: imagePart.inlineData.mimeType || 'image/png',
+  };
+};
+
 const callGemini = async (modelName, messages, systemPrompt) => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
@@ -267,6 +313,7 @@ module.exports = {
   getModelForPlan,
   callAI,
   callAIVision,
+  callGeminiImageGen,
   callClaude,
   callGemini,
   callGroq,

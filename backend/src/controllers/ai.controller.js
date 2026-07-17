@@ -200,6 +200,21 @@ const scoreThumbnail = async (req, res) => {
   }
 };
 
+const generateThumbnailImage = async (req, res) => {
+  try {
+    const { title, niche, style } = req.body;
+    if (!title) return errorResponse(res, 400, 'title is required');
+    const result = await aiContentService.generateThumbnailImage(req.user.id, {
+      title,
+      niche,
+      style,
+    });
+    return successResponse(res, 200, 'Thumbnail generated', result);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
 const getMonetizationTips = async (req, res) => {
   try {
     const result = await aiContentService.getMonetizationTips(req.user.id, req.params.channelId);
@@ -223,5 +238,6 @@ module.exports = {
   generateShortsScript,
   repurposeToShorts,
   scoreThumbnail,
+  generateThumbnailImage,
   getMonetizationTips,
 };
