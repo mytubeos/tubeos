@@ -1,10 +1,12 @@
 // src/pages/referral/Referral.jsx
 import { useState, useEffect } from 'react'
-import { Gift, Copy, Check, Users, TrendingUp, Trophy, Zap } from 'lucide-react'
+import { Gift, Copy, Check, Users, TrendingUp, Trophy, Zap, Banknote } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
+import { Modal } from '../../components/ui/Modal'
+import { Input, Select } from '../../components/ui/Input'
 import { formatNumber } from '../../utils/formatters'
 import toast from 'react-hot-toast'
 import referralAPI from '../../api/referral.api'
@@ -60,7 +62,14 @@ export const Referral = () => {
     minPayout: 200,
   })
 
-  useEffect(() => {
+  const [showWithdraw, setShowWithdraw] = useState(false)
+  const [withdrawing, setWithdrawing] = useState(false)
+  const [withdrawAmount, setWithdrawAmount] = useState('')
+  const [withdrawMethod, setWithdrawMethod] = useState('upi')
+  const [upi, setUpi] = useState('')
+  const [bankAccount, setBankAccount] = useState({ accountNumber: '', ifsc: '', holderName: '' })
+
+  const fetchStats = () => {
     referralAPI
       .getStats()
       .then((res) => {
@@ -78,7 +87,61 @@ export const Referral = () => {
         })
       })
       .catch((err) => console.error('[Referral] stats load failed:', err.message))
+  }
+
+  useEffect(() => {
+    fetchStats()
   }, [])
+
+  const openWithdraw = () => {
+    setWithdrawAmount(String(stats.balance))
+    setWithdrawMethod('upi')
+    setUpi('')
+    setBankAccount({ accountNumber: '', ifsc: '', holderName: '' })
+    setShowWithdraw(true)
+  }
+
+  const handleWithdraw = async () => {
+    const amount = parseInt(withdrawAmount, 10)
+    if (!amount || amount < stats.minPayout) {
+      toast.error(`Minimum payout is ₹${stats.minPayout}`)
+      return
+    }
+    if (amount > stats.balance) {
+      toast.error(`Insufficient balance. Available: ₹${stats.balance}`)
+      return
+    }
+    if (withdrawMethod === 'upi' && !upi.trim()) {
+      toast.error('Enter your UPI ID')
+      return
+    }
+    if (
+      withdrawMethod === 'bank' &&
+      (!bankAccount.accountNumber.trim() ||
+        !bankAccount.ifsc.trim() ||
+        !bankAccount.holderName.trim())
+    ) {
+      toast.error('Enter account number, IFSC, and holder name')
+      return
+    }
+
+    setWithdrawing(true)
+    try {
+      const res = await referralAPI.requestPayout({
+        amount,
+        method: withdrawMethod,
+        upi: withdrawMethod === 'upi' ? upi.trim() : undefined,
+        bankAccount: withdrawMethod === 'bank' ? bankAccount : undefined,
+      })
+      toast.success(res.data?.message || 'Payout request submitted')
+      setShowWithdraw(false)
+      fetchStats()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to request payout')
+    } finally {
+      setWithdrawing(false)
+    }
+  }
 
   const referralCode = stats.code || user?.referral?.myCode || user?.referralCode || 'LOADING'
   const referralLink = `${window.location.origin}/signup?ref=${referralCode}`
@@ -151,6 +214,29 @@ export const Referral = () => {
                 <p className="text-2xs text-gray-500">{label}</p>
               </div>
             ))}
+          </div>
+
+          {/* Withdraw */}
+          <div className="flex items-center justify-between gap-3 p-3 mb-3 bg-base-600 rounded-xl border border-white/10">
+            <div>
+              <p className="text-2xs text-gray-500 mb-0.5">Available to withdraw</p>
+              <p className="font-display font-bold text-white text-lg">
+                ₹{formatNumber(stats.balance)}
+              </p>
+              {stats.balance < stats.minPayout && (
+                <p className="text-2xs text-gray-500 mt-0.5">
+                  Minimum ₹{stats.minPayout} required to withdraw
+                </p>
+              )}
+            </div>
+            <Button
+              size="sm"
+              icon={Banknote}
+              onClick={openWithdraw}
+              disabled={stats.balance < stats.minPayout}
+            >
+              Withdraw
+            </Button>
           </div>
 
           {/* Referral code */}
@@ -296,6 +382,85 @@ export const Referral = () => {
           </p>
         </div>
       </Card>
+
+      {/* Withdraw Modal */}
+      <Modal
+        isOpen={showWithdraw}
+        onClose={() => setShowWithdraw(false)}
+        title="Withdraw Earnings"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" size="sm" onClick={() => setShowWithdraw(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={handleWithdraw} loading={withdrawing}>
+              Request Payout
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Input
+            label="Amount (₹)"
+            type="number"
+            name="amount"
+            min={stats.minPayout}
+            max={stats.balance}
+            value={withdrawAmount}
+            onChange={(e) => setWithdrawAmount(e.target.value)}
+            hint={`Available: ₹${formatNumber(stats.balance)} · Minimum: ₹${stats.minPayout}`}
+          />
+
+          <Select
+            label="Payout Method"
+            name="method"
+            value={withdrawMethod}
+            onChange={(e) => setWithdrawMethod(e.target.value)}
+            options={[
+              { value: 'upi', label: 'UPI' },
+              { value: 'bank', label: 'Bank Transfer' },
+            ]}
+          />
+
+          {withdrawMethod === 'upi' ? (
+            <Input
+              label="UPI ID"
+              name="upi"
+              placeholder="yourname@upi"
+              value={upi}
+              onChange={(e) => setUpi(e.target.value)}
+            />
+          ) : (
+            <>
+              <Input
+                label="Account Holder Name"
+                name="holderName"
+                value={bankAccount.holderName}
+                onChange={(e) => setBankAccount((b) => ({ ...b, holderName: e.target.value }))}
+              />
+              <Input
+                label="Account Number"
+                name="accountNumber"
+                value={bankAccount.accountNumber}
+                onChange={(e) => setBankAccount((b) => ({ ...b, accountNumber: e.target.value }))}
+              />
+              <Input
+                label="IFSC Code"
+                name="ifsc"
+                value={bankAccount.ifsc}
+                onChange={(e) =>
+                  setBankAccount((b) => ({ ...b, ifsc: e.target.value.toUpperCase() }))
+                }
+              />
+            </>
+          )}
+
+          <div className="p-3 bg-brand/5 border border-brand/15 rounded-xl">
+            <p className="text-xs text-gray-400">Processed within 3 business days.</p>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
