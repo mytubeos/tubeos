@@ -26,7 +26,7 @@ export const aiApi = {
 
   // Tools
   scoreThumbnail: (data) => api.post('/ai/thumbnail/score', data),
-  // Image generation (Gemini) + Cloudinary upload routinely takes longer
+  // Image generation (Cloudflare) + Cloudinary upload routinely takes longer
   // than the API-wide 30s default — same reasoning as video.api.js's upload
   // timeout override.
   generateThumbnail: (data) => api.post('/ai/thumbnail/generate', data, { timeout: 90 * 1000 }),

@@ -2,7 +2,7 @@
 // AI Content Engine
 // Generates titles, tags, descriptions, content ideas, Shorts scripts
 
-const { callAI, callAIVision, callGeminiImageGen } = require('../config/ai.config');
+const { callAI, callAIVision, callCloudflareImageGen } = require('../config/ai.config');
 const User = require('../models/user.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
 const Video = require('../models/video.model');
@@ -352,7 +352,7 @@ Style: ${THUMBNAIL_STYLES[style]}.
 Composition: rule-of-thirds, one clear focal point, bold enough to read at small size, no watermarks or logos.
 Leave clean, uncluttered space in the frame — do not render any title text baked into the image, since the creator will add their own text overlay afterward.`;
 
-  const { base64, mimeType } = await callGeminiImageGen(prompt);
+  const { base64, mimeType } = await callCloudflareImageGen(prompt);
   const buffer = Buffer.from(base64, 'base64');
 
   const { url } = await uploadGeneratedThumbnail(userId, buffer, mimeType);

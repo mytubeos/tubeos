@@ -232,50 +232,52 @@ const callGroq = async (modelName, messages, systemPrompt, maxTokens = 1000) => 
   return data.choices?.[0]?.message?.content || '';
 };
 
-// Gemini's dedicated image-generation model — same GEMINI_API_KEY as text/vision,
-// no separate provider/key needed. Returns base64 image bytes, not text.
-const IMAGE_GEN_MODEL = 'gemini-2.5-flash-image';
+// Cloudflare Workers AI — FLUX Schnell text-to-image. Chosen over Gemini's
+// image-gen (gemini-2.5-flash-image) because Gemini has zero free-tier quota
+// for image generation (requires a funded prepay billing account); Workers AI
+// has a real daily free allocation, no card required to start.
+const CLOUDFLARE_IMAGE_MODEL = '@cf/black-forest-labs/flux-1-schnell';
 
-const callGeminiImageGen = async (prompt) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
+const callCloudflareImageGen = async (prompt) => {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+  if (!accountId || !apiToken) {
+    throw new Error('CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN not configured');
+  }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_GEN_MODEL}:generateContent?key=${apiKey}`;
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${CLOUDFLARE_IMAGE_MODEL}`;
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        responseModalities: ['IMAGE'],
-        imageConfig: { aspectRatio: '16:9' },
-      },
-    }),
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiToken}`,
+    },
+    body: JSON.stringify({ prompt, width: 1280, height: 720 }),
   });
 
+  const contentType = response.headers.get('content-type') || '';
+
+  // FLUX on Workers AI returns a JSON envelope with a base64 image; other
+  // Workers AI image models (e.g. Stable Diffusion) return raw image bytes
+  // instead — handled defensively in case the model is ever swapped.
+  if (contentType.includes('application/json')) {
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error(data.errors?.[0]?.message || `Cloudflare image-gen error: ${response.status}`);
+    }
+    const base64 = data.result?.image;
+    if (!base64) throw new Error('Cloudflare did not return an image');
+    return { base64, mimeType: 'image/png' };
+  }
+
   if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.error?.message || `Gemini image-gen error: ${response.status}`);
+    const errText = await response.text().catch(() => '');
+    throw new Error(errText || `Cloudflare image-gen error: ${response.status}`);
   }
 
-  const data = await response.json();
-
-  if (data.promptFeedback?.blockReason) {
-    throw new Error(`Image generation blocked: ${data.promptFeedback.blockReason}`);
-  }
-
-  const parts = data.candidates?.[0]?.content?.parts || [];
-  const imagePart = parts.find((p) => p.inlineData?.data);
-  if (!imagePart) {
-    const textPart = parts.find((p) => p.text)?.text;
-    throw new Error(textPart || 'Gemini did not return an image');
-  }
-
-  return {
-    base64: imagePart.inlineData.data,
-    mimeType: imagePart.inlineData.mimeType || 'image/png',
-  };
+  const arrayBuf = await response.arrayBuffer();
+  return { base64: Buffer.from(arrayBuf).toString('base64'), mimeType: contentType || 'image/png' };
 };
 
 const callGemini = async (modelName, messages, systemPrompt) => {
@@ -313,7 +315,7 @@ module.exports = {
   getModelForPlan,
   callAI,
   callAIVision,
-  callGeminiImageGen,
+  callCloudflareImageGen,
   callClaude,
   callGemini,
   callGroq,
