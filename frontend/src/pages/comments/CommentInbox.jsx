@@ -293,7 +293,7 @@ export const CommentInbox = () => {
         <div className="text-center py-16 text-gray-500">
           <MessageCircle size={36} className="mx-auto mb-4 opacity-30" />
           <p className="text-sm mb-3">No comments found</p>
-          <Button variant="ghost" size="sm" icon={RefreshCw} onClick={handleSync}>
+          <Button variant="ghost" size="sm" icon={RefreshCw} onClick={handleSync} loading={syncing}>
             Sync Comments
           </Button>
         </div>
