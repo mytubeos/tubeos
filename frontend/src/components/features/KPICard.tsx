@@ -97,7 +97,9 @@ export const KPIGrid = ({ overview, loading = false, channelStats = null, period
   // Show period-based gained/lost only when we have real Analytics API data
   const hasRealSubData =
     (metrics.subscribers?.gained || 0) > 0 || (metrics.subscribers?.lost || 0) > 0
-  const subValue = hasRealSubData ? metrics.subscribers?.net : channelStats?.subscriberCount
+  // Card is always labeled "Total Subscribers" — always show the real total here,
+  // never the period net (gained − lost), which can be negative and isn't a total.
+  const subValue = channelStats?.subscriberCount
   const subSubtitle = hasRealSubData
     ? `+${formatNumber(metrics.subscribers?.gained ?? 0)} gained · ${periodLabel}`
     : 'Total subscribers'
