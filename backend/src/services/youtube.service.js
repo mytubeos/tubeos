@@ -293,6 +293,8 @@ const setPrimaryChannel = async (channelId, userId) => {
     throw err;
   }
 
+  await invalidateChannelCache(userId);
+
   return { channel: sanitizeChannel(channel), message: 'Primary channel updated' };
 };
 
