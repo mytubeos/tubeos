@@ -1,6 +1,6 @@
 // src/pages/videos/VideoUpload.jsx
 import { useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Upload, Sparkles, X, ArrowLeft, Image, Tag, Clock } from 'lucide-react'
 import { videoApi } from '../../api/video.api'
 import { aiApi } from '../../api/ai.api'
@@ -25,13 +25,14 @@ const CATEGORY_OPTIONS = Object.entries(VIDEO_CATEGORIES).map(([value, label]) =
 
 export const VideoUpload = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { activeChannel } = useChannelStore()
   const fileRef = useRef()
   const thumbRef = useRef()
 
   const [file, setFile] = useState(null)
   const [form, setForm] = useState({
-    title: '',
+    title: location.state?.prefillTitle || '',
     description: '',
     tags: '',
     category: '22',

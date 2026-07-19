@@ -1,5 +1,6 @@
 // src/pages/ai/AIContent.jsx
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Sparkles,
   Type,
@@ -97,6 +98,7 @@ const TagCloud = ({ tags = [] }) => (
 )
 
 export const AIContent = () => {
+  const navigate = useNavigate()
   const { activeChannel } = useChannelStore()
   const [activeTab, setActiveTab] = useState('titles')
   const [loading, setLoading] = useState(false)
@@ -236,7 +238,14 @@ export const AIContent = () => {
                 <Button fullWidth icon={Sparkles} loading={loading} onClick={handleGenerate}>
                   Generate 6 Titles
                 </Button>
-                <ResultBox items={titles} type="list" />
+                <ResultBox
+                  items={titles}
+                  type="list"
+                  onSelect={(title) => {
+                    toast.success('Opening Upload with this title...')
+                    navigate('/videos/upload', { state: { prefillTitle: title } })
+                  }}
+                />
               </div>
             </>
           )}
