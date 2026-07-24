@@ -264,7 +264,9 @@ const callCloudflareImageGen = async (prompt) => {
   if (contentType.includes('application/json')) {
     const data = await response.json();
     if (!data.success) {
-      throw new Error(data.errors?.[0]?.message || `Cloudflare image-gen error: ${response.status}`);
+      throw new Error(
+        data.errors?.[0]?.message || `Cloudflare image-gen error: ${response.status}`
+      );
     }
     const base64 = data.result?.image;
     if (!base64) throw new Error('Cloudflare did not return an image');
