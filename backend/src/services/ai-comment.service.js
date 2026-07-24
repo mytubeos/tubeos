@@ -151,7 +151,7 @@ confidence: 0-100`;
 
     const result = await callAI(
       plan,
-      'bulk',
+      'sentiment',
       [{ role: 'user', content: `Analyze: "${safeText}"` }],
       systemPrompt
     );
@@ -188,7 +188,10 @@ confidence: 0-100`;
 };
 
 // ==================== GENERATE AI REPLY ====================
-const generateReply = async (userId, commentId, tone = 'friendly') => {
+// isBulk: routes through the cheaper 'bulk_generation' tier when called from
+// bulkGenerateReplies' loop below, vs the normal 'comment_reply' tier for a
+// single standalone reply — see TASK_TIERS in ai.config.js.
+const generateReply = async (userId, commentId, tone = 'friendly', isBulk = false) => {
   const comment = await Comment.findOne({ _id: commentId, userId });
   if (!comment) {
     const err = new Error('Comment not found');
@@ -231,7 +234,7 @@ Reply with ONLY the reply text, nothing else.`;
 
   const reply = await callAI(
     user.plan,
-    'default',
+    isBulk ? 'bulk_generation' : 'comment_reply',
     [{ role: 'user', content: `Comment from ${safeAuthor}: "${safeText}"` }],
     systemPrompt
   );
@@ -371,7 +374,7 @@ const bulkGenerateReplies = async (userId, channelId, commentIds, tone = 'friend
   for (const id of commentIds.slice(0, 10)) {
     // Max 10 at once
     try {
-      await generateReply(userId, id, tone);
+      await generateReply(userId, id, tone, true);
       results.push({ commentId: id, success: true });
     } catch (err) {
       results.push({ commentId: id, success: false, error: err.message });

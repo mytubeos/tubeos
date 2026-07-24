@@ -1,8 +1,13 @@
 // src/config/ai.config.js
 
 const AI_MODELS = {
+  // gemini-2.0-flash was hard-shut-down by Google on 2026-06-01 — every Free
+  // plan AI call was silently failing until this swap. 2.5 Flash-Lite is also
+  // the free plan's fixed model going forward (see getModelForPlan), and is
+  // the only vision-capable model in this table (DeepSeek's public API does
+  // not reliably support vision), so it's used for thumbnail analysis too.
   gemini: {
-    name: 'gemini-2.0-flash',
+    name: 'gemini-2.5-flash-lite',
     provider: 'google',
     maxTokens: 1000,
     costPer1M: 0,
@@ -13,6 +18,23 @@ const AI_MODELS = {
     maxTokens: 1000,
     costPer1M: 0, // free tier
   },
+  // Paid-plan text generation, split by task weight (see TASK_TIERS) —
+  // ~15-20x cheaper than the Claude models they replace, per
+  // AI_MODEL_COST_COMPARISON.md's 2026-07-18 pricing audit.
+  deepseekFlash: {
+    name: 'deepseek-v4-flash',
+    provider: 'deepseek',
+    maxTokens: 1000,
+    costPer1M: 0.14,
+  },
+  deepseekPro: {
+    name: 'deepseek-v4-pro',
+    provider: 'deepseek',
+    maxTokens: 2000,
+    costPer1M: 0.435,
+  },
+  // No longer routed to by default (replaced by DeepSeek above) — left wired
+  // and callable in case Claude is ever needed again as a fallback.
   sonnet: {
     name: 'claude-sonnet-5',
     provider: 'anthropic',
@@ -33,32 +55,44 @@ const AI_MODELS = {
   },
 };
 
+// Which model tier each AI feature gets, independent of plan (Free plan is
+// the one exception — see getModelForPlan, it always gets Gemini regardless
+// of task). 'flash'/'pro' = DeepSeek weight class, 'vision' = thumbnail
+// analysis (must be Gemini — DeepSeek has no reliable vision support),
+// 'bulk' = cheapest-possible per-call cost for the bulk-reply loop.
+const TASK_TIERS = {
+  titles: 'flash',
+  tags: 'flash',
+  description: 'flash',
+  content_ideas: 'flash',
+  comment_reply: 'flash',
+  sentiment: 'flash',
+  shorts_script: 'pro',
+  channel_audit: 'pro',
+  thumbnail_analysis: 'vision',
+  bulk_generation: 'bulk',
+  default: 'flash',
+};
+
 const getModelForPlan = (plan, task = 'default') => {
   const bulkModel = process.env.GROQ_API_KEY ? AI_MODELS.groq : AI_MODELS.haiku;
 
-  // TEST_MODE=true → sab free model (Groq if available, else Gemini)
+  // TEST_MODE=true → sab free model (Groq if available, else Gemini) —
+  // vision tasks are still safe here: callAIVision routes Groq to Gemini
+  // vision automatically since Groq's llama-3.3 has no vision support.
   const testMode = process.env.AI_TEST_MODE === 'true';
   const freeModel = process.env.GROQ_API_KEY ? AI_MODELS.groq : AI_MODELS.gemini;
-  const paid = testMode ? freeModel : AI_MODELS.sonnet;
-  const premium = testMode ? freeModel : AI_MODELS.opus;
+  if (testMode) return freeModel;
 
-  const mapping = {
-    free: AI_MODELS.gemini,
-    creator: paid,
-    pro: paid,
-    agency: {
-      default: paid,
-      deep_analysis: premium,
-      bulk: testMode ? freeModel : bulkModel,
-      growth: premium,
-    },
-  };
+  // Free plan stays on the free Gemini tier regardless of task/feature.
+  if (plan === 'free') return AI_MODELS.gemini;
 
-  if (plan === 'agency' && typeof mapping.agency === 'object') {
-    return mapping.agency[task] || mapping.agency.default;
-  }
+  const tier = TASK_TIERS[task] || TASK_TIERS.default;
 
-  return mapping[plan] || AI_MODELS.gemini;
+  if (tier === 'vision') return AI_MODELS.gemini;
+  if (tier === 'bulk') return bulkModel;
+  if (tier === 'pro') return AI_MODELS.deepseekPro;
+  return AI_MODELS.deepseekFlash;
 };
 
 const callAI = async (plan, task, messages, systemPrompt) => {
@@ -70,6 +104,10 @@ const callAI = async (plan, task, messages, systemPrompt) => {
 
   if (model.provider === 'groq') {
     return callGroq(model.name, messages, systemPrompt, model.maxTokens);
+  }
+
+  if (model.provider === 'deepseek') {
+    return callDeepSeek(model.name, messages, systemPrompt, model.maxTokens);
   }
 
   return callClaude(model.name, messages, systemPrompt, model.maxTokens);
@@ -232,6 +270,41 @@ const callGroq = async (modelName, messages, systemPrompt, maxTokens = 1000) => 
   return data.choices?.[0]?.message?.content || '';
 };
 
+const callDeepSeek = async (modelName, messages, systemPrompt, maxTokens = 1000) => {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) throw new Error('DEEPSEEK_API_KEY not configured');
+
+  const dsMessages = [];
+  if (systemPrompt) dsMessages.push({ role: 'system', content: systemPrompt });
+  dsMessages.push(...messages);
+
+  const response = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: modelName,
+      messages: dsMessages,
+      max_tokens: maxTokens,
+      temperature: 0.7,
+      // V4 models think by default, sharing the response's max_tokens budget
+      // — same truncation risk as Claude Sonnet 5/Opus 4.8 (see callClaude).
+      // These are all short, non-streaming content-gen calls, so disabled.
+      thinking: { type: 'disabled' },
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || `DeepSeek API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || '';
+};
+
 // Cloudflare Workers AI — FLUX Schnell text-to-image. Chosen over Gemini's
 // image-gen (gemini-2.5-flash-image) because Gemini has zero free-tier quota
 // for image generation (requires a funded prepay billing account); Workers AI
@@ -314,6 +387,7 @@ const callGemini = async (modelName, messages, systemPrompt) => {
 
 module.exports = {
   AI_MODELS,
+  TASK_TIERS,
   getModelForPlan,
   callAI,
   callAIVision,
@@ -321,4 +395,5 @@ module.exports = {
   callClaude,
   callGemini,
   callGroq,
+  callDeepSeek,
 };

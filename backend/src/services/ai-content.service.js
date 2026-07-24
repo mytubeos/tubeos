@@ -36,7 +36,7 @@ Return ONLY a valid JSON array with exactly ${count} strings. No explanation, no
 ${description ? `Description: ${description}` : ''}
 ${tags?.length ? `Keywords: ${tags.join(', ')}` : ''}`;
 
-  const result = await callAI(user.plan, 'default', [{ role: 'user', content }], systemPrompt);
+  const result = await callAI(user.plan, 'titles', [{ role: 'user', content }], systemPrompt);
 
   const clean = result.replace(/```json|```/g, '').trim();
   const titles = JSON.parse(clean);
@@ -66,7 +66,7 @@ No explanation, no markdown.`;
 
   const result = await callAI(
     user.plan,
-    'default',
+    'tags',
     [
       {
         role: 'user',
@@ -108,7 +108,7 @@ Write the complete description directly, no extra commentary.`;
 
   const result = await callAI(
     user.plan,
-    'default',
+    'description',
     [
       {
         role: 'user',
@@ -149,7 +149,7 @@ Return ONLY valid JSON array:
 
   const result = await callAI(
     user.plan,
-    'default',
+    'content_ideas',
     [
       {
         role: 'user',
@@ -199,7 +199,7 @@ Return as plain text with section labels.`;
 
   const result = await callAI(
     user.plan,
-    'default',
+    'shorts_script',
     [{ role: 'user', content: `Write a Shorts script about: ${topic}` }],
     systemPrompt
   );
@@ -240,7 +240,7 @@ Return ONLY valid JSON:
 
   const result = await callAI(
     user.plan,
-    'default',
+    'shorts_script',
     [
       {
         role: 'user',
@@ -294,7 +294,7 @@ Return ONLY valid JSON:
       const base64 = Buffer.from(arrayBuf).toString('base64');
 
       const prompt = `Title: ${title}\nNiche: ${niche || 'general'}\nAnalyze the attached thumbnail.`;
-      result = await callAIVision(user.plan, 'default', {
+      result = await callAIVision(user.plan, 'thumbnail_analysis', {
         prompt,
         systemPrompt,
         base64,
@@ -306,7 +306,7 @@ Return ONLY valid JSON:
       });
       result = await callAI(
         user.plan,
-        'default',
+        'thumbnail_analysis',
         [
           {
             role: 'user',
@@ -319,7 +319,7 @@ Return ONLY valid JSON:
   } else {
     result = await callAI(
       user.plan,
-      'default',
+      'thumbnail_analysis',
       [
         {
           role: 'user',
@@ -383,7 +383,7 @@ Return ONLY valid JSON:
 
   const result = await callAI(
     user.plan,
-    'default',
+    'channel_audit',
     [
       {
         role: 'user',
