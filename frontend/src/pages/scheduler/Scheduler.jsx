@@ -111,7 +111,7 @@ export const Scheduler = () => {
 
       {/* Queue stats bar */}
       {queueStats && (
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: 'Waiting', value: queueStats.delayed || 0, color: 'brand' },
             { label: 'Active', value: queueStats.active || 0, color: 'cyan', dot: true },

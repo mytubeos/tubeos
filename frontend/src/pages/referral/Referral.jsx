@@ -202,7 +202,7 @@ export const Referral = () => {
           </div>
 
           {/* Stats row */}
-          <div className="grid grid-cols-4 gap-3 mb-5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
             {[
               { label: 'Referrals', value: stats.totalReferrals, icon: Users },
               { label: 'Active', value: stats.activeReferrals, icon: Zap },

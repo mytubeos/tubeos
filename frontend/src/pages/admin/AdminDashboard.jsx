@@ -49,7 +49,7 @@ export const AdminDashboard = () => {
       {/* User Stats */}
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Users</p>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {userMetrics.map((m) => (
             <MetricCard key={m.label} {...m} loading={loading} />
           ))}
@@ -61,7 +61,7 @@ export const AdminDashboard = () => {
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">
           Plan Breakdown
         </p>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {planMetrics.map((m) => (
             <MetricCard key={m.label} {...m} loading={loading} />
           ))}

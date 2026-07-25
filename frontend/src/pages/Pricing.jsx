@@ -192,6 +192,156 @@ export const Pricing = () => {
             </div>
           </div>
 
+          {/* Mobile: stacked plan cards (grid-cols-5 comparison table is unusable under ~640px) */}
+          <div className="md:hidden space-y-5">
+            {plans.map((plan) => (
+              <div
+                key={plan}
+                className={`rounded-2xl p-5 ${plan === 'creator' ? 'bg-brand/10 border border-brand/30' : 'glass'}`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <p className="font-display font-bold text-white capitalize text-lg">{plan}</p>
+                  <p className={`text-2xl font-display font-bold text-${planColors[plan]}`}>
+                    {PLAN_PRICES[plan].price}
+                    <span className="text-sm text-gray-500 font-normal">/mo</span>
+                  </p>
+                </div>
+                <p className="text-xs text-gray-600 mb-4">{PLAN_PRICES[plan].note}</p>
+
+                {user?.plan === plan ? (
+                  <div className="w-full py-2 text-sm text-center text-emerald font-semibold">
+                    Current Plan
+                  </div>
+                ) : plan === 'free' ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="w-full"
+                    onClick={() => navigate('/signup')}
+                  >
+                    Get Free
+                  </Button>
+                ) : couponState.activePlan === plan ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-1.5">
+                      <input
+                        className="input-field h-9 text-sm px-3 flex-1 uppercase"
+                        placeholder="COUPON CODE"
+                        value={couponState.code}
+                        onChange={(e) =>
+                          setCouponState((s) => ({
+                            ...s,
+                            code: e.target.value.toUpperCase(),
+                            result: null,
+                          }))
+                        }
+                        onKeyDown={(e) => e.key === 'Enter' && validateCoupon(plan)}
+                      />
+                      <button
+                        onClick={() => validateCoupon(plan)}
+                        disabled={couponState.validating}
+                        className="px-3 h-9 bg-brand/20 border border-brand/30 rounded-lg text-brand text-sm
+                                   hover:bg-brand/30 transition-colors disabled:opacity-50"
+                      >
+                        {couponState.validating ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          'Apply'
+                        )}
+                      </button>
+                      <button
+                        onClick={closeCouponBox}
+                        className="p-2 h-9 glass border border-white/10 rounded-lg text-gray-500 hover:text-white"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+
+                    {couponState.result && (
+                      <div className="flex items-center gap-1.5 px-3 py-2 bg-emerald/10 border border-emerald/20 rounded-lg">
+                        <Check size={13} className="text-emerald shrink-0" />
+                        <span className="text-xs text-emerald">
+                          ₹{couponState.result.originalPrice} → ₹
+                          {couponState.result.discountedPrice}
+                        </span>
+                      </div>
+                    )}
+
+                    <Button
+                      size="sm"
+                      variant={plan === 'creator' ? 'brand' : 'ghost'}
+                      className="w-full"
+                      disabled={loadingPlan === plan}
+                      onClick={() => {
+                        closeCouponBox()
+                        handlePlanClick(plan, couponState.code || null)
+                      }}
+                    >
+                      {loadingPlan === plan ? (
+                        <Loader2 size={16} className="animate-spin mx-auto" />
+                      ) : (
+                        'Upgrade'
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      size="sm"
+                      variant={plan === 'creator' ? 'brand' : 'ghost'}
+                      className="w-full"
+                      disabled={loadingPlan === plan}
+                      onClick={() => handlePlanClick(plan)}
+                    >
+                      {loadingPlan === plan ? (
+                        <Loader2 size={16} className="animate-spin mx-auto" />
+                      ) : (
+                        'Upgrade'
+                      )}
+                    </Button>
+                    <button
+                      onClick={() => openCouponBox(plan)}
+                      className="flex items-center justify-center gap-1 w-full text-xs text-gray-600
+                                 hover:text-gray-400 transition-colors py-1.5"
+                    >
+                      <Tag size={11} /> Have a coupon?
+                    </button>
+                  </>
+                )}
+
+                {/* What's included — only the features this plan actually has */}
+                <div className="mt-5 pt-4 border-t border-white/8 space-y-3">
+                  {FEATURES_TABLE.map(({ category, features }) => {
+                    const included = features.filter((f) => f[plan] !== false)
+                    if (included.length === 0) return null
+                    return (
+                      <div key={category}>
+                        <p className="text-2xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5">
+                          {category}
+                        </p>
+                        <ul className="space-y-1.5">
+                          {included.map((f) => (
+                            <li key={f.name} className="flex items-center gap-2 text-sm text-gray-300">
+                              <Check size={13} className="text-emerald shrink-0" />
+                              <span>
+                                {f.name}
+                                {typeof f[plan] === 'string' && (
+                                  <span className="text-gray-500"> — {f[plan]}</span>
+                                )}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: full comparison table */}
+          <div className="hidden md:block">
           {/* Plan headers */}
           <div
             className="grid grid-cols-5 gap-4 mb-2 sticky top-16 z-10
@@ -357,6 +507,7 @@ export const Pricing = () => {
                 ))}
               </div>
             ))}
+          </div>
           </div>
 
           {/* Bottom CTA */}

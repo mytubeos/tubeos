@@ -64,7 +64,7 @@ export const CompetitorCard = ({ competitor, onSync, onRemove, syncing = false }
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-3 mt-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-3">
             <div>
               <p className="text-xs font-bold text-white">
                 {formatNumber(competitor.stats?.subscribers)}

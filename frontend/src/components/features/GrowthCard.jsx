@@ -104,7 +104,7 @@ export const GrowthPredictionCard = ({ data, loading = false }) => {
       />
 
       {/* Prediction boxes */}
-      <div className="grid grid-cols-3 gap-3 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         {[
           { label: '30 Days', data: preds.thirtyDays, color: 'brand' },
           { label: '90 Days', data: preds.ninetyDays, color: 'cyan' },
