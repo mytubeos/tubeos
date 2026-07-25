@@ -25,6 +25,7 @@ const JOB_SCHEDULES = [
   { id: 'weekly-reports', pattern: '0 8 * * 1' }, // Monday 8am
   { id: 'monthly-reports', pattern: '0 9 1 * *' }, // 1st of month 9am
   { id: 'renew-pubsub', pattern: '0 3 */7 * *' }, // every 7 days 3am
+  { id: 'chingari-nudges', pattern: '0 */6 * * *' }, // every 6h
 ];
 
 let queue = null;
@@ -75,6 +76,8 @@ const startWorkers = async () => {
           return cron.sendMonthlyReports();
         case 'renew-pubsub':
           return cron.renewPubSubSubscriptions();
+        case 'chingari-nudges':
+          return cron.generateNudges();
         default:
           logger.warn(`[bullmq] unknown job name: ${job.name}`);
       }

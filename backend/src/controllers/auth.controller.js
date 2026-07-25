@@ -286,6 +286,8 @@ const updatePreferences = async (req, res) => {
       'reportDay',
       'timezone',
       'language',
+      'chingariEnabled',
+      'maxNudgesPerDay',
     ];
     const updates = {};
     allowed.forEach((key) => {

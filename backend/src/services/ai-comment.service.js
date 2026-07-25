@@ -9,6 +9,7 @@ const { getValidAccessToken } = require('./youtube.service');
 const { youtubeRequest } = require('../config/youtube.config');
 const { callAI } = require('../config/ai.config');
 const { sanitizePromptInput } = require('../utils/sanitize.utils');
+const { touchActivity } = require('./notification.service');
 
 // ==================== SYNC COMMENTS ====================
 // options.analyze (default true): run LLM sentiment on new comments. The daily
@@ -301,6 +302,8 @@ const postReply = async (userId, commentId, replyText = null) => {
   }
   comment.aiReply.isApproved = true;
   await comment.save();
+
+  await touchActivity(userId);
 
   return { comment, message: 'Reply posted to YouTube!' };
 };

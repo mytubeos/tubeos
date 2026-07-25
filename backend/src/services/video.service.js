@@ -10,6 +10,7 @@ const { getValidAccessToken } = require('./youtube.service');
 const { youtubeRequest, QUOTA_COSTS } = require('../config/youtube.config');
 const storageService = require('./storage.service');
 const logger = require('../config/logger');
+const { touchActivity, createNotification } = require('./notification.service');
 
 // ==================== CREATE DRAFT ====================
 /**
@@ -200,6 +201,17 @@ const uploadVideo = async (userId, videoId, fileRef, mimeType) => {
           $inc: { 'usage.uploadsUsed': 1 },
         }
       );
+
+      await touchActivity(userId);
+      const publishedCount = await Video.countDocuments({ userId, status: { $ne: 'draft' } });
+      if (publishedCount === 1) {
+        await createNotification(
+          userId,
+          'welcome',
+          'Pehla video upload ho gaya! Ye TubeOS ka sabse important step tha — badhai ho 🎉',
+          'celebrate'
+        );
+      }
 
       return {
         video,

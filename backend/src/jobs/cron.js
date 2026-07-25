@@ -230,6 +230,68 @@ const renewPubSubSubscriptions = async () => {
   }
 };
 
+// ---------- Chingari nudges ----------
+// Periodic "has this user gone quiet" checks only. Event-driven moments
+// (streak milestones, first-ever publish) fire immediately from their own
+// call sites instead of waiting for this poll — see
+// notification.service.js's touchActivity and video.service.js.
+const generateNudges = async () => {
+  try {
+    const User = require('../models/user.model');
+    const Video = require('../models/video.model');
+    const Comment = require('../models/comment.model');
+    const { createNotification } = require('../services/notification.service');
+
+    const users = await User.find({
+      isActive: true,
+      isBanned: false,
+      'preferences.chingariEnabled': { $ne: false },
+    })
+      .select('_id')
+      .lean();
+
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+
+    for (const { _id: userId } of users) {
+      try {
+        const recentVideo = await Video.findOne({
+          userId,
+          status: { $in: ['published', 'processing', 'scheduled'] },
+        })
+          .sort({ createdAt: -1 })
+          .select('createdAt')
+          .lean();
+
+        if (!recentVideo || recentVideo.createdAt < threeDaysAgo) {
+          await createNotification(
+            userId,
+            'upload_reminder',
+            'Aaj kuch upload nahi hua abhi tak — Content Ideas tool se 2 min mein topic nikaal lo 👀',
+            'nudge'
+          );
+        }
+
+        const backlogCount = await Comment.countDocuments({
+          userId,
+          status: { $in: ['unread', 'pending_reply'] },
+        });
+        if (backlogCount >= 5) {
+          await createNotification(
+            userId,
+            'comment_backlog',
+            `${backlogCount} comments reply ka wait kar rahe hain — AI se 2 min mein nipta do 💬`,
+            'nudge'
+          );
+        }
+      } catch (err) {
+        logger.error(`[cron] chingari-nudges failed for user ${userId}`, { error: err.message });
+      }
+    }
+  } catch (err) {
+    logger.error('[cron] generateNudges error', { error: err.message });
+  }
+};
+
 const startCron = () => {
   logger.info('In-process cron started');
 
@@ -250,6 +312,9 @@ const startCron = () => {
 
   // Every 7 days: renew PubSubHubbub subscriptions (9-day lease, renew before expiry)
   timers.push(setInterval(renewPubSubSubscriptions, 7 * 24 * 60 * 60 * 1000));
+
+  // Every 6h: Chingari nudge rules (stagnation checks only, see generateNudges)
+  timers.push(setInterval(generateNudges, 6 * 60 * 60 * 1000));
 
   // Fire once on boot (best-effort)
   setTimeout(reapPublishedSchedules, 5_000);
@@ -274,4 +339,5 @@ module.exports = {
   sendWeeklyReports,
   sendMonthlyReports,
   renewPubSubSubscriptions,
+  generateNudges,
 };

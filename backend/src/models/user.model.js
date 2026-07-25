@@ -185,6 +185,21 @@ const userSchema = new mongoose.Schema(
         type: Number,
         default: 1, // 0=Sun, 1=Mon, 2=Tue ... 6=Sat
       },
+      chingariEnabled: {
+        type: Boolean,
+        default: true,
+      },
+      maxNudgesPerDay: {
+        type: Number,
+        default: 2,
+      },
+    },
+
+    // ==================== GAMIFICATION (Chingari streak) ====================
+    gamification: {
+      currentStreak: { type: Number, default: 0 },
+      longestStreak: { type: Number, default: 0 },
+      lastActiveDate: { type: Date, default: null },
     },
 
     // ==================== METADATA ====================
