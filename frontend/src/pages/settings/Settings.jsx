@@ -93,6 +93,7 @@ export const Settings = () => {
     weeklyReport: user?.preferences?.weeklyReport ?? true,
     reportFrequency: user?.preferences?.reportFrequency || 'weekly',
     marketingEmails: user?.preferences?.marketingEmails ?? false,
+    chingariEnabled: user?.preferences?.chingariEnabled ?? true,
   })
   const [savingNotifications, setSavingNotifications] = useState(false)
 
@@ -146,6 +147,7 @@ export const Settings = () => {
         weeklyReport: notifications.weeklyReport,
         reportFrequency: notifications.reportFrequency,
         marketingEmails: notifications.marketingEmails,
+        chingariEnabled: notifications.chingariEnabled,
       })
       updateUser({ preferences: res.data.data?.preferences })
       toast.success('Preferences saved!')
@@ -442,6 +444,11 @@ export const Settings = () => {
                   key: 'marketingEmails',
                   label: 'Product Updates & Tips',
                   desc: 'New features, creator tips, and platform news',
+                },
+                {
+                  key: 'chingariEnabled',
+                  label: 'Chingari Nudges',
+                  desc: 'In-app reminders and streak celebrations from your mascot',
                 },
               ].map(({ key, label, desc }) => (
                 <div

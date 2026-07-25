@@ -113,4 +113,287 @@
   .section-title {
     @apply font-display text-base font-semibold text-gray-100;
   }
+
+  /* ==================== Chingari mascot ====================
+     Bespoke organic-blob shape + mood variants — kept as plain CSS (like
+     .shimmer above) rather than Tailwind utilities, since these keyframes
+     are one component's bespoke states, not generic reusable animations. */
+  .chingari {
+    position: relative;
+    width: var(--chingari-size, 48px);
+    height: var(--chingari-size, 48px);
+    animation: chingari-bob 4s ease-in-out infinite;
+  }
+  @keyframes chingari-bob {
+    0%,
+    100% {
+      transform: translateY(0) rotate(-2deg);
+    }
+    50% {
+      transform: translateY(-10%) rotate(2deg);
+    }
+  }
+  .chingari__glow {
+    position: absolute;
+    inset: -18%;
+    background: radial-gradient(circle, rgba(255, 77, 122, 0.35), transparent 65%);
+    filter: blur(6px);
+  }
+  .chingari__tip {
+    position: absolute;
+    top: -8%;
+    left: 50%;
+    width: 26%;
+    height: 34%;
+    background: linear-gradient(160deg, #ffb238, #ff4d7a);
+    clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+    transform: translateX(-50%) rotate(-8deg);
+    border-radius: 40% 40% 8% 8%;
+  }
+  .chingari__body {
+    position: absolute;
+    inset: 14% 4% 0 4%;
+    border-radius: 44% 56% 62% 38% / 48% 42% 58% 52%;
+    background: linear-gradient(150deg, #ffb238, #ff4d7a 68%);
+    box-shadow:
+      0 26px 60px -22px rgba(255, 77, 122, 0.55),
+      inset -12px -16px 28px rgba(0, 0, 0, 0.18),
+      inset 10px 12px 22px rgba(255, 255, 255, 0.22);
+  }
+  .chingari__face {
+    position: absolute;
+    inset: 14% 4% 0 4%;
+  }
+  .chingari__eye {
+    position: absolute;
+    top: 44%;
+    width: 9%;
+    height: 9%;
+    background: #201225;
+    border-radius: 50%;
+  }
+  .chingari__eye::after {
+    content: '';
+    position: absolute;
+    top: 18%;
+    left: 18%;
+    width: 32%;
+    height: 32%;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 50%;
+  }
+  .chingari__eye--l {
+    left: 33%;
+  }
+  .chingari__eye--r {
+    left: 60%;
+  }
+  .chingari__mouth {
+    position: absolute;
+    top: 58%;
+    left: 44%;
+    width: 16%;
+    height: 9%;
+    border-bottom: 3px solid #201225;
+    border-radius: 0 0 60% 60%;
+  }
+  .chingari__cheek {
+    position: absolute;
+    top: 55%;
+    width: 8%;
+    height: 5%;
+    background: rgba(255, 255, 255, 0.35);
+    border-radius: 50%;
+    filter: blur(1px);
+  }
+  .chingari__cheek--l {
+    left: 22%;
+  }
+  .chingari__cheek--r {
+    left: 74%;
+  }
+
+  /* Moods */
+  .chingari--celebrate {
+    animation: chingari-celebrate 0.6s ease-in-out infinite;
+  }
+  @keyframes chingari-celebrate {
+    0%,
+    100% {
+      transform: translateY(0) scale(1) rotate(-4deg);
+    }
+    50% {
+      transform: translateY(-30%) scale(1.06) rotate(4deg);
+    }
+  }
+  .chingari--hype {
+    animation: chingari-hype 0.45s ease-in-out infinite;
+  }
+  @keyframes chingari-hype {
+    0%,
+    100% {
+      transform: translateY(0) scale(1) rotate(-6deg);
+    }
+    50% {
+      transform: translateY(-34%) scale(1.1) rotate(6deg);
+    }
+  }
+  .chingari--celebrate .chingari__mouth,
+  .chingari--hype .chingari__mouth {
+    width: 24%;
+    height: 15%;
+    top: 55%;
+    left: 38%;
+    border-radius: 0 0 50% 50%;
+    border-bottom-width: 4px;
+  }
+
+  .chingari--curious {
+    animation: chingari-curious 2.2s ease-in-out infinite;
+  }
+  @keyframes chingari-curious {
+    0%,
+    20% {
+      transform: rotate(0deg);
+    }
+    50%,
+    80% {
+      transform: rotate(13deg);
+    }
+    100% {
+      transform: rotate(0deg);
+    }
+  }
+  .chingari--curious .chingari__eye {
+    transform: translate(6%, -10%);
+  }
+  .chingari--curious .chingari__mouth {
+    width: 10%;
+    height: 10%;
+    left: 45%;
+    top: 58%;
+    border: 2.5px solid #201225;
+    border-radius: 50%;
+  }
+
+  .chingari--proud {
+    animation: chingari-proud 3s ease-in-out infinite;
+  }
+  @keyframes chingari-proud {
+    0%,
+    100% {
+      transform: translateY(0) scale(1);
+    }
+    50% {
+      transform: translateY(-4%) scale(1.03);
+    }
+  }
+  .chingari--proud .chingari__glow {
+    background: radial-gradient(circle, rgba(255, 178, 56, 0.42), transparent 65%);
+  }
+  .chingari--proud .chingari__eye {
+    height: 7%;
+    top: 45%;
+  }
+  .chingari--proud .chingari__mouth {
+    width: 20%;
+    height: 11%;
+    top: 57%;
+    left: 40%;
+    border-radius: 0 0 50% 50%;
+    border-bottom-width: 3.5px;
+  }
+
+  .chingari--playful {
+    animation: chingari-playful 0.5s ease-in-out infinite;
+  }
+  @keyframes chingari-playful {
+    0%,
+    100% {
+      transform: translateX(0) rotate(-3deg);
+    }
+    25% {
+      transform: translateX(-7%) rotate(-9deg);
+    }
+    75% {
+      transform: translateX(7%) rotate(9deg);
+    }
+  }
+  .chingari--playful .chingari__eye--r {
+    height: 2px;
+    border-radius: 2px;
+  }
+  .chingari--playful .chingari__eye--r::after {
+    display: none;
+  }
+  .chingari--playful .chingari__mouth {
+    width: 20%;
+    height: 12%;
+    top: 56%;
+    left: 40%;
+    border-radius: 0 0 50% 30%;
+    border-bottom-width: 3.5px;
+    transform: rotate(-8deg);
+  }
+
+  .chingari--thinking {
+    animation: chingari-thinking 2.6s ease-in-out infinite;
+  }
+  @keyframes chingari-thinking {
+    0%,
+    100% {
+      transform: rotate(-7deg);
+    }
+    50% {
+      transform: rotate(7deg);
+    }
+  }
+  .chingari--nudge {
+    animation: chingari-nudge 3.6s ease-in-out infinite;
+  }
+  @keyframes chingari-nudge {
+    0%,
+    100% {
+      transform: translateY(0) rotate(-1deg);
+    }
+    50% {
+      transform: translateY(-8%) rotate(1deg);
+    }
+  }
+  .chingari--sleepy {
+    animation: chingari-sleepy 5.5s ease-in-out infinite;
+  }
+  @keyframes chingari-sleepy {
+    0%,
+    100% {
+      transform: translateY(0) rotate(-1deg);
+    }
+    50% {
+      transform: translateY(-6%) rotate(1deg);
+    }
+  }
+  .chingari--nudge .chingari__glow,
+  .chingari--sleepy .chingari__glow {
+    opacity: 0.4;
+  }
+  .chingari--thinking .chingari__eye,
+  .chingari--nudge .chingari__eye {
+    transform: translateY(-14%);
+  }
+  .chingari--nudge .chingari__mouth {
+    width: 9%;
+    height: 9%;
+    left: 45.5%;
+    top: 60%;
+    border: 2.5px solid #201225;
+    border-radius: 50%;
+  }
+  .chingari--sleepy .chingari__eye {
+    height: 2.5%;
+    top: 47%;
+    border-radius: 2px;
+  }
+  .chingari--sleepy .chingari__eye::after {
+    display: none;
+  }
 }

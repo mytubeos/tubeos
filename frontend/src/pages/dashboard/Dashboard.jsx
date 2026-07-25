@@ -12,9 +12,11 @@ import { Card, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { analyticsApi } from '../../api/analytics.api'
 import { scheduleApi } from '../../api/schedule.api'
+import notificationAPI from '../../api/notification.api'
 import { formatDate, formatNumber } from '../../utils/formatters'
 import { PERIODS } from '../../utils/constants'
 import { StatusBadge } from '../../components/ui/Badge'
+import { Chingari } from '../../components/features/Chingari'
 import toast from 'react-hot-toast'
 
 export const Dashboard = () => {
@@ -25,7 +27,15 @@ export const Dashboard = () => {
   const [syncing, setSyncing] = useState(false)
   const [upcoming, setUpcoming] = useState([])
   const [bestTime, setBestTime] = useState(null)
+  const [latestNudge, setLatestNudge] = useState(null)
   const autoSyncDone = useRef(false)
+
+  useEffect(() => {
+    notificationAPI
+      .getAll({ limit: 1 })
+      .then((res) => setLatestNudge(res.data.data?.notifications?.[0] || null))
+      .catch(() => {})
+  }, [])
 
   const { overview, graphData, topVideos, isLoading, refetch } = useAnalytics(period)
 
@@ -278,6 +288,28 @@ export const Dashboard = () => {
           )}
         </Card>
       </div>
+
+      {/* Chingari widget */}
+      <Card>
+        <div className="flex items-center gap-4">
+          <Chingari mood={latestNudge?.mood || 'idle'} size={56} className="shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-gray-200 leading-relaxed">
+              {latestNudge?.message || 'Sab kuch on track hai — badhiya kaam chal raha hai! 🎉'}
+            </p>
+            <div className="flex items-baseline gap-1.5 mt-2">
+              <span className="font-display font-bold text-white text-lg">
+                {user?.gamification?.currentStreak || 0}
+              </span>
+              <span className="text-2xs text-gray-500">
+                din ka active streak
+                {user?.gamification?.longestStreak > 0 &&
+                  ` · best: ${user.gamification.longestStreak}`}
+              </span>
+            </div>
+          </div>
+        </div>
+      </Card>
     </div>
   )
 }

@@ -1,15 +1,65 @@
 // src/components/layout/Navbar.jsx
-import { useState } from 'react'
-import { Bell, Plus, ChevronDown } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Bell, Plus, ChevronDown, Check } from 'lucide-react'
 import { useChannelStore } from '../../store/channelStore'
 import { Button } from '../ui/Button'
-import { formatNumber } from '../../utils/formatters'
+import { Chingari } from '../features/Chingari'
+import { formatNumber, timeAgo } from '../../utils/formatters'
 import { useNavigate } from 'react-router-dom'
+import notificationAPI from '../../api/notification.api'
+
+const NOTIF_POLL_MS = 2 * 60 * 1000
 
 export const Navbar = ({ title }) => {
   const { channels, activeChannel, setActiveChannel } = useChannelStore()
   const [showChannels, setShowChannels] = useState(false)
+  const [showNotifs, setShowNotifs] = useState(false)
+  const [notifications, setNotifications] = useState([])
+  const [unreadCount, setUnreadCount] = useState(0)
   const navigate = useNavigate()
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await notificationAPI.getAll({ limit: 15 })
+      setNotifications(res.data.data?.notifications || [])
+      setUnreadCount(res.data.data?.unreadCount || 0)
+    } catch {
+      // Silent — the bell just stays at its last-known state, no toast spam
+      // for a background poll.
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchNotifications()
+    const interval = setInterval(fetchNotifications, NOTIF_POLL_MS)
+    return () => clearInterval(interval)
+  }, [fetchNotifications])
+
+  const handleOpenNotifs = () => {
+    setShowNotifs((v) => !v)
+    if (!showNotifs) fetchNotifications()
+  }
+
+  const handleItemClick = async (n) => {
+    if (n.read) return
+    setNotifications((prev) => prev.map((x) => (x._id === n._id ? { ...x, read: true } : x)))
+    setUnreadCount((c) => Math.max(0, c - 1))
+    try {
+      await notificationAPI.markRead(n._id)
+    } catch {
+      // Best-effort — a stale "read" state locally is harmless
+    }
+  }
+
+  const handleMarkAllRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+    setUnreadCount(0)
+    try {
+      await notificationAPI.markAllRead()
+    } catch {
+      // Best-effort, same as above
+    }
+  }
 
   return (
     <header
@@ -121,16 +171,72 @@ export const Navbar = ({ title }) => {
         </Button>
 
         {/* Notifications */}
-        <button
-          className="relative w-9 h-9 rounded-lg glass flex items-center justify-center
-                           text-gray-400 hover:text-white hover:bg-white/6 transition-all"
-        >
-          <Bell size={17} />
-          <span
-            className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand rounded-full
-                           ring-1 ring-base-800 animate-pulse"
-          />
-        </button>
+        <div className="relative">
+          <button
+            onClick={handleOpenNotifs}
+            aria-label="Notifications"
+            className="relative w-9 h-9 rounded-lg glass flex items-center justify-center
+                             text-gray-400 hover:text-white hover:bg-white/6 transition-all"
+          >
+            <Bell size={17} />
+            {unreadCount > 0 && (
+              <span
+                className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand rounded-full
+                               ring-1 ring-base-800 animate-pulse"
+              />
+            )}
+          </button>
+
+          {showNotifs && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowNotifs(false)} />
+              <div
+                className="absolute right-0 top-11 w-80 bg-base-700 border border-white/10
+                              rounded-xl shadow-2xl z-20 overflow-hidden animate-slide-up"
+              >
+                <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-white/8">
+                  <span className="text-sm font-semibold text-white">Notifications</span>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="flex items-center gap-1 text-2xs text-gray-500 hover:text-brand transition-colors"
+                    >
+                      <Check size={11} />
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-96 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="py-10 text-center">
+                      <Chingari mood="idle" size={40} className="mx-auto mb-2" />
+                      <p className="text-xs text-gray-500">Sab clear hai, kuch naya nahi hai</p>
+                    </div>
+                  ) : (
+                    notifications.map((n) => (
+                      <button
+                        key={n._id}
+                        onClick={() => handleItemClick(n)}
+                        className={`w-full flex items-start gap-2.5 px-3.5 py-3 text-left
+                                    border-b border-white/5 last:border-0 transition-all
+                                    hover:bg-white/5 ${!n.read ? 'bg-brand/5' : ''}`}
+                      >
+                        <Chingari mood={n.mood} size={30} className="shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="text-xs text-gray-200 leading-relaxed">{n.message}</p>
+                          <p className="text-2xs text-gray-600 mt-1">{timeAgo(n.createdAt)}</p>
+                        </div>
+                        {!n.read && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0 mt-1.5" />
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </header>
   )
