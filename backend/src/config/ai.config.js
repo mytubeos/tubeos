@@ -69,6 +69,7 @@ const TASK_TIERS = {
   sentiment: 'flash',
   shorts_script: 'pro',
   channel_audit: 'pro',
+  thumbnail_prompt: 'pro',
   thumbnail_analysis: 'vision',
   bulk_generation: 'bulk',
   default: 'flash',

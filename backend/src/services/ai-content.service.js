@@ -342,15 +342,47 @@ const THUMBNAIL_STYLES = {
   dramatic: 'cinematic, intense emotion, dark moody lighting with one bright focal highlight',
 };
 
+const THUMBNAIL_PROMPT_SYSTEM_PROMPT = `You are an expert AI image-prompt engineer specializing in YouTube thumbnails.
+Given a video's title, niche, and desired style, write a single, detailed, vivid image-generation
+prompt for a text-to-image model that will produce a scroll-stopping YouTube thumbnail.
+Rules:
+- 16:9 composition, rule-of-thirds, one clear focal point
+- Do not instruct the model to render any text/words — the creator adds their own overlay after
+- No watermarks, logos, or brand names
+- Be visually specific: subject, action, lighting, color palette, mood
+Return ONLY the image-generation prompt text — no explanation, no markdown, no preamble.`;
+
 const generateThumbnailImage = async (userId, { title, niche, style }) => {
   title = sanitizePromptInput(title, 200);
   niche = sanitizePromptInput(niche, 100);
   style = THUMBNAIL_STYLES[style] ? style : 'bold';
+  const user = await User.findById(userId);
 
-  const prompt = `Create a professional, eye-catching YouTube thumbnail image (16:9 widescreen) for a video titled "${title}"${niche ? ` in the ${niche} niche` : ''}.
+  const fallbackPrompt = `Create a professional, eye-catching YouTube thumbnail image (16:9 widescreen) for a video titled "${title}"${niche ? ` in the ${niche} niche` : ''}.
 Style: ${THUMBNAIL_STYLES[style]}.
 Composition: rule-of-thirds, one clear focal point, bold enough to read at small size, no watermarks or logos.
 Leave clean, uncluttered space in the frame — do not render any title text baked into the image, since the creator will add their own text overlay afterward.`;
+
+  let prompt;
+  try {
+    const raw = await callAI(
+      user.plan,
+      'thumbnail_prompt',
+      [
+        {
+          role: 'user',
+          content: `Title: ${title}\nNiche: ${niche || 'general'}\nStyle: ${THUMBNAIL_STYLES[style]}`,
+        },
+      ],
+      THUMBNAIL_PROMPT_SYSTEM_PROMPT
+    );
+    prompt = raw.trim() || fallbackPrompt;
+  } catch (err) {
+    logger.warn('[generateThumbnailImage] prompt refinement failed, using template fallback', {
+      error: err.message,
+    });
+    prompt = fallbackPrompt;
+  }
 
   const { base64, mimeType } = await callCloudflareImageGen(prompt);
   const buffer = Buffer.from(base64, 'base64');
