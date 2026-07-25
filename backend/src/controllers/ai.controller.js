@@ -185,6 +185,21 @@ const generateShortsScript = async (req, res) => {
   }
 };
 
+const generateLongScript = async (req, res) => {
+  try {
+    const { topic, style, minutes } = req.body;
+    if (!topic) return errorResponse(res, 400, 'topic is required');
+    const result = await aiContentService.generateLongScript(req.user.id, {
+      topic,
+      style,
+      minutes,
+    });
+    return successResponse(res, 200, 'Long-form script generated', result);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
 const repurposeToShorts = async (req, res) => {
   try {
     const result = await aiContentService.repurposeToShorts(req.user.id, req.params.videoId);
@@ -248,6 +263,7 @@ module.exports = {
   analyzeSEO,
   getContentIdeas,
   generateShortsScript,
+  generateLongScript,
   repurposeToShorts,
   scoreThumbnail,
   generateThumbnailImage,

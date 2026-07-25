@@ -247,6 +247,57 @@ Return as plain text with section labels.`;
   };
 };
 
+// ==================== GENERATE LONG-FORM SCRIPT ====================
+const generateLongScript = async (userId, { topic, style = 'educational', minutes = 5 }) => {
+  topic = sanitizePromptInput(topic, 500);
+  style = ['educational', 'entertainment', 'trending', 'motivation'].includes(style)
+    ? style
+    : 'educational';
+  // Clamped to 10min ceiling — deepseekPro's maxTokens:2000 budget is ~1500
+  // words, and 10min * 150 words/min (avg long-form speaking pace) ≈ 1500
+  // words. Above this the response would truncate mid-script.
+  minutes = Math.min(Math.max(parseInt(minutes) || 5, 3), 10);
+
+  const user = await User.findById(userId);
+
+  const styleGuide = {
+    educational: 'Quick tip or fact-based, hook + value + CTA',
+    entertainment: 'Funny, relatable, story-based',
+    trending: 'Trend-jacking, popular format',
+    motivation: 'Inspiring, punchy, emotional',
+  };
+
+  const systemPrompt = `You are a professional YouTube scriptwriter.
+Write a long-form video script of approximately ${minutes} minutes when spoken aloud.
+Style: ${styleGuide[style] || styleGuide.educational}
+Format:
+- HOOK (first 15-30s): Grab attention immediately, tease what's coming
+- INTRO: Briefly introduce the topic/promise
+- MAIN CONTENT: Clearly labeled segments/chapters covering the topic in depth
+- OUTRO (last 20-30s): Summarize, strong call-to-action (subscribe/comment/next video)
+Rules:
+- Speakable in approximately ${minutes} minutes (avg 150 words/min = ~${minutes * 150} words)
+- Each section/segment clearly labeled
+- Conversational, natural spoken tone, not robotic or written-for-reading
+Return as plain text with section labels.`;
+
+  const result = await callAI(
+    user.plan,
+    'long_script',
+    [{ role: 'user', content: `Write a long-form video script about: ${topic}` }],
+    systemPrompt
+  );
+
+  await User.findByIdAndUpdate(userId, { $inc: { 'usage.aiContentUsed': 1 } });
+  return {
+    script: result.trim(),
+    topic,
+    style,
+    estimatedMinutes: minutes,
+    wordCount: result.split(' ').length,
+  };
+};
+
 // ==================== REPURPOSE LONG VIDEO TO SHORTS ====================
 const repurposeToShorts = async (userId, videoId) => {
   const user = await User.findById(userId);
@@ -473,6 +524,7 @@ module.exports = {
   analyzeSEO,
   generateContentIdeas,
   generateShortsScript,
+  generateLongScript,
   repurposeToShorts,
   scoreThumbnail,
   generateThumbnailImage,

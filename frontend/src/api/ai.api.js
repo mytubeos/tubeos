@@ -25,6 +25,10 @@ export const aiApi = {
   generateShortsScript: (data) => api.post('/ai/shorts/script', data),
   repurposeToShorts: (videoId) => api.post(`/ai/shorts/repurpose/${videoId}`),
 
+  // Scripts (long-form) — heavier Pro-tier call than Shorts, same timeout
+  // reasoning as generateThumbnail's override below.
+  generateLongScript: (data) => api.post('/ai/scripts/long', data, { timeout: 60 * 1000 }),
+
   // Tools
   scoreThumbnail: (data) => api.post('/ai/thumbnail/score', data),
   // Image generation (Cloudflare) + Cloudinary upload routinely takes longer

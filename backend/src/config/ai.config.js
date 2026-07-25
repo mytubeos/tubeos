@@ -68,6 +68,7 @@ const TASK_TIERS = {
   comment_reply: 'flash',
   sentiment: 'flash',
   shorts_script: 'pro',
+  long_script: 'pro',
   channel_audit: 'pro',
   thumbnail_prompt: 'pro',
   thumbnail_analysis: 'vision',

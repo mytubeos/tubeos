@@ -144,6 +144,21 @@ router.post(
   aiController.repurposeToShorts
 );
 
+// ==================== SCRIPT STUDIO ====================
+
+/**
+ * @route   POST /api/v1/ai/scripts/long
+ * @desc    Generate a long-form video script
+ * @access  Private
+ * @body    { topic, style?, minutes? }
+ */
+router.post(
+  '/scripts/long',
+  protect,
+  checkUsageLimit('aiContent'),
+  aiController.generateLongScript
+);
+
 // ==================== ADDITIONAL AI TOOLS ====================
 
 /**

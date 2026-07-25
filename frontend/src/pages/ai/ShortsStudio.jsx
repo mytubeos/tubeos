@@ -1,6 +1,6 @@
 // src/pages/ai/ShortsStudio.jsx
 import { useState } from 'react'
-import { Zap, Video, RefreshCw, Copy, Check, Scissors } from 'lucide-react'
+import { Zap, Video, RefreshCw, Copy, Check, Scissors, ScrollText } from 'lucide-react'
 import { aiApi } from '../../api/ai.api'
 import { videoApi } from '../../api/video.api'
 import { useChannelStore } from '../../store/channelStore'
@@ -24,6 +24,13 @@ const DURATIONS = [
   { value: 60, label: '60s' },
 ]
 
+const LONG_DURATIONS = [
+  { value: 3, label: '3 min' },
+  { value: 5, label: '5 min' },
+  { value: 8, label: '8 min' },
+  { value: 10, label: '10 min' },
+]
+
 export const ShortsStudio = () => {
   const { activeChannel } = useChannelStore()
   const { user } = useAuthStore()
@@ -36,6 +43,14 @@ export const ShortsStudio = () => {
   const [script, setScript] = useState(null)
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+
+  // Long Script state
+  const [longTopic, setLongTopic] = useState('')
+  const [longStyle, setLongStyle] = useState('educational')
+  const [longMinutes, setLongMinutes] = useState(5)
+  const [longScript, setLongScript] = useState(null)
+  const [loadingLong, setLoadingLong] = useState(false)
+  const [copiedLong, setCopiedLong] = useState(false)
 
   // Repurpose state
   const [videos, setVideos] = useState([])
@@ -66,6 +81,34 @@ export const ShortsStudio = () => {
     navigator.clipboard.writeText(script.script)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const generateLongScript = async () => {
+    if (!longTopic) {
+      toast.error('Enter a topic')
+      return
+    }
+    setLoadingLong(true)
+    try {
+      const res = await aiApi.generateLongScript({
+        topic: longTopic,
+        style: longStyle,
+        minutes: longMinutes,
+      })
+      setLongScript(res.data.data)
+      toast.success('Script generated!')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to generate script')
+    } finally {
+      setLoadingLong(false)
+    }
+  }
+
+  const copyLongScript = () => {
+    if (!longScript?.script) return
+    navigator.clipboard.writeText(longScript.script)
+    setCopiedLong(true)
+    setTimeout(() => setCopiedLong(false), 2000)
   }
 
   const loadPublishedVideos = async () => {
@@ -112,6 +155,13 @@ export const ShortsStudio = () => {
                       ${activeTab === 'script' ? 'bg-brand text-white' : 'text-gray-400 hover:text-white'}`}
         >
           <Zap size={15} /> Write Script
+        </button>
+        <button
+          onClick={() => setActiveTab('long')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
+                      ${activeTab === 'long' ? 'bg-brand text-white' : 'text-gray-400 hover:text-white'}`}
+        >
+          <ScrollText size={15} /> Long Script
         </button>
         <button
           onClick={() => {
@@ -242,6 +292,133 @@ export const ShortsStudio = () => {
                   icon={RefreshCw}
                   onClick={generateScript}
                   loading={loading}
+                  fullWidth
+                >
+                  Regenerate
+                </Button>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {activeTab === 'long' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Input */}
+          <Card>
+            <CardHeader
+              title="Long Script Generator"
+              subtitle="Full long-form video scripts"
+              icon={ScrollText}
+            />
+            <div className="space-y-4">
+              <Input
+                label="Video Topic"
+                placeholder="e.g. Everything I learned building a YouTube channel to 100k"
+                value={longTopic}
+                onChange={(e) => setLongTopic(e.target.value)}
+              />
+
+              {/* Style selector */}
+              <div>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">Style</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {STYLES.map((s) => (
+                    <button
+                      key={s.value}
+                      onClick={() => setLongStyle(s.value)}
+                      className={`p-3 rounded-xl text-left transition-all
+                                  ${
+                                    longStyle === s.value
+                                      ? 'bg-brand/15 border border-brand/30'
+                                      : 'glass hover:border-white/15'
+                                  }`}
+                    >
+                      <p className="text-sm font-medium text-white">{s.label}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{s.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Duration */}
+              <div>
+                <label className="text-sm font-medium text-gray-300 mb-2 block">Length</label>
+                <div className="flex items-center glass rounded-xl p-1 w-fit">
+                  {LONG_DURATIONS.map((d) => (
+                    <button
+                      key={d.value}
+                      onClick={() => setLongMinutes(d.value)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all
+                                  ${
+                                    longMinutes === d.value
+                                      ? 'bg-brand text-white'
+                                      : 'text-gray-400 hover:text-white'
+                                  }`}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Button
+                fullWidth
+                icon={ScrollText}
+                loading={loadingLong}
+                onClick={generateLongScript}
+              >
+                Generate Script
+              </Button>
+            </div>
+          </Card>
+
+          {/* Script output */}
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <CardHeader title="Your Script" icon={Video} />
+              {longScript && (
+                <button
+                  onClick={copyLongScript}
+                  className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-brand transition-colors"
+                >
+                  {copiedLong ? <Check size={12} className="text-emerald" /> : <Copy size={12} />}
+                  {copiedLong ? 'Copied!' : 'Copy Script'}
+                </button>
+              )}
+            </div>
+
+            {!longScript ? (
+              <div className="text-center py-12 text-gray-500">
+                <ScrollText size={32} className="mx-auto mb-3 opacity-30" />
+                <p className="text-sm">Generate a script to see it here</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Badge variant="cyan" size="sm">
+                    ⏱ {longScript.estimatedMinutes} min
+                  </Badge>
+                  <Badge variant="brand" size="sm">
+                    📝 {longScript.wordCount} words
+                  </Badge>
+                  <Badge variant="gray" size="sm">
+                    🎨 {longScript.style}
+                  </Badge>
+                </div>
+
+                <div className="p-4 bg-base-600 rounded-xl border border-white/8 max-h-96 overflow-y-auto">
+                  <pre className="text-sm text-gray-300 whitespace-pre-wrap font-body leading-relaxed">
+                    {longScript.script}
+                  </pre>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={RefreshCw}
+                  onClick={generateLongScript}
+                  loading={loadingLong}
                   fullWidth
                 >
                   Regenerate

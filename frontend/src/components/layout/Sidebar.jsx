@@ -42,6 +42,7 @@ const NAV_GROUPS = [
     label: 'AI & Growth',
     items: [
       { path: '/ai', label: 'AI Tools', icon: Sparkles },
+      { path: '/ai/shorts', label: 'Script Studio', icon: Zap },
       { path: '/growth', label: 'Growth', icon: TrendingUp },
     ],
   },
