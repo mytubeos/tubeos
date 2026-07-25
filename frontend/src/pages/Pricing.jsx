@@ -321,7 +321,10 @@ export const Pricing = () => {
                         </p>
                         <ul className="space-y-1.5">
                           {included.map((f) => (
-                            <li key={f.name} className="flex items-center gap-2 text-sm text-gray-300">
+                            <li
+                              key={f.name}
+                              className="flex items-center gap-2 text-sm text-gray-300"
+                            >
                               <Check size={13} className="text-emerald shrink-0" />
                               <span>
                                 {f.name}
@@ -342,172 +345,172 @@ export const Pricing = () => {
 
           {/* Desktop: full comparison table */}
           <div className="hidden md:block">
-          {/* Plan headers */}
-          <div
-            className="grid grid-cols-5 gap-4 mb-2 sticky top-16 z-10
+            {/* Plan headers */}
+            <div
+              className="grid grid-cols-5 gap-4 mb-2 sticky top-16 z-10
                           bg-base-900/95 backdrop-blur-sm py-4 -mx-5 px-5"
-          >
-            <div /> {/* Feature column */}
-            {plans.map((plan) => (
-              <div
-                key={plan}
-                className={`p-4 rounded-xl text-center
+            >
+              <div /> {/* Feature column */}
+              {plans.map((plan) => (
+                <div
+                  key={plan}
+                  className={`p-4 rounded-xl text-center
                             ${plan === 'creator' ? 'bg-brand/10 border border-brand/30' : 'glass'}`}
-              >
-                <p className="font-display font-bold text-white capitalize mb-1">{plan}</p>
-                <p className={`text-2xl font-display font-bold text-${planColors[plan]}`}>
-                  {PLAN_PRICES[plan].price}
-                  <span className="text-sm text-gray-500 font-normal">/mo</span>
-                </p>
-                <p className="text-2xs text-gray-600 mt-0.5">{PLAN_PRICES[plan].note}</p>
+                >
+                  <p className="font-display font-bold text-white capitalize mb-1">{plan}</p>
+                  <p className={`text-2xl font-display font-bold text-${planColors[plan]}`}>
+                    {PLAN_PRICES[plan].price}
+                    <span className="text-sm text-gray-500 font-normal">/mo</span>
+                  </p>
+                  <p className="text-2xs text-gray-600 mt-0.5">{PLAN_PRICES[plan].note}</p>
 
-                {user?.plan === plan ? (
-                  <div className="mt-3 w-full py-1.5 text-xs text-center text-emerald font-semibold">
-                    Current Plan
-                  </div>
-                ) : plan === 'free' ? (
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    className="mt-3 w-full"
-                    onClick={() => navigate('/signup')}
-                  >
-                    Get Free
-                  </Button>
-                ) : (
-                  <div className="mt-3 space-y-2">
-                    {/* Coupon box */}
-                    {couponState.activePlan === plan ? (
-                      <div className="space-y-2">
-                        <div className="flex gap-1">
-                          <input
-                            className="input-field h-7 text-xs px-2 flex-1 uppercase"
-                            placeholder="COUPON CODE"
-                            value={couponState.code}
-                            onChange={(e) =>
-                              setCouponState((s) => ({
-                                ...s,
-                                code: e.target.value.toUpperCase(),
-                                result: null,
-                              }))
-                            }
-                            onKeyDown={(e) => e.key === 'Enter' && validateCoupon(plan)}
-                          />
-                          <button
-                            onClick={() => validateCoupon(plan)}
-                            disabled={couponState.validating}
-                            className="px-2 h-7 bg-brand/20 border border-brand/30 rounded-lg text-brand text-xs
+                  {user?.plan === plan ? (
+                    <div className="mt-3 w-full py-1.5 text-xs text-center text-emerald font-semibold">
+                      Current Plan
+                    </div>
+                  ) : plan === 'free' ? (
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      className="mt-3 w-full"
+                      onClick={() => navigate('/signup')}
+                    >
+                      Get Free
+                    </Button>
+                  ) : (
+                    <div className="mt-3 space-y-2">
+                      {/* Coupon box */}
+                      {couponState.activePlan === plan ? (
+                        <div className="space-y-2">
+                          <div className="flex gap-1">
+                            <input
+                              className="input-field h-7 text-xs px-2 flex-1 uppercase"
+                              placeholder="COUPON CODE"
+                              value={couponState.code}
+                              onChange={(e) =>
+                                setCouponState((s) => ({
+                                  ...s,
+                                  code: e.target.value.toUpperCase(),
+                                  result: null,
+                                }))
+                              }
+                              onKeyDown={(e) => e.key === 'Enter' && validateCoupon(plan)}
+                            />
+                            <button
+                              onClick={() => validateCoupon(plan)}
+                              disabled={couponState.validating}
+                              className="px-2 h-7 bg-brand/20 border border-brand/30 rounded-lg text-brand text-xs
                                        hover:bg-brand/30 transition-colors disabled:opacity-50"
-                          >
-                            {couponState.validating ? (
-                              <Loader2 size={11} className="animate-spin" />
-                            ) : (
-                              'Apply'
-                            )}
-                          </button>
-                          <button
-                            onClick={closeCouponBox}
-                            className="p-1.5 h-7 glass border border-white/10 rounded-lg text-gray-500 hover:text-white"
-                          >
-                            <X size={11} />
-                          </button>
-                        </div>
-
-                        {couponState.result && (
-                          <div className="flex items-center gap-1.5 px-2 py-1.5 bg-emerald/10 border border-emerald/20 rounded-lg">
-                            <Check size={11} className="text-emerald shrink-0" />
-                            <span className="text-2xs text-emerald">
-                              ₹{couponState.result.originalPrice} → ₹
-                              {couponState.result.discountedPrice}
-                            </span>
+                            >
+                              {couponState.validating ? (
+                                <Loader2 size={11} className="animate-spin" />
+                              ) : (
+                                'Apply'
+                              )}
+                            </button>
+                            <button
+                              onClick={closeCouponBox}
+                              className="p-1.5 h-7 glass border border-white/10 rounded-lg text-gray-500 hover:text-white"
+                            >
+                              <X size={11} />
+                            </button>
                           </div>
-                        )}
 
-                        <Button
-                          size="xs"
-                          variant={plan === 'creator' ? 'brand' : 'ghost'}
-                          className="w-full"
-                          disabled={loadingPlan === plan}
-                          onClick={() => {
-                            closeCouponBox()
-                            handlePlanClick(plan, couponState.code || null)
-                          }}
-                        >
-                          {loadingPlan === plan ? (
-                            <Loader2 size={14} className="animate-spin mx-auto" />
-                          ) : (
-                            'Upgrade'
+                          {couponState.result && (
+                            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-emerald/10 border border-emerald/20 rounded-lg">
+                              <Check size={11} className="text-emerald shrink-0" />
+                              <span className="text-2xs text-emerald">
+                                ₹{couponState.result.originalPrice} → ₹
+                                {couponState.result.discountedPrice}
+                              </span>
+                            </div>
                           )}
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <Button
-                          size="xs"
-                          variant={plan === 'creator' ? 'brand' : 'ghost'}
-                          className="w-full"
-                          disabled={loadingPlan === plan}
-                          onClick={() => handlePlanClick(plan)}
-                        >
-                          {loadingPlan === plan ? (
-                            <Loader2 size={14} className="animate-spin mx-auto" />
-                          ) : (
-                            'Upgrade'
-                          )}
-                        </Button>
-                        <button
-                          onClick={() => openCouponBox(plan)}
-                          className="flex items-center justify-center gap-1 w-full text-2xs text-gray-600
+
+                          <Button
+                            size="xs"
+                            variant={plan === 'creator' ? 'brand' : 'ghost'}
+                            className="w-full"
+                            disabled={loadingPlan === plan}
+                            onClick={() => {
+                              closeCouponBox()
+                              handlePlanClick(plan, couponState.code || null)
+                            }}
+                          >
+                            {loadingPlan === plan ? (
+                              <Loader2 size={14} className="animate-spin mx-auto" />
+                            ) : (
+                              'Upgrade'
+                            )}
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <Button
+                            size="xs"
+                            variant={plan === 'creator' ? 'brand' : 'ghost'}
+                            className="w-full"
+                            disabled={loadingPlan === plan}
+                            onClick={() => handlePlanClick(plan)}
+                          >
+                            {loadingPlan === plan ? (
+                              <Loader2 size={14} className="animate-spin mx-auto" />
+                            ) : (
+                              'Upgrade'
+                            )}
+                          </Button>
+                          <button
+                            onClick={() => openCouponBox(plan)}
+                            className="flex items-center justify-center gap-1 w-full text-2xs text-gray-600
                                      hover:text-gray-400 transition-colors py-0.5"
-                        >
-                          <Tag size={10} /> Have a coupon?
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Feature table */}
-          <div className="space-y-6">
-            {FEATURES_TABLE.map(({ category, features }) => (
-              <div key={category}>
-                <div className="grid grid-cols-5 gap-4">
-                  <div className="col-span-5 pt-4 pb-2 border-b border-white/8">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
-                      {category}
-                    </p>
-                  </div>
+                          >
+                            <Tag size={10} /> Have a coupon?
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
+              ))}
+            </div>
 
-                {features.map(({ name, free, creator, pro, agency }) => (
-                  <div
-                    key={name}
-                    className="grid grid-cols-5 gap-4 py-3 border-b border-white/[0.04]
-                               hover:bg-white/[0.02] transition-colors -mx-2 px-2 rounded-lg"
-                  >
-                    <div className="flex items-center">
-                      <span className="text-sm text-gray-400">{name}</span>
-                    </div>
-                    <div className="flex items-center justify-center">
-                      <CellValue value={free} />
-                    </div>
-                    <div className="flex items-center justify-center">
-                      <CellValue value={creator} />
-                    </div>
-                    <div className="flex items-center justify-center">
-                      <CellValue value={pro} />
-                    </div>
-                    <div className="flex items-center justify-center">
-                      <CellValue value={agency} />
+            {/* Feature table */}
+            <div className="space-y-6">
+              {FEATURES_TABLE.map(({ category, features }) => (
+                <div key={category}>
+                  <div className="grid grid-cols-5 gap-4">
+                    <div className="col-span-5 pt-4 pb-2 border-b border-white/8">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
+                        {category}
+                      </p>
                     </div>
                   </div>
-                ))}
-              </div>
-            ))}
-          </div>
+
+                  {features.map(({ name, free, creator, pro, agency }) => (
+                    <div
+                      key={name}
+                      className="grid grid-cols-5 gap-4 py-3 border-b border-white/[0.04]
+                               hover:bg-white/[0.02] transition-colors -mx-2 px-2 rounded-lg"
+                    >
+                      <div className="flex items-center">
+                        <span className="text-sm text-gray-400">{name}</span>
+                      </div>
+                      <div className="flex items-center justify-center">
+                        <CellValue value={free} />
+                      </div>
+                      <div className="flex items-center justify-center">
+                        <CellValue value={creator} />
+                      </div>
+                      <div className="flex items-center justify-center">
+                        <CellValue value={pro} />
+                      </div>
+                      <div className="flex items-center justify-center">
+                        <CellValue value={agency} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Bottom CTA */}
