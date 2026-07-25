@@ -102,6 +102,14 @@ router.post(
 );
 
 /**
+ * @route   POST /api/v1/ai/content/seo
+ * @desc    Analyze title/description/tags for SEO quality
+ * @access  Private
+ * @body    { title, description?, tags? }
+ */
+router.post('/content/seo', protect, checkUsageLimit('aiContent'), aiController.analyzeSEO);
+
+/**
  * @route   GET /api/v1/ai/content/ideas
  * @desc    Get AI content ideas for your niche
  * @access  Private

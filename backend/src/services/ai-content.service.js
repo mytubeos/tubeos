@@ -122,6 +122,39 @@ Write the complete description directly, no extra commentary.`;
   return { description: result.trim(), title };
 };
 
+// ==================== SEO ANALYSIS ====================
+const analyzeSEO = async (userId, { title, description, tags }) => {
+  title = sanitizePromptInput(title, 200);
+  description = sanitizePromptInput(description, 1000);
+  tags = sanitizePromptArray(tags, 50, 30);
+
+  const user = await User.findById(userId);
+
+  const systemPrompt = `You are a YouTube SEO expert.
+Analyze this video's title, description, and tags for SEO quality — keyword usage, clarity,
+length, searchability, and click-through appeal.
+Return ONLY valid JSON:
+{"score":0-100,"titleScore":0-100,"descriptionScore":0-100,"tagsScore":0-100,"suggestions":[{"area":"title|description|tags","issue":"string","fix":"string"}]}`;
+
+  const result = await callAI(
+    user.plan,
+    'seo_analysis',
+    [
+      {
+        role: 'user',
+        content: `Title: ${title}\nDescription: ${description || '(none)'}\nTags: ${tags.join(', ') || '(none)'}`,
+      },
+    ],
+    systemPrompt
+  );
+
+  const clean = result.replace(/```json|```/g, '').trim();
+  const analysis = JSON.parse(clean);
+
+  await User.findByIdAndUpdate(userId, { $inc: { 'usage.aiContentUsed': 1 } });
+  return analysis;
+};
+
 // ==================== GENERATE CONTENT IDEAS ====================
 const generateContentIdeas = async (userId, { channelId, niche, count = 10 }) => {
   niche = sanitizePromptInput(niche, 100);
@@ -437,6 +470,7 @@ module.exports = {
   generateTitles,
   generateTags,
   generateDescription,
+  analyzeSEO,
   generateContentIdeas,
   generateShortsScript,
   repurposeToShorts,

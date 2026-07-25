@@ -11,12 +11,13 @@ import {
   Check,
   Image,
   Download,
+  Search,
 } from 'lucide-react'
 import { aiApi } from '../../api/ai.api'
 import { useChannelStore } from '../../store/channelStore'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
-import { Input } from '../../components/ui/Input'
+import { Input, Textarea } from '../../components/ui/Input'
 import { Badge } from '../../components/ui/Badge'
 import toast from 'react-hot-toast'
 
@@ -97,6 +98,15 @@ const TagCloud = ({ tags = [] }) => (
   </div>
 )
 
+const scoreVariant = (n) => (n >= 80 ? 'emerald' : n >= 50 ? 'amber' : 'rose')
+// Tailwind's JIT scanner needs literal class strings in source — can't
+// interpolate `bg-${variant}/15` at runtime, so map through this instead.
+const SCORE_CIRCLE_CLASS = {
+  emerald: 'bg-emerald/15 text-emerald',
+  amber: 'bg-amber/15 text-amber',
+  rose: 'bg-rose/15 text-rose',
+}
+
 export const AIContent = () => {
   const navigate = useNavigate()
   const { activeChannel } = useChannelStore()
@@ -125,6 +135,12 @@ export const AIContent = () => {
   const [thumbStyle, setThumbStyle] = useState('bold')
   const [thumbImageUrl, setThumbImageUrl] = useState(null)
 
+  // SEO Analysis state
+  const [seoTitle, setSeoTitle] = useState('')
+  const [seoDescription, setSeoDescription] = useState('')
+  const [seoTags, setSeoTags] = useState('')
+  const [seoResult, setSeoResult] = useState(null)
+
   const THUMB_STYLES = [
     { key: 'bold', label: 'Bold' },
     { key: 'minimal', label: 'Minimal' },
@@ -135,6 +151,7 @@ export const AIContent = () => {
     { key: 'titles', label: 'Titles', icon: Type },
     { key: 'tags', label: 'Tags', icon: Tag },
     { key: 'description', label: 'Description', icon: FileText },
+    { key: 'seo', label: 'SEO Analysis', icon: Search },
     { key: 'ideas', label: 'Content Ideas', icon: Lightbulb },
     { key: 'thumbnail', label: 'AI Thumbnail', icon: Image },
   ]
@@ -154,6 +171,10 @@ export const AIContent = () => {
     }
     if (activeTab === 'thumbnail' && !thumbTitle) {
       toast.error('Enter a video title')
+      return
+    }
+    if (activeTab === 'seo' && !seoTitle) {
+      toast.error('Enter a title')
       return
     }
 
@@ -187,6 +208,17 @@ export const AIContent = () => {
         })
         setThumbImageUrl(res.data.data?.imageUrl || null)
         toast.success('Thumbnail generated!')
+      } else if (activeTab === 'seo') {
+        const res = await aiApi.analyzeSEO({
+          title: seoTitle,
+          description: seoDescription,
+          tags: seoTags
+            .split(',')
+            .map((t) => t.trim())
+            .filter(Boolean),
+        })
+        setSeoResult(res.data.data)
+        toast.success('SEO analysis ready!')
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Generation failed')
@@ -296,6 +328,41 @@ export const AIContent = () => {
                     </p>
                   </div>
                 )}
+              </div>
+            </>
+          )}
+
+          {activeTab === 'seo' && (
+            <>
+              <CardHeader
+                title="SEO Analysis"
+                subtitle="Score your title, description & tags"
+                icon={Search}
+                iconColor="emerald"
+              />
+              <div className="space-y-4">
+                <Input
+                  label="Video Title"
+                  placeholder="Enter your video title"
+                  value={seoTitle}
+                  onChange={(e) => setSeoTitle(e.target.value)}
+                />
+                <Textarea
+                  label="Description (optional)"
+                  placeholder="Paste your video description"
+                  value={seoDescription}
+                  onChange={(e) => setSeoDescription(e.target.value)}
+                  rows={4}
+                />
+                <Input
+                  label="Tags (optional, comma-separated)"
+                  placeholder="e.g. youtube growth, seo tips, 2026"
+                  value={seoTags}
+                  onChange={(e) => setSeoTags(e.target.value)}
+                />
+                <Button fullWidth icon={Sparkles} loading={loading} onClick={handleGenerate}>
+                  Analyze SEO
+                </Button>
               </div>
             </>
           )}
@@ -428,8 +495,55 @@ export const AIContent = () => {
           </div>
         )}
 
+        {/* Right — SEO report */}
+        {activeTab === 'seo' && seoResult && (
+          <Card>
+            <CardHeader title="SEO Report" icon={Search} iconColor="emerald" />
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 p-4 glass rounded-xl">
+                <div
+                  className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0
+                              ${SCORE_CIRCLE_CLASS[scoreVariant(seoResult.score)]}`}
+                >
+                  <span className="text-2xl font-display font-bold">{seoResult.score}</span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Overall SEO Score</p>
+                  <p className="text-xs text-gray-500 mt-0.5">out of 100</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant={scoreVariant(seoResult.titleScore)} size="xs">
+                  Title {seoResult.titleScore}
+                </Badge>
+                <Badge variant={scoreVariant(seoResult.descriptionScore)} size="xs">
+                  Description {seoResult.descriptionScore}
+                </Badge>
+                <Badge variant={scoreVariant(seoResult.tagsScore)} size="xs">
+                  Tags {seoResult.tagsScore}
+                </Badge>
+              </div>
+
+              {seoResult.suggestions?.length > 0 && (
+                <div className="space-y-2">
+                  {seoResult.suggestions.map((s, i) => (
+                    <div key={i} className="p-3 glass rounded-xl">
+                      <Badge variant="gray" size="xs">
+                        {s.area}
+                      </Badge>
+                      <p className="text-sm text-white mt-1.5">{s.issue}</p>
+                      <p className="text-xs text-gray-500 mt-1">→ {s.fix}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
+
         {/* Right — Tips panel */}
-        {activeTab !== 'ideas' && (
+        {activeTab !== 'ideas' && activeTab !== 'seo' && (
           <Card>
             <CardHeader title="Pro Tips" icon={Sparkles} iconColor="amber" />
             <div className="space-y-4">

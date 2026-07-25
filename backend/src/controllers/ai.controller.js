@@ -143,6 +143,17 @@ const generateDescription = async (req, res) => {
   }
 };
 
+const analyzeSEO = async (req, res) => {
+  try {
+    const { title, description, tags } = req.body;
+    if (!title) return errorResponse(res, 400, 'title is required');
+    const result = await aiContentService.analyzeSEO(req.user.id, { title, description, tags });
+    return successResponse(res, 200, 'SEO analysis complete', result);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
 const getContentIdeas = async (req, res) => {
   try {
     const { channelId, niche, count } = req.query;
@@ -234,6 +245,7 @@ module.exports = {
   generateTitles,
   generateTags,
   generateDescription,
+  analyzeSEO,
   getContentIdeas,
   generateShortsScript,
   repurposeToShorts,

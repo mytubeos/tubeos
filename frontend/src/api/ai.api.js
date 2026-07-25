@@ -18,6 +18,7 @@ export const aiApi = {
   generateTitles: (data) => api.post('/ai/content/titles', data),
   generateTags: (data) => api.post('/ai/content/tags', data),
   generateDescription: (data) => api.post('/ai/content/description', data),
+  analyzeSEO: (data) => api.post('/ai/content/seo', data),
   getContentIdeas: (params = {}) => api.get('/ai/content/ideas', { params }),
 
   // Shorts
