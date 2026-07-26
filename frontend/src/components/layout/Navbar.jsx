@@ -1,6 +1,6 @@
 // src/components/layout/Navbar.jsx
 import { useState, useEffect, useCallback } from 'react'
-import { Bell, Plus, ChevronDown, Check } from 'lucide-react'
+import { Bell, Plus, ChevronDown, Check, Menu } from 'lucide-react'
 import { useChannelStore } from '../../store/channelStore'
 import { Button } from '../ui/Button'
 import { Chingari } from '../features/Chingari'
@@ -10,7 +10,7 @@ import notificationAPI from '../../api/notification.api'
 
 const NOTIF_POLL_MS = 2 * 60 * 1000
 
-export const Navbar = ({ title }) => {
+export const Navbar = ({ title, onMenuClick }) => {
   const { channels, activeChannel, setActiveChannel } = useChannelStore()
   const [showChannels, setShowChannels] = useState(false)
   const [showNotifs, setShowNotifs] = useState(false)
@@ -66,11 +66,21 @@ export const Navbar = ({ title }) => {
       className="h-14 bg-base-800/80 backdrop-blur-sm border-b border-white/8
                         flex items-center justify-between px-5 sticky top-0 z-30"
     >
-      {/* Left — Page title */}
-      <h1 className="font-display font-bold text-white text-lg">{title}</h1>
+      {/* Left — Menu toggle (mobile) + Page title */}
+      <div className="flex items-center gap-2.5 min-w-0">
+        <button
+          onClick={onMenuClick}
+          aria-label="Open menu"
+          className="md:hidden w-9 h-9 -ml-1 rounded-lg flex items-center justify-center shrink-0
+                     text-gray-400 hover:text-white hover:bg-white/6 transition-all"
+        >
+          <Menu size={19} />
+        </button>
+        <h1 className="font-display font-bold text-white text-lg truncate">{title}</h1>
+      </div>
 
       {/* Right — Controls */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
         {/* Channel Switcher */}
         {channels.length > 0 && (
           <div className="relative">
