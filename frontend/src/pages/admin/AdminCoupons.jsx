@@ -459,161 +459,163 @@ export const AdminCoupons = () => {
 
       {/* Table */}
       <div className="glass overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-white/8">
-              {['Code', 'Type', 'Discount', 'Plans', 'Uses', 'Expiry', 'Status', ''].map((h) => (
-                <th
-                  key={h}
-                  className="px-4 py-3 text-left text-2xs font-semibold text-gray-500 uppercase tracking-wider"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              Array.from({ length: 6 }).map((_, i) => (
-                <tr key={i} className="border-b border-white/5">
-                  {Array.from({ length: 8 }).map((_, j) => (
-                    <td key={j} className="px-4 py-3.5">
-                      <div className="shimmer h-3 rounded w-16" />
-                    </td>
-                  ))}
-                </tr>
-              ))
-            ) : coupons.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-gray-500 text-sm">
-                  No coupons found. Create your first one.
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-white/8">
+                {['Code', 'Type', 'Discount', 'Plans', 'Uses', 'Expiry', 'Status', ''].map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-left text-2xs font-semibold text-gray-500 uppercase tracking-wider"
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ) : (
-              coupons.map((c) => (
-                <tr
-                  key={c._id}
-                  className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
-                >
-                  {/* Code */}
-                  <td className="px-4 py-3.5">
-                    <button
-                      onClick={() => copyCode(c.code)}
-                      className="flex items-center gap-1.5 font-mono text-sm text-white
-                                 hover:text-brand transition-colors group"
-                    >
-                      {c.code}
-                      <Copy size={11} className="text-gray-600 group-hover:text-brand" />
-                    </button>
-                    {c.description && (
-                      <p className="text-2xs text-gray-600 mt-0.5 truncate max-w-32">
-                        {c.description}
-                      </p>
-                    )}
+            </thead>
+            <tbody>
+              {loading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={i} className="border-b border-white/5">
+                    {Array.from({ length: 8 }).map((_, j) => (
+                      <td key={j} className="px-4 py-3.5">
+                        <div className="shimmer h-3 rounded w-16" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : coupons.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center text-gray-500 text-sm">
+                    No coupons found. Create your first one.
                   </td>
-
-                  {/* Type */}
-                  <td className="px-4 py-3.5">
-                    {c.type === 'internal' ? (
-                      <Badge variant="amber" size="xs">
-                        <Lock size={9} className="mr-0.5" />
-                        Internal
-                      </Badge>
-                    ) : (
-                      <Badge variant="brand" size="xs">
-                        <Globe size={9} className="mr-0.5" />
-                        Public
-                      </Badge>
-                    )}
-                  </td>
-
-                  {/* Discount */}
-                  <td className="px-4 py-3.5">
-                    <span className="text-sm font-medium text-white">{formatDiscount(c)}</span>
-                  </td>
-
-                  {/* Plans */}
-                  <td className="px-4 py-3.5">
-                    <div className="flex flex-wrap gap-1">
-                      {c.validPlans.map((p) => (
-                        <Badge key={p} variant={PLAN_COLORS[p]} size="xs">
-                          {p}
-                        </Badge>
-                      ))}
-                    </div>
-                  </td>
-
-                  {/* Uses */}
-                  <td className="px-4 py-3.5">
-                    <span className="text-sm text-gray-300">{c.usedCount}</span>
-                    <span className="text-xs text-gray-600">
-                      {c.maxUses ? ` / ${c.maxUses}` : ' / ∞'}
-                    </span>
-                  </td>
-
-                  {/* Expiry */}
-                  <td className="px-4 py-3.5">
-                    <span
-                      className={`text-xs ${isExpired(c.expiresAt) ? 'text-rose' : 'text-gray-400'}`}
-                    >
-                      {formatExpiry(c.expiresAt)}
-                    </span>
-                  </td>
-
-                  {/* Status */}
-                  <td className="px-4 py-3.5">
-                    {isExpired(c.expiresAt) ? (
-                      <Badge variant="rose" size="xs">
-                        Expired
-                      </Badge>
-                    ) : c.isActive ? (
-                      <Badge variant="emerald" size="xs" dot>
-                        Active
-                      </Badge>
-                    ) : (
-                      <Badge variant="gray" size="xs">
-                        Inactive
-                      </Badge>
-                    )}
-                  </td>
-
-                  {/* Actions */}
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-1">
+                </tr>
+              ) : (
+                coupons.map((c) => (
+                  <tr
+                    key={c._id}
+                    className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
+                  >
+                    {/* Code */}
+                    <td className="px-4 py-3.5">
                       <button
-                        onClick={() => handleToggle(c)}
-                        disabled={toggling === c._id}
-                        className={`p-1.5 rounded-lg transition-colors
+                        onClick={() => copyCode(c.code)}
+                        className="flex items-center gap-1.5 font-mono text-sm text-white
+                                 hover:text-brand transition-colors group"
+                      >
+                        {c.code}
+                        <Copy size={11} className="text-gray-600 group-hover:text-brand" />
+                      </button>
+                      {c.description && (
+                        <p className="text-2xs text-gray-600 mt-0.5 truncate max-w-32">
+                          {c.description}
+                        </p>
+                      )}
+                    </td>
+
+                    {/* Type */}
+                    <td className="px-4 py-3.5">
+                      {c.type === 'internal' ? (
+                        <Badge variant="amber" size="xs">
+                          <Lock size={9} className="mr-0.5" />
+                          Internal
+                        </Badge>
+                      ) : (
+                        <Badge variant="brand" size="xs">
+                          <Globe size={9} className="mr-0.5" />
+                          Public
+                        </Badge>
+                      )}
+                    </td>
+
+                    {/* Discount */}
+                    <td className="px-4 py-3.5">
+                      <span className="text-sm font-medium text-white">{formatDiscount(c)}</span>
+                    </td>
+
+                    {/* Plans */}
+                    <td className="px-4 py-3.5">
+                      <div className="flex flex-wrap gap-1">
+                        {c.validPlans.map((p) => (
+                          <Badge key={p} variant={PLAN_COLORS[p]} size="xs">
+                            {p}
+                          </Badge>
+                        ))}
+                      </div>
+                    </td>
+
+                    {/* Uses */}
+                    <td className="px-4 py-3.5">
+                      <span className="text-sm text-gray-300">{c.usedCount}</span>
+                      <span className="text-xs text-gray-600">
+                        {c.maxUses ? ` / ${c.maxUses}` : ' / ∞'}
+                      </span>
+                    </td>
+
+                    {/* Expiry */}
+                    <td className="px-4 py-3.5">
+                      <span
+                        className={`text-xs ${isExpired(c.expiresAt) ? 'text-rose' : 'text-gray-400'}`}
+                      >
+                        {formatExpiry(c.expiresAt)}
+                      </span>
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-4 py-3.5">
+                      {isExpired(c.expiresAt) ? (
+                        <Badge variant="rose" size="xs">
+                          Expired
+                        </Badge>
+                      ) : c.isActive ? (
+                        <Badge variant="emerald" size="xs" dot>
+                          Active
+                        </Badge>
+                      ) : (
+                        <Badge variant="gray" size="xs">
+                          Inactive
+                        </Badge>
+                      )}
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleToggle(c)}
+                          disabled={toggling === c._id}
+                          className={`p-1.5 rounded-lg transition-colors
                                     ${
                                       c.isActive
                                         ? 'text-emerald/70 hover:text-emerald hover:bg-emerald/10'
                                         : 'text-gray-600 hover:text-gray-400 hover:bg-white/5'
                                     }`}
-                        title={c.isActive ? 'Deactivate' : 'Activate'}
-                      >
-                        {c.isActive ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
-                      </button>
-                      <button
-                        onClick={() => openEdit(c)}
-                        className="p-1.5 rounded-lg text-gray-600 hover:text-white hover:bg-white/5 transition-colors"
-                        title="Edit"
-                      >
-                        <Pencil size={13} />
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(c)}
-                        className="p-1.5 rounded-lg text-gray-600 hover:text-rose hover:bg-rose/10 transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                          title={c.isActive ? 'Deactivate' : 'Activate'}
+                        >
+                          {c.isActive ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+                        </button>
+                        <button
+                          onClick={() => openEdit(c)}
+                          className="p-1.5 rounded-lg text-gray-600 hover:text-white hover:bg-white/5 transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget(c)}
+                          className="p-1.5 rounded-lg text-gray-600 hover:text-rose hover:bg-rose/10 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Pagination */}

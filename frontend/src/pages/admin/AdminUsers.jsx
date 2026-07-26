@@ -325,165 +325,167 @@ export const AdminUsers = () => {
 
       {/* Table */}
       <div className="glass overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-white/8">
-              {['User', 'Plan', 'Status', 'Joined', 'Last Login', 'Actions'].map((h) => (
-                <th
-                  key={h}
-                  className="px-4 py-3 text-left text-2xs font-semibold text-gray-500 uppercase tracking-wider"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              Array.from({ length: 8 }).map((_, i) => (
-                <tr key={i} className="border-b border-white/5">
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <div className="shimmer w-8 h-8 rounded-full" />
-                      <div className="space-y-1.5">
-                        <div className="shimmer h-3 w-28 rounded" />
-                        <div className="shimmer h-2.5 w-36 rounded" />
-                      </div>
-                    </div>
-                  </td>
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <td key={j} className="px-4 py-3.5">
-                      <div className="shimmer h-3 rounded w-16" />
-                    </td>
-                  ))}
-                </tr>
-              ))
-            ) : users.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-16 text-center text-gray-500 text-sm">
-                  No users found.
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-white/8">
+                {['User', 'Plan', 'Status', 'Joined', 'Last Login', 'Actions'].map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-left text-2xs font-semibold text-gray-500 uppercase tracking-wider"
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ) : (
-              users.map((u) => (
-                <tr
-                  key={u._id}
-                  className={`border-b border-white/5 hover:bg-white/[0.02] transition-colors
-                              ${u.isBanned ? 'opacity-60' : ''}`}
-                >
-                  {/* User */}
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <Avatar name={u.name} />
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-medium text-white">{u.name}</span>
-                          {u.isEmailVerified && (
-                            <ShieldCheck
-                              size={11}
-                              className="text-emerald"
-                              title="Email verified"
-                            />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
-                          <Mail size={10} />
-                          {u.email}
+            </thead>
+            <tbody>
+              {loading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={i} className="border-b border-white/5">
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div className="shimmer w-8 h-8 rounded-full" />
+                        <div className="space-y-1.5">
+                          <div className="shimmer h-3 w-28 rounded" />
+                          <div className="shimmer h-2.5 w-36 rounded" />
                         </div>
                       </div>
-                    </div>
+                    </td>
+                    {Array.from({ length: 5 }).map((_, j) => (
+                      <td key={j} className="px-4 py-3.5">
+                        <div className="shimmer h-3 rounded w-16" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : users.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-16 text-center text-gray-500 text-sm">
+                    No users found.
                   </td>
+                </tr>
+              ) : (
+                users.map((u) => (
+                  <tr
+                    key={u._id}
+                    className={`border-b border-white/5 hover:bg-white/[0.02] transition-colors
+                              ${u.isBanned ? 'opacity-60' : ''}`}
+                  >
+                    {/* User */}
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={u.name} />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-medium text-white">{u.name}</span>
+                            {u.isEmailVerified && (
+                              <ShieldCheck
+                                size={11}
+                                className="text-emerald"
+                                title="Email verified"
+                              />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
+                            <Mail size={10} />
+                            {u.email}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
 
-                  {/* Plan */}
-                  <td className="px-4 py-3.5">
-                    <Badge variant={PLAN_META[u.plan]?.color || 'gray'} size="xs">
-                      {PLAN_META[u.plan]?.label || u.plan}
-                    </Badge>
-                    {u.subscriptionExpiresAt && u.plan !== 'free' && (
-                      <p className="text-2xs text-gray-600 mt-0.5">
-                        until {fmt(u.subscriptionExpiresAt)}
-                      </p>
-                    )}
-                  </td>
-
-                  {/* Status */}
-                  <td className="px-4 py-3.5">
-                    {u.isBanned ? (
-                      <Badge variant="rose" size="xs">
-                        <ShieldOff size={9} className="mr-0.5" />
-                        Banned
+                    {/* Plan */}
+                    <td className="px-4 py-3.5">
+                      <Badge variant={PLAN_META[u.plan]?.color || 'gray'} size="xs">
+                        {PLAN_META[u.plan]?.label || u.plan}
                       </Badge>
-                    ) : (
-                      <Badge variant="emerald" size="xs" dot>
-                        Active
-                      </Badge>
-                    )}
-                    {u.isBanned && u.bannedReason && (
-                      <p
-                        className="text-2xs text-gray-600 mt-0.5 max-w-24 truncate"
-                        title={u.bannedReason}
-                      >
-                        {u.bannedReason}
-                      </p>
-                    )}
-                  </td>
+                      {u.subscriptionExpiresAt && u.plan !== 'free' && (
+                        <p className="text-2xs text-gray-600 mt-0.5">
+                          until {fmt(u.subscriptionExpiresAt)}
+                        </p>
+                      )}
+                    </td>
 
-                  {/* Joined */}
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-1 text-xs text-gray-400">
-                      <Calendar size={11} />
-                      {fmt(u.createdAt)}
-                    </div>
-                  </td>
+                    {/* Status */}
+                    <td className="px-4 py-3.5">
+                      {u.isBanned ? (
+                        <Badge variant="rose" size="xs">
+                          <ShieldOff size={9} className="mr-0.5" />
+                          Banned
+                        </Badge>
+                      ) : (
+                        <Badge variant="emerald" size="xs" dot>
+                          Active
+                        </Badge>
+                      )}
+                      {u.isBanned && u.bannedReason && (
+                        <p
+                          className="text-2xs text-gray-600 mt-0.5 max-w-24 truncate"
+                          title={u.bannedReason}
+                        >
+                          {u.bannedReason}
+                        </p>
+                      )}
+                    </td>
 
-                  {/* Last Login */}
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-1 text-xs text-gray-400">
-                      <Clock size={11} />
-                      {fmtTime(u.lastLoginAt)}
-                    </div>
-                  </td>
+                    {/* Joined */}
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-1 text-xs text-gray-400">
+                        <Calendar size={11} />
+                        {fmt(u.createdAt)}
+                      </div>
+                    </td>
 
-                  {/* Actions */}
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => setPlanTarget(u)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs
+                    {/* Last Login */}
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-1 text-xs text-gray-400">
+                        <Clock size={11} />
+                        {fmtTime(u.lastLoginAt)}
+                      </div>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setPlanTarget(u)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs
                                    glass border border-white/10 text-gray-400
                                    hover:border-brand/30 hover:text-brand transition-all"
-                        title="Change Plan"
-                      >
-                        <Crown size={12} /> Plan
-                      </button>
-                      {u.isBanned ? (
-                        <button
-                          onClick={() => setUnbanTarget(u)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs
+                          title="Change Plan"
+                        >
+                          <Crown size={12} /> Plan
+                        </button>
+                        {u.isBanned ? (
+                          <button
+                            onClick={() => setUnbanTarget(u)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs
                                        glass border border-emerald/20 text-emerald/70
                                        hover:border-emerald/40 hover:text-emerald transition-all"
-                          title="Unban"
-                        >
-                          <UserCheck size={12} /> Unban
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setBanTarget(u)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs
+                            title="Unban"
+                          >
+                            <UserCheck size={12} /> Unban
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setBanTarget(u)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs
                                        glass border border-rose/20 text-rose/60
                                        hover:border-rose/40 hover:text-rose transition-all"
-                          title="Ban"
-                        >
-                          <UserX size={12} /> Ban
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                            title="Ban"
+                          >
+                            <UserX size={12} /> Ban
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Pagination */}
