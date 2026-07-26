@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Zap,
   X,
+  ShieldCheck,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { useChannelStore } from '../../store/channelStore'
@@ -199,6 +200,17 @@ export const Sidebar = ({ collapsed = false, open = false, onClose }) => {
                 <PlanBadge plan={user.plan} />
               </div>
             </div>
+          )}
+
+          {user?.isAdmin && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm
+                       text-gray-400 hover:text-brand hover:bg-brand/10 transition-all duration-150"
+            >
+              <ShieldCheck size={16} />
+              {!collapsed && <span>Admin Panel</span>}
+            </button>
           )}
 
           <button
