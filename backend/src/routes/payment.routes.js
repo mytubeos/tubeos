@@ -7,6 +7,8 @@ const {
   verifyPayment,
   validateCouponEndpoint,
   webhook,
+  getPaymentHistory,
+  downgradeToFree,
 } = require('../controllers/payment.controller');
 
 // Webhook — no auth, raw body captured in app.js
@@ -16,5 +18,7 @@ router.post('/webhook', webhook);
 router.post('/create-order', protect, createOrder);
 router.post('/verify', protect, verifyPayment);
 router.post('/validate-coupon', protect, validateCouponEndpoint);
+router.get('/history', protect, getPaymentHistory);
+router.post('/downgrade', protect, downgradeToFree);
 
 module.exports = router;

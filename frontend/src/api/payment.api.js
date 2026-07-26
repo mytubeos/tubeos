@@ -5,6 +5,8 @@ const paymentAPI = {
   createOrder: (plan, couponCode = null) => api.post('/payment/create-order', { plan, couponCode }),
   verifyPayment: (data) => api.post('/payment/verify', data),
   validateCoupon: (code, plan) => api.post('/payment/validate-coupon', { code, plan }),
+  getHistory: (page = 1, limit = 10) => api.get('/payment/history', { params: { page, limit } }),
+  downgradeToFree: () => api.post('/payment/downgrade'),
 }
 
 export default paymentAPI

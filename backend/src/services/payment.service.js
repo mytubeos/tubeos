@@ -8,6 +8,7 @@ const Razorpay = /** @type {any} */ (require('razorpay'));
 const crypto = require('crypto');
 const { config } = require('../config/env');
 const User = /** @type {any} */ (require('../models/user.model'));
+const PaymentHistory = /** @type {any} */ (require('../models/payment-history.model'));
 const { validateCoupon, redeemCoupon } = require('./coupon.service');
 const { recordEarningFromPayment } = require('./referral.service');
 const logger = require('../config/logger');
@@ -26,6 +27,40 @@ const getRazorpayInstance = () => {
     key_id: config.razorpay.keyId,
     key_secret: config.razorpay.keySecret,
   });
+};
+
+// Best-effort payment-history insert. Non-fatal by design — the plan is already
+// active by the time this runs, so a history-write failure shouldn't undo that.
+// razorpayPaymentId has a unique index, so if both the client-verify path and the
+// webhook fire for the same payment, the second insert just hits a duplicate-key
+// error (11000) here and is silently ignored.
+/**
+ * @param {{userId: string, plan: PlanName, amount: number, originalAmount: number, couponCode?: string|null, razorpayOrderId?: string|null, razorpayPaymentId: string}} params
+ */
+const recordPaymentHistory = async ({
+  userId,
+  plan,
+  amount,
+  originalAmount,
+  couponCode,
+  razorpayOrderId,
+  razorpayPaymentId,
+}) => {
+  try {
+    await PaymentHistory.create({
+      user: userId,
+      plan,
+      amount,
+      originalAmount,
+      couponCode: couponCode || null,
+      razorpayOrderId: razorpayOrderId || null,
+      razorpayPaymentId,
+    });
+  } catch (err) {
+    if (err.code !== 11000) {
+      logger.error('[recordPaymentHistory] failed (non-fatal)', { error: err.message });
+    }
+  }
 };
 
 // Create a Razorpay order — optional coupon support
@@ -116,6 +151,23 @@ const verifyPayment = async (
     throw err;
   }
 
+  // Recompute the discounted amount for the history record BEFORE redeeming the
+  // coupon below — redeeming first would bump usedCount and could make an
+  // at-the-cap coupon look invalid on this re-check. Falls back to list price if
+  // the coupon can't be re-validated for any reason (history is best-effort; the
+  // plan activation below doesn't depend on this).
+  let chargedAmountPaise = PLAN_PRICES[plan].amount;
+  if (couponCode) {
+    try {
+      const couponResult = await validateCoupon(couponCode, plan);
+      chargedAmountPaise = Math.max(100, couponResult.discountedPrice * 100);
+    } catch (err) {
+      logger.warn('[verifyPayment] could not recompute coupon discount for history record', {
+        error: err.message,
+      });
+    }
+  }
+
   // Redeem coupon if used
   if (couponCode) {
     await redeemCoupon(couponCode);
@@ -147,6 +199,16 @@ const verifyPayment = async (
   } catch (err) {
     logger.error('[verifyPayment] referral credit failed (non-fatal)', { error: err.message });
   }
+
+  await recordPaymentHistory({
+    userId,
+    plan,
+    amount: chargedAmountPaise,
+    originalAmount: PLAN_PRICES[plan].amount,
+    couponCode,
+    razorpayOrderId,
+    razorpayPaymentId,
+  });
 
   return {
     plan: user.plan,
@@ -202,8 +264,59 @@ const handleWebhook = async (rawBody, signature) => {
       } catch (err) {
         logger.error('[webhook] referral credit failed (non-fatal)', { error: err.message });
       }
+
+      // Webhook payload carries the real captured amount directly — no recompute needed.
+      await recordPaymentHistory({
+        userId,
+        plan,
+        amount: event.payload.payment.entity.amount,
+        originalAmount: PLAN_PRICES[plan].amount,
+        couponCode,
+        razorpayOrderId: event.payload.payment.entity.order_id,
+        razorpayPaymentId: event.payload.payment.entity.id,
+      });
     }
   }
 };
 
-module.exports = { createOrder, verifyPayment, handleWebhook };
+// Paginated payment history for the current user, newest first
+/**
+ * @param {string} userId
+ * @param {{page?: number, limit?: number}} [opts]
+ */
+const getPaymentHistory = async (userId, { page = 1, limit = 20 } = {}) => {
+  const skip = (page - 1) * limit;
+  const [history, total] = await Promise.all([
+    PaymentHistory.find({ user: userId }).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    PaymentHistory.countDocuments({ user: userId }),
+  ]);
+  return { history, total, page, limit };
+};
+
+// Switch to Free immediately. There's no real recurring Razorpay subscription to
+// cancel here (billing is a manual monthly top-up, not auto-charge) — this just
+// ends the current paid plan early rather than waiting for subscriptionExpiresAt.
+/**
+ * @param {string} userId
+ */
+const downgradeToFree = async (userId) => {
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { plan: 'free', subscriptionExpiresAt: null },
+    { new: true }
+  );
+  if (!user) {
+    const err = new Error('User not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  return { plan: user.plan };
+};
+
+module.exports = {
+  createOrder,
+  verifyPayment,
+  handleWebhook,
+  getPaymentHistory,
+  downgradeToFree,
+};

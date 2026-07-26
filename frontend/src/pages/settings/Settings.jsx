@@ -1,5 +1,5 @@
 // src/pages/settings/Settings.jsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { User, Lock, Bell, CreditCard, Check, Loader2, Tag, X } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
@@ -8,9 +8,10 @@ import paymentAPI from '../../api/payment.api'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
+import { ConfirmModal } from '../../components/ui/Modal'
 import { PlanBadge } from '../../components/ui/Badge'
 import { PLANS } from '../../utils/constants'
-import { formatNumber } from '../../utils/formatters'
+import { formatNumber, formatDate } from '../../utils/formatters'
 import { useRazorpay } from '../../hooks/useRazorpay'
 import toast from 'react-hot-toast'
 
@@ -97,6 +98,36 @@ export const Settings = () => {
   })
   const [savingNotifications, setSavingNotifications] = useState(false)
 
+  // Billing history + downgrade state
+  const [billingHistory, setBillingHistory] = useState([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [showDowngradeConfirm, setShowDowngradeConfirm] = useState(false)
+  const [downgrading, setDowngrading] = useState(false)
+
+  useEffect(() => {
+    if (activeTab !== 'plan') return
+    setLoadingHistory(true)
+    paymentAPI
+      .getHistory(1, 10)
+      .then((res) => setBillingHistory(res.data.data?.history || []))
+      .catch(() => {})
+      .finally(() => setLoadingHistory(false))
+  }, [activeTab])
+
+  const handleDowngrade = async () => {
+    setDowngrading(true)
+    try {
+      await paymentAPI.downgradeToFree()
+      updateUser({ plan: 'free', subscriptionExpiresAt: null })
+      toast.success('Switched to Free plan')
+      setShowDowngradeConfirm(false)
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to switch plan')
+    } finally {
+      setDowngrading(false)
+    }
+  }
+
   const handleSaveProfile = async () => {
     if (!name.trim()) {
       toast.error('Name is required')
@@ -161,6 +192,10 @@ export const Settings = () => {
   const plan = user?.plan || 'free'
   const planConfig = PLANS[plan]
   const usage = user?.usage || {}
+  // Most recent history entry for the current plan — the real amount charged
+  // (post-coupon), since billingHistory is sorted newest-first by the API.
+  // Falls back to nothing for users who paid before this feature existed.
+  const currentPlanPayment = billingHistory.find((h) => h.plan === plan)
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
@@ -265,8 +300,25 @@ export const Settings = () => {
                   <PlanBadge plan={plan} />
                 </div>
                 <p className="text-sm text-gray-500">
-                  {plan === 'free' ? 'Free forever' : `₹${planConfig?.price?.inr}/month`}
+                  {plan === 'free' ? (
+                    'Free forever'
+                  ) : currentPlanPayment &&
+                    currentPlanPayment.amount !== currentPlanPayment.originalAmount ? (
+                    <>
+                      <span className="line-through text-gray-600 mr-1.5">
+                        ₹{Math.round(currentPlanPayment.originalAmount / 100)}
+                      </span>
+                      ₹{Math.round(currentPlanPayment.amount / 100)}/month
+                    </>
+                  ) : (
+                    `₹${currentPlanPayment ? Math.round(currentPlanPayment.amount / 100) : planConfig?.price?.inr}/month`
+                  )}
                 </p>
+                {plan !== 'free' && user?.subscriptionExpiresAt && (
+                  <p className="text-2xs text-gray-600 mt-0.5">
+                    Renews on {formatDate(user.subscriptionExpiresAt, 'medium')}
+                  </p>
+                )}
               </div>
               {plan !== 'agency' && (
                 <Button size="sm" onClick={() => navigate('/pricing')}>
@@ -291,6 +343,15 @@ export const Settings = () => {
                 limit={planConfig?.uploads === 0 ? 0 : planConfig?.uploads || 0}
               />
             </div>
+
+            {plan !== 'free' && (
+              <button
+                onClick={() => setShowDowngradeConfirm(true)}
+                className="w-full text-center text-2xs text-gray-600 hover:text-rose transition-colors mt-4"
+              >
+                Switch to Free plan
+              </button>
+            )}
           </Card>
 
           {/* Upgrade CTA */}
@@ -424,8 +485,50 @@ export const Settings = () => {
               </div>
             </Card>
           )}
+
+          {/* Billing History */}
+          <Card>
+            <CardHeader title="Billing History" icon={CreditCard} />
+            {loadingHistory ? (
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="shimmer h-14 rounded-xl" />
+                ))}
+              </div>
+            ) : billingHistory.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-6">No payments yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {billingHistory.map((h) => (
+                  <div
+                    key={h._id}
+                    className="flex items-center justify-between p-3 glass rounded-xl"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-white capitalize">{h.plan} Plan</p>
+                      <p className="text-2xs text-gray-500">{formatDate(h.createdAt, 'medium')}</p>
+                    </div>
+                    <p className="text-sm font-semibold text-white">
+                      ₹{Math.round(h.amount / 100)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={showDowngradeConfirm}
+        onClose={() => setShowDowngradeConfirm(false)}
+        onConfirm={handleDowngrade}
+        title="Switch to Free plan?"
+        message="You'll lose access to paid features immediately — this can't be undone, and you'll need to purchase a plan again to upgrade."
+        confirmLabel="Switch to Free"
+        confirmVariant="danger"
+        loading={downgrading}
+      />
 
       {/* Notifications */}
       {activeTab === 'notifications' && (

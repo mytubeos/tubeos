@@ -63,4 +63,35 @@ const webhook = async (req, res) => {
   }
 };
 
-module.exports = { createOrder, verifyPayment, validateCouponEndpoint, webhook };
+// GET /api/v1/payment/history
+const getPaymentHistory = async (req, res) => {
+  try {
+    const { page, limit } = req.query;
+    const result = await paymentService.getPaymentHistory(req.user.id, {
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    });
+    return successResponse(res, 200, 'Payment history fetched', result);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
+// POST /api/v1/payment/downgrade
+const downgradeToFree = async (req, res) => {
+  try {
+    const result = await paymentService.downgradeToFree(req.user.id);
+    return successResponse(res, 200, 'Switched to Free plan', result);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
+module.exports = {
+  createOrder,
+  verifyPayment,
+  validateCouponEndpoint,
+  webhook,
+  getPaymentHistory,
+  downgradeToFree,
+};

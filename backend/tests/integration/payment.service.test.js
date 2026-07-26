@@ -9,6 +9,7 @@ const paymentService = require('../../src/services/payment.service.js');
 const User = require('../../src/models/user.model.js');
 const Coupon = require('../../src/models/coupon.model.js');
 const Referral = require('../../src/models/referral.model.js');
+const PaymentHistory = require('../../src/models/payment-history.model.js');
 
 const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET;
@@ -200,5 +201,154 @@ describe('payment.service.handleWebhook', () => {
 
     const dbUser = await User.findById(user._id);
     expect(dbUser.plan).toBe('free'); // untouched
+  });
+});
+
+describe('payment.service payment history', () => {
+  it('verifyPayment records a history entry at full list price when no coupon is used', async () => {
+    const user = await createTestUser();
+    const razorpayOrderId = 'order_hist1';
+    const razorpayPaymentId = 'pay_hist1';
+    const razorpaySignature = signOrderPayment(razorpayOrderId, razorpayPaymentId);
+
+    await paymentService.verifyPayment(user._id.toString(), {
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
+      plan: 'pro',
+    });
+
+    const entry = await PaymentHistory.findOne({ razorpayPaymentId });
+    expect(entry).toBeTruthy();
+    expect(entry.amount).toBe(49900); // ₹499 in paise
+    expect(entry.originalAmount).toBe(49900);
+    expect(entry.couponCode).toBeNull();
+  });
+
+  it('verifyPayment records the discounted amount when a coupon is used', async () => {
+    const user = await createTestUser();
+    await Coupon.create({
+      code: 'HALFOFF',
+      type: 'public',
+      discountType: 'percent',
+      discountValue: 50,
+      validPlans: ['pro'],
+    });
+
+    const razorpayOrderId = 'order_hist2';
+    const razorpayPaymentId = 'pay_hist2';
+    const razorpaySignature = signOrderPayment(razorpayOrderId, razorpayPaymentId);
+
+    await paymentService.verifyPayment(user._id.toString(), {
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
+      plan: 'pro',
+      couponCode: 'HALFOFF',
+    });
+
+    const entry = await PaymentHistory.findOne({ razorpayPaymentId });
+    expect(entry.amount).toBe(25000); // 50% off ₹499 → ₹250 → 25000 paise
+    expect(entry.originalAmount).toBe(49900);
+    expect(entry.couponCode).toBe('HALFOFF');
+  });
+
+  it('handleWebhook records a history entry using the amount in the payload', async () => {
+    const user = await createTestUser();
+    const rawBody = JSON.stringify({
+      event: 'payment.captured',
+      payload: {
+        payment: {
+          entity: {
+            id: 'pay_webhook_hist',
+            order_id: 'order_webhook_hist',
+            amount: 299900,
+            notes: { userId: user._id.toString(), plan: 'agency' },
+          },
+        },
+      },
+    });
+    const signature = signWebhookBody(rawBody);
+
+    await paymentService.handleWebhook(rawBody, signature);
+
+    const entry = await PaymentHistory.findOne({ razorpayPaymentId: 'pay_webhook_hist' });
+    expect(entry).toBeTruthy();
+    expect(entry.amount).toBe(299900);
+    expect(entry.plan).toBe('agency');
+  });
+
+  it('does not create a duplicate history entry when verify and webhook fire for the same payment', async () => {
+    const user = await createTestUser();
+    const razorpayOrderId = 'order_dupe';
+    const razorpayPaymentId = 'pay_dupe';
+    const razorpaySignature = signOrderPayment(razorpayOrderId, razorpayPaymentId);
+
+    await paymentService.verifyPayment(user._id.toString(), {
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
+      plan: 'creator',
+    });
+
+    // Simulate the webhook firing for the same payment afterwards
+    const rawBody = JSON.stringify({
+      event: 'payment.captured',
+      payload: {
+        payment: {
+          entity: {
+            id: razorpayPaymentId,
+            order_id: razorpayOrderId,
+            amount: 19900,
+            notes: { userId: user._id.toString(), plan: 'creator' },
+          },
+        },
+      },
+    });
+    const signature = signWebhookBody(rawBody);
+
+    await expect(paymentService.handleWebhook(rawBody, signature)).resolves.toBeUndefined();
+
+    const count = await PaymentHistory.countDocuments({ razorpayPaymentId });
+    expect(count).toBe(1);
+  });
+
+  it('getPaymentHistory returns entries newest-first, paginated', async () => {
+    const user = await createTestUser();
+    for (const [i, paymentId] of ['pay_p1', 'pay_p2', 'pay_p3'].entries()) {
+      await PaymentHistory.create({
+        user: user._id,
+        plan: 'creator',
+        amount: 19900,
+        originalAmount: 19900,
+        razorpayPaymentId: paymentId,
+        createdAt: new Date(Date.now() + i * 1000),
+      });
+    }
+
+    const result = await paymentService.getPaymentHistory(user._id.toString(), {
+      page: 1,
+      limit: 2,
+    });
+
+    expect(result.total).toBe(3);
+    expect(result.history).toHaveLength(2);
+    expect(result.history[0].razorpayPaymentId).toBe('pay_p3'); // newest first
+  });
+});
+
+describe('payment.service.downgradeToFree', () => {
+  it('switches the plan to free and clears the expiry date', async () => {
+    const user = await createTestUser({
+      plan: 'pro',
+      subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+
+    const result = await paymentService.downgradeToFree(user._id.toString());
+    expect(result.plan).toBe('free');
+
+    const dbUser = await User.findById(user._id);
+    expect(dbUser.plan).toBe('free');
+    expect(dbUser.subscriptionExpiresAt).toBeNull();
   });
 });
