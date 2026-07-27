@@ -15,7 +15,7 @@ const { Queue, Worker } = require('bullmq');
 const IORedis = require('ioredis');
 const logger = require('../config/logger');
 
-const QUEUE_NAME = 'tubeos-scheduler';
+const QUEUE_NAME = 'vezrin-scheduler';
 
 // Cron schedule for each job (UTC)
 const JOB_SCHEDULES = [

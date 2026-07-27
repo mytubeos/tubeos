@@ -229,7 +229,7 @@ const exportAnalytics = async (req, res) => {
 
     if (format === 'pdf') {
       const buf = await exportService.buildPdf(rows, channelName, period);
-      const filename = `tubeos-analytics-${period}-${exportService.fmtDate(new Date())}.pdf`;
+      const filename = `vezrin-analytics-${period}-${exportService.fmtDate(new Date())}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       return res.send(buf);
@@ -237,7 +237,7 @@ const exportAnalytics = async (req, res) => {
 
     // default: CSV
     const csv = exportService.buildCsv(rows, channelName, period);
-    const filename = `tubeos-analytics-${period}-${exportService.fmtDate(new Date())}.csv`;
+    const filename = `vezrin-analytics-${period}-${exportService.fmtDate(new Date())}.csv`;
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     return res.send(csv);

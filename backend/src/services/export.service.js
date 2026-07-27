@@ -148,10 +148,10 @@ const buildCsv = (rows, channelName, period) => {
 
 // ===================== PDF =====================
 
-const BRAND = '#4F46E5'; // indigo brand color
-const DARK = '#1E1B4B';
+const BRAND = '#00A0FD'; // Vezrin brand blue
+const DARK = '#0B1220';
 const GRAY = '#6B7280';
-const LIGHT_BG = '#F5F3FF';
+const LIGHT_BG = '#E6F5FF';
 
 /**
  * Build a PDF Buffer from daily analytics rows.
@@ -341,10 +341,10 @@ const buildReportPdf = (reportData, user) => {
     const typeLabel = reportType === 'monthly' ? 'Monthly' : 'Weekly';
 
     // ---- Header ----
-    doc.rect(50, 30, W, 75).fill('#1a1033');
+    doc.rect(50, 30, W, 75).fill('#04263D');
     doc.fillColor('white').font('Helvetica-Bold').fontSize(22).text('⚡ Vezrin', 65, 44);
     doc
-      .fillColor('#a78bfa')
+      .fillColor('#4DBBFF')
       .font('Helvetica')
       .fontSize(11)
       .text(`${typeLabel} Creator Report`, 65, 72);
@@ -395,7 +395,7 @@ const buildReportPdf = (reportData, user) => {
     const kpiBoxW = (W - 15) / 4;
     kpiList.forEach((k, i) => {
       const x = 50 + i * (kpiBoxW + 5);
-      doc.rect(x, kpiY, kpiBoxW, 56).fill('#F5F3FF');
+      doc.rect(x, kpiY, kpiBoxW, 56).fill('#E6F5FF');
       doc
         .fillColor(BRAND)
         .font('Helvetica-Bold')

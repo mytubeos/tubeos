@@ -284,7 +284,7 @@ const sendWeeklyReportEmail = async (user, reportData) => {
   try {
     const pdfBuf = await buildReportPdf(reportData, user);
     const date = new Date().toISOString().slice(0, 10);
-    attachment = [{ content: pdfBuf.toString('base64'), name: `tubeos-weekly-report-${date}.pdf` }];
+    attachment = [{ content: pdfBuf.toString('base64'), name: `vezrin-weekly-report-${date}.pdf` }];
   } catch (pdfErr) {
     logger.warn('[sendWeeklyReportEmail] PDF generation failed, sending without attachment', {
       error: pdfErr.message,
@@ -345,7 +345,7 @@ const sendMonthlyReportEmail = async (user, reportData) => {
     const pdfBuf = await buildReportPdf(reportData, user);
     const date = new Date().toISOString().slice(0, 10);
     attachment = [
-      { content: pdfBuf.toString('base64'), name: `tubeos-monthly-report-${date}.pdf` },
+      { content: pdfBuf.toString('base64'), name: `vezrin-monthly-report-${date}.pdf` },
     ];
   } catch (pdfErr) {
     logger.warn('[sendMonthlyReportEmail] PDF generation failed, sending without attachment', {
@@ -414,7 +414,7 @@ const buildWeeklyReportHtml = (user, data) => {
       const pct = Math.round((v / maxViews) * 60);
       const isHi = v === maxViews;
       return `<td style="text-align:center;vertical-align:bottom;padding:0 3px;width:14%;">
-      <div style="height:${pct || 2}px;background:${isHi ? '#4f46e5' : '#a5b4fc'};border-radius:3px 3px 0 0;"></div>
+      <div style="height:${pct || 2}px;background:${isHi ? '#00a0fd' : '#7dd3fc'};border-radius:3px 3px 0 0;"></div>
       <div style="font-size:10px;color:#9ca3af;margin-top:3px;">${dayLabels[i]}</div>
     </td>`;
     })
@@ -468,7 +468,7 @@ const buildWeeklyReportHtml = (user, data) => {
               <div style="font-size:11px;color:#9ca3af;margin-top:2px;">👁 ${fmtNum(v.performance?.views)} views &nbsp;·&nbsp; 👍 ${fmtNum(v.performance?.likes)}</div>
             </td>
             <td style="text-align:right;">
-              <a href="${ytUrl}" style="font-size:11px;color:#4f46e5;text-decoration:none;">Watch ↗</a>
+              <a href="${ytUrl}" style="font-size:11px;color:#00a0fd;text-decoration:none;">Watch ↗</a>
             </td>
           </tr>
         </table>
@@ -501,7 +501,7 @@ const buildWeeklyReportHtml = (user, data) => {
           ? dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
           : slot.hour || '';
         const bg = i === 0 ? '#f0fdf4' : '#f9fafb';
-        const clr = i === 0 ? '#15803d' : '#4f46e5';
+        const clr = i === 0 ? '#15803d' : '#00a0fd';
         return `
     <div style="background:${bg};border:1px solid ${i === 0 ? '#bbf7d0' : '#e5e7eb'};border-radius:6px;padding:8px 12px;margin:5px 0;display:flex;justify-content:space-between;">
       <div>
@@ -534,7 +534,7 @@ const buildWeeklyReportHtml = (user, data) => {
     .map(
       (item) => `
     <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;font-size:13px;color:#374151;">
-      <span style="color:#4f46e5;flex-shrink:0;font-size:15px;">✓</span>
+      <span style="color:#00a0fd;flex-shrink:0;font-size:15px;">✓</span>
       <span>${item}</span>
     </div>`
     )
@@ -554,7 +554,7 @@ const buildWeeklyReportHtml = (user, data) => {
 <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
 
   <!-- HEADER -->
-  <tr><td style="background:#1a1033;border-radius:12px 12px 0 0;padding:28px 32px 24px;">
+  <tr><td style="background:#04263D;border-radius:12px 12px 0 0;padding:28px 32px 24px;">
     <table width="100%"><tr>
       <td><span style="color:#fff;font-size:18px;font-weight:600;">⚡ Vezrin</span></td>
       <td style="text-align:right;"><span style="font-size:11px;color:rgba(255,255,255,.4);">Week of ${weekRange}</span></td>
@@ -564,7 +564,7 @@ const buildWeeklyReportHtml = (user, data) => {
       <div style="font-size:22px;font-weight:600;color:#fff;line-height:1.35;">
         ${
           kpis.views.value > 0 || kpis.subscribers.gained > 0
-            ? `Good week, ${firstName}! ${kpis.subscribers.gained > 0 ? `Your channel grew <span style="color:#a78bfa;">+${kpis.subscribers.gained} subscriber${kpis.subscribers.gained > 1 ? 's' : ''}</span> this week.` : `You got <span style="color:#a78bfa;">${fmtNum(kpis.views.value)} views</span> this week.`}`
+            ? `Good week, ${firstName}! ${kpis.subscribers.gained > 0 ? `Your channel grew <span style="color:#4DBBFF;">+${kpis.subscribers.gained} subscriber${kpis.subscribers.gained > 1 ? 's' : ''}</span> this week.` : `You got <span style="color:#4DBBFF;">${fmtNum(kpis.views.value)} views</span> this week.`}`
             : `Here's your weekly summary, ${firstName}.`
         }
       </div>
@@ -621,7 +621,7 @@ const buildWeeklyReportHtml = (user, data) => {
     <!-- CTA -->
     <div style="text-align:center;margin:24px 0 4px;">
       <a href="${process.env.CLIENT_URL || 'https://tubeos-eight.vercel.app'}/dashboard"
-         style="display:inline-block;background:#4f46e5;color:#fff;padding:13px 32px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;">
+         style="display:inline-block;background:#00a0fd;color:#fff;padding:13px 32px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;">
         View Full Dashboard →
       </a>
     </div>
