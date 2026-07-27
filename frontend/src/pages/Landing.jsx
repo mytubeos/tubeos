@@ -1,7 +1,6 @@
 // src/pages/Landing.jsx
 import { useNavigate } from 'react-router-dom'
 import {
-  Zap,
   BarChart3,
   Calendar,
   MessageCircle,
@@ -205,7 +204,7 @@ export const Landing = () => {
         <div className="max-w-3xl mx-auto mt-16 grid grid-cols-3 gap-4">
           {[
             { value: '6hr', label: 'Saved per day' },
-            { value: '85%', label: 'Profit margin' },
+            { value: '100+', label: 'Features' },
             { value: '7×', label: 'Faster growth' },
           ].map(({ value, label }) => (
             <div key={label} className="glass p-5 rounded-2xl text-center">
@@ -343,9 +342,7 @@ export const Landing = () => {
       {/* Final CTA */}
       <section className="py-20 px-5">
         <div className="max-w-2xl mx-auto text-center">
-          <div className="w-16 h-16 bg-brand-gradient rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <Zap size={28} className="text-white" />
-          </div>
+          <img src="/icon.png" alt="Vezrin" className="w-16 h-16 rounded-2xl mx-auto mb-6" />
           <h2 className="font-display font-bold text-white text-4xl mb-4">
             Ready to automate your growth?
           </h2>
@@ -365,9 +362,7 @@ export const Landing = () => {
       {/* Footer */}
       <footer className="border-t border-white/8 py-8 px-5 text-center">
         <div className="flex items-center justify-center gap-2 mb-3">
-          <div className="w-6 h-6 bg-brand-gradient rounded-md flex items-center justify-center">
-            <Zap size={12} className="text-white" />
-          </div>
+          <img src="/icon.png" alt="Vezrin" className="w-6 h-6 rounded-md" />
           <span className="font-display font-bold text-white">Vezrin</span>
         </div>
         <p className="text-gray-600 text-sm">© 2026 Vezrin. Built for YouTube creators. 🇮🇳</p>
