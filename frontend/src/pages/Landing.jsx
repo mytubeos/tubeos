@@ -30,7 +30,7 @@ const FEATURES = [
     icon: Calendar,
     color: 'emerald',
     title: 'Smart Scheduling',
-    desc: 'Auto-publish at the best time. Set it once, TubeOS handles the rest.',
+    desc: 'Auto-publish at the best time. Set it once, Vezrin handles the rest.',
   },
   {
     icon: MessageCircle,
@@ -122,12 +122,7 @@ export const Landing = () => {
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-base-900/80 backdrop-blur-sm border-b border-white/5">
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-brand-gradient rounded-lg flex items-center justify-center">
-              <Zap size={16} className="text-white" />
-            </div>
-            <span className="font-display font-bold text-white text-lg">TubeOS</span>
-          </div>
+          <img src="/logo-full.png" alt="Vezrin" className="h-8 w-auto" />
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
               Sign In
@@ -352,7 +347,7 @@ export const Landing = () => {
             Ready to automate your growth?
           </h2>
           <p className="text-gray-500 mb-8">
-            Join hundreds of creators using TubeOS to save 6 hours a day.
+            Join hundreds of creators using Vezrin to save 6 hours a day.
           </p>
           <Button
             size="xl"
@@ -370,9 +365,9 @@ export const Landing = () => {
           <div className="w-6 h-6 bg-brand-gradient rounded-md flex items-center justify-center">
             <Zap size={12} className="text-white" />
           </div>
-          <span className="font-display font-bold text-white">TubeOS</span>
+          <span className="font-display font-bold text-white">Vezrin</span>
         </div>
-        <p className="text-gray-600 text-sm">© 2026 TubeOS. Built for YouTube creators. 🇮🇳</p>
+        <p className="text-gray-600 text-sm">© 2026 Vezrin. Built for YouTube creators. 🇮🇳</p>
       </footer>
     </div>
   )

@@ -1,7 +1,7 @@
 // src/utils/constants.js
 // FIX: API_URL default port 5000 → 8080
 
-export const APP_NAME = 'TubeOS'
+export const APP_NAME = 'Vezrin'
 export const APP_TAGLINE = 'Creator Command Center'
 export const API_URL =
   import.meta.env.VITE_API_URL || 'https://tubeos-backend-4303.onrender.com/api/v1'

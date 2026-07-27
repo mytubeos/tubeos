@@ -1,7 +1,7 @@
 {
-  "name": "tubeos-frontend",
+  "name": "vezrin-frontend",
   "version": "1.0.0",
-  "description": "TubeOS — Creator Command Center",
+  "description": "Vezrin — Creator Command Center",
   "type": "module",
   "scripts": {
     "dev": "vite",

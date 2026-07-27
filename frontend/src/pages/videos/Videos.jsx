@@ -208,7 +208,7 @@ export const Videos = () => {
         onClose={() => setDeleteId(null)}
         onConfirm={handleDelete}
         title="Delete Video"
-        message="Are you sure? This will delete the video from TubeOS. It won't be deleted from YouTube."
+        message="Are you sure? This will delete the video from Vezrin. It won't be deleted from YouTube."
         confirmLabel="Delete"
         confirmVariant="danger"
         loading={deleting}

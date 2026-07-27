@@ -26,7 +26,7 @@ const sendOTPEmail = async (recipientEmail, recipientName, otp) => {
     const emailContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
-          <h1 style="color: white; margin: 0;">TubeOS</h1>
+          <h1 style="color: white; margin: 0;">Vezrin</h1>
           <p style="color: rgba(255, 255, 255, 0.9); margin: 0;">AI-Powered YouTube Creator Management</p>
         </div>
         
@@ -44,7 +44,7 @@ const sendOTPEmail = async (recipientEmail, recipientName, otp) => {
         </div>
         
         <div style="background: #f0f0f0; padding: 20px; text-align: center; border-radius: 0 0 8px 8px;">
-          <p style="color: #999; font-size: 12px; margin: 0;">© 2024 TubeOS. All rights reserved.</p>
+          <p style="color: #999; font-size: 12px; margin: 0;">© 2024 Vezrin. All rights reserved.</p>
         </div>
       </div>
     `;
@@ -54,7 +54,7 @@ const sendOTPEmail = async (recipientEmail, recipientName, otp) => {
       {
         sender: {
           email: EMAIL_FROM,
-          name: 'TubeOS Team',
+          name: 'Vezrin Team',
         },
         to: [
           {
@@ -62,7 +62,7 @@ const sendOTPEmail = async (recipientEmail, recipientName, otp) => {
             name: recipientName,
           },
         ],
-        subject: `Your TubeOS Verification Code: ${otp}`,
+        subject: `Your Vezrin Verification Code: ${otp}`,
         htmlContent: emailContent,
         replyTo: {
           email: EMAIL_FROM,
@@ -105,14 +105,14 @@ const sendPasswordResetEmail = async (recipientEmail, recipientName, resetToken)
     const emailContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
-          <h1 style="color: white; margin: 0;">TubeOS</h1>
+          <h1 style="color: white; margin: 0;">Vezrin</h1>
           <p style="color: rgba(255, 255, 255, 0.9); margin: 0;">Password Reset Request</p>
         </div>
         
         <div style="background: #f8f9fa; padding: 40px 20px;">
           <h2 style="color: #333;">Reset Your Password</h2>
           <p style="color: #666; font-size: 14px;">Hi ${recipientName},</p>
-          <p style="color: #666; font-size: 14px;">We received a request to reset your TubeOS password. Click the button below to proceed:</p>
+          <p style="color: #666; font-size: 14px;">We received a request to reset your Vezrin password. Click the button below to proceed:</p>
           
           <div style="text-align: center; margin: 30px 0;">
             <a href="${resetUrl}" 
@@ -132,7 +132,7 @@ const sendPasswordResetEmail = async (recipientEmail, recipientName, resetToken)
         </div>
         
         <div style="background: #f0f0f0; padding: 20px; text-align: center; border-radius: 0 0 8px 8px;">
-          <p style="color: #999; font-size: 12px; margin: 0;">© 2024 TubeOS. All rights reserved.</p>
+          <p style="color: #999; font-size: 12px; margin: 0;">© 2024 Vezrin. All rights reserved.</p>
         </div>
       </div>
     `;
@@ -142,7 +142,7 @@ const sendPasswordResetEmail = async (recipientEmail, recipientName, resetToken)
       {
         sender: {
           email: EMAIL_FROM,
-          name: 'TubeOS Security',
+          name: 'Vezrin Security',
         },
         to: [
           {
@@ -150,7 +150,7 @@ const sendPasswordResetEmail = async (recipientEmail, recipientName, resetToken)
             name: recipientName,
           },
         ],
-        subject: 'Reset Your TubeOS Password',
+        subject: 'Reset Your Vezrin Password',
         htmlContent: emailContent,
         replyTo: {
           email: EMAIL_FROM,
@@ -193,7 +193,7 @@ const sendWelcomeEmail = async (recipientEmail, recipientName) => {
     const emailContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
-          <h1 style="color: white; margin: 0;">🎉 Welcome to TubeOS!</h1>
+          <h1 style="color: white; margin: 0;">🎉 Welcome to Vezrin!</h1>
           <p style="color: rgba(255, 255, 255, 0.9); margin: 0;">Your AI-Powered YouTube Creator Companion</p>
         </div>
         
@@ -222,7 +222,7 @@ const sendWelcomeEmail = async (recipientEmail, recipientName) => {
         
         <div style="background: #f0f0f0; padding: 20px; text-align: center; border-radius: 0 0 8px 8px;">
           <p style="color: #999; font-size: 12px; margin: 0;">Questions? Contact us at ${EMAIL_FROM}</p>
-          <p style="color: #999; font-size: 12px; margin: 5px 0;">© 2024 TubeOS. All rights reserved.</p>
+          <p style="color: #999; font-size: 12px; margin: 5px 0;">© 2024 Vezrin. All rights reserved.</p>
         </div>
       </div>
     `;
@@ -232,7 +232,7 @@ const sendWelcomeEmail = async (recipientEmail, recipientName) => {
       {
         sender: {
           email: EMAIL_FROM,
-          name: 'TubeOS Team',
+          name: 'Vezrin Team',
         },
         to: [
           {
@@ -240,7 +240,7 @@ const sendWelcomeEmail = async (recipientEmail, recipientName) => {
             name: recipientName,
           },
         ],
-        subject: `Welcome to TubeOS, ${recipientName}! 🎉`,
+        subject: `Welcome to Vezrin, ${recipientName}! 🎉`,
         htmlContent: emailContent,
         replyTo: {
           email: EMAIL_FROM,
@@ -295,7 +295,7 @@ const sendWeeklyReportEmail = async (user, reportData) => {
     await axios.post(
       BREVO_API_URL,
       {
-        sender: { email: EMAIL_FROM, name: 'TubeOS Reports' },
+        sender: { email: EMAIL_FROM, name: 'Vezrin Reports' },
         to: [{ email: user.email, name: user.name }],
         subject,
         htmlContent: html,
@@ -332,7 +332,7 @@ const sendMonthlyReportEmail = async (user, reportData) => {
       ? `${firstName}, you gained ${subs} subscribers in ${reportData.weekRange}! 🎉`
       : views > 0
         ? `Your monthly report: ${views >= 1000 ? `${(views / 1000).toFixed(1)}K` : views} views this month 📊`
-        : `Your monthly TubeOS report — ${reportData.weekRange}`;
+        : `Your monthly Vezrin report — ${reportData.weekRange}`;
 
   // Reuse the weekly HTML builder (same data shape — title says "Monthly" via reportType)
   const html = buildWeeklyReportHtml(user, {
@@ -357,7 +357,7 @@ const sendMonthlyReportEmail = async (user, reportData) => {
     await axios.post(
       BREVO_API_URL,
       {
-        sender: { email: EMAIL_FROM, name: 'TubeOS Reports' },
+        sender: { email: EMAIL_FROM, name: 'Vezrin Reports' },
         to: [{ email: user.email, name: user.name }],
         subject,
         htmlContent: html,
@@ -556,7 +556,7 @@ const buildWeeklyReportHtml = (user, data) => {
   <!-- HEADER -->
   <tr><td style="background:#1a1033;border-radius:12px 12px 0 0;padding:28px 32px 24px;">
     <table width="100%"><tr>
-      <td><span style="color:#fff;font-size:18px;font-weight:600;">⚡ TubeOS</span></td>
+      <td><span style="color:#fff;font-size:18px;font-weight:600;">⚡ Vezrin</span></td>
       <td style="text-align:right;"><span style="font-size:11px;color:rgba(255,255,255,.4);">Week of ${weekRange}</span></td>
     </tr></table>
     <div style="margin-top:14px;">
@@ -640,7 +640,7 @@ const buildWeeklyReportHtml = (user, data) => {
         <a href="${process.env.CLIENT_URL || 'https://tubeos-eight.vercel.app'}/settings" style="font-size:11px;color:#9ca3af;text-decoration:none;margin-left:12px;">Unsubscribe</a>
       </td>
     </tr></table>
-    <div style="margin-top:10px;font-size:11px;color:#d1d5db;text-align:center;">© 2025 TubeOS · AI-Powered YouTube Management</div>
+    <div style="margin-top:10px;font-size:11px;color:#d1d5db;text-align:center;">© 2025 Vezrin · AI-Powered YouTube Management</div>
   </td></tr>
 
 </table>

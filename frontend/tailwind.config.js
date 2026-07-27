@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // TubeOS Design System
+        // Vezrin Design System
         base: {
           900: '#06060A',
           800: '#0A0A12',

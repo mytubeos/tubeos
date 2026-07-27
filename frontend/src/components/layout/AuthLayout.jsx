@@ -26,15 +26,7 @@ export const AuthLayout = () => {
         />
 
         {/* Logo */}
-        <div className="flex items-center gap-3 relative z-10">
-          <div className="w-10 h-10 bg-brand-gradient rounded-xl flex items-center justify-center shadow-brand">
-            <Zap size={20} className="text-white" />
-          </div>
-          <div>
-            <p className="font-display font-bold text-white text-xl">TubeOS</p>
-            <p className="text-gray-500 text-xs">Creator Command Center</p>
-          </div>
-        </div>
+        <img src="/logo-full.png" alt="Vezrin" className="h-10 w-auto relative z-10" />
 
         {/* Feature highlights */}
         <div className="space-y-5 relative z-10">
@@ -100,7 +92,7 @@ export const AuthLayout = () => {
           <div className="w-8 h-8 bg-brand-gradient rounded-lg flex items-center justify-center">
             <Zap size={16} className="text-white" />
           </div>
-          <p className="font-display font-bold text-white">TubeOS</p>
+          <p className="font-display font-bold text-white">Vezrin</p>
         </div>
 
         <div className="w-full max-w-md animate-slide-up">

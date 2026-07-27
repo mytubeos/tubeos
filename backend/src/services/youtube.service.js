@@ -87,7 +87,7 @@ const handleOAuthCallback = async (code, state) => {
   });
 
   if (existingChannel && existingChannel.userId.toString() !== userId) {
-    const err = new Error('This YouTube channel is already connected to another TubeOS account.');
+    const err = new Error('This YouTube channel is already connected to another Vezrin account.');
     err.statusCode = 409;
     throw err;
   }

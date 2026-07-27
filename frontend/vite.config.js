@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'icon.svg', 'apple-touch-icon-180x180.png'],
       manifest: {
-        name: 'TubeOS — Creator Command Center',
-        short_name: 'TubeOS',
+        name: 'Vezrin — Creator Command Center',
+        short_name: 'Vezrin',
         description:
           'AI-powered YouTube creator management platform. Upload, schedule, analyze, and automate your channel growth.',
         theme_color: '#06060A',
@@ -50,7 +50,7 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
             form_factor: 'narrow',
-            label: 'TubeOS Dashboard',
+            label: 'Vezrin Dashboard',
           },
         ],
       },

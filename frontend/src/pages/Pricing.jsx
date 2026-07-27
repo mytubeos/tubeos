@@ -167,7 +167,7 @@ export const Pricing = () => {
               <div className="w-7 h-7 bg-brand-gradient rounded-md flex items-center justify-center">
                 <Zap size={13} className="text-white" />
               </div>
-              <span className="font-display font-bold text-white">TubeOS</span>
+              <span className="font-display font-bold text-white">Vezrin</span>
             </div>
           </button>
           <Button size="sm" onClick={() => navigate('/signup')}>

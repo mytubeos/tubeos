@@ -28,7 +28,7 @@ export const PageLoader = () => (
         />
       </div>
       <div className="text-center">
-        <p className="font-display font-bold text-white text-lg">TubeOS</p>
+        <p className="font-display font-bold text-white text-lg">Vezrin</p>
         <p className="text-gray-500 text-sm">Loading your command center...</p>
       </div>
     </div>

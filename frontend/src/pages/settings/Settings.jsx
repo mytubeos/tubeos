@@ -541,7 +541,7 @@ export const Settings = () => {
                 {
                   key: 'emailNotifications',
                   label: 'Email Notifications',
-                  desc: 'Receive all transactional emails from TubeOS',
+                  desc: 'Receive all transactional emails from Vezrin',
                 },
                 {
                   key: 'marketingEmails',

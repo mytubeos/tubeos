@@ -119,7 +119,7 @@ app.use('/api/v1', routes);
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: '🚀 Welcome to TubeOS API',
+    message: '🚀 Welcome to Vezrin API',
     version: '1.0.0',
     docs: '/api/v1/health',
   });

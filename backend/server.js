@@ -1,5 +1,5 @@
 // server.js
-// TubeOS — Main Entry Point
+// Vezrin — Main Entry Point
 // Boots up: Config validation → DB → Redis → Express server
 
 require('dotenv').config();
@@ -17,7 +17,7 @@ const logger = require('./src/config/logger');
 // ==================== STARTUP ====================
 const startServer = async () => {
   try {
-    logger.info('Starting TubeOS Server...');
+    logger.info('Starting Vezrin Server...');
 
     // 1. Validate environment variables
     validateEnv();
@@ -62,7 +62,7 @@ const startServer = async () => {
     // 5. Start Express server
     const PORT = config.port;
     const server = app.listen(PORT, '0.0.0.0', () => {
-      logger.info('TubeOS Server running!', {
+      logger.info('Vezrin Server running!', {
         url: `http://localhost:${PORT}`,
         api: `http://localhost:${PORT}/api/v1`,
         environment: config.nodeEnv,
@@ -101,7 +101,7 @@ const startServer = async () => {
           logger.error('Error closing MongoDB', { error: err.message });
         }
 
-        logger.info('TubeOS shutdown complete');
+        logger.info('Vezrin shutdown complete');
         process.exit(0);
       });
 

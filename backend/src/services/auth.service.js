@@ -174,7 +174,7 @@ const verifyEmail = async (otp, userId) => {
   return {
     user: sanitizeUser(user),
     tokens,
-    message: 'Email verified successfully! Welcome to TubeOS.',
+    message: 'Email verified successfully! Welcome to Vezrin.',
   };
 };
 

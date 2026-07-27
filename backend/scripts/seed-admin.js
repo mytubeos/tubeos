@@ -7,7 +7,7 @@ const mongoose = require('mongoose');
 const User = require('../src/models/user.model');
 
 const ADMIN_EMAIL = 'tubeos.saas@gmail.com';
-const ADMIN_NAME = 'TubeOS Admin';
+const ADMIN_NAME = 'Vezrin Admin';
 const ADMIN_PASSWORD = 'vibecore4admin';
 
 (async () => {

@@ -20,7 +20,7 @@ const getPageTitle = (pathname) => {
     '/referral': 'Referral',
     '/settings': 'Settings',
   }
-  return titles[pathname] || 'TubeOS'
+  return titles[pathname] || 'Vezrin'
 }
 
 export const DashboardLayout = () => {

@@ -159,7 +159,7 @@ export const Referral = () => {
   }
 
   const shareOnTwitter = () => {
-    const text = `I'm using TubeOS to grow my YouTube channel with AI. Use my code ${referralCode} for 10% off! 🚀`
+    const text = `I'm using Vezrin to grow my YouTube channel with AI. Use my code ${referralCode} for 10% off! 🚀`
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(referralLink)}`,
       '_blank'
@@ -167,7 +167,7 @@ export const Referral = () => {
   }
 
   const shareOnWhatsApp = () => {
-    const text = `TubeOS use karo apna YouTube channel grow karne ke liye! Use code: ${referralCode} for 10% off 🎉\n${referralLink}`
+    const text = `Vezrin use karo apna YouTube channel grow karne ke liye! Use code: ${referralCode} for 10% off 🎉\n${referralLink}`
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
   }
 
@@ -341,7 +341,7 @@ export const Referral = () => {
             {
               step: '1',
               title: 'Share your code',
-              desc: 'Give your referral code or link to anyone who wants to use TubeOS.',
+              desc: 'Give your referral code or link to anyone who wants to use Vezrin.',
             },
             {
               step: '2',

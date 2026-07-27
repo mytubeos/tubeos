@@ -1,5 +1,5 @@
 // src/components/features/Chingari.jsx
-// TubeOS's mascot — see index.css's ".chingari" block for the shape/mood CSS.
+// Vezrin's mascot — see index.css's ".chingari" block for the shape/mood CSS.
 const MOODS = [
   'idle',
   'celebrate',

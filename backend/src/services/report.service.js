@@ -204,7 +204,7 @@ const generateInsights = ({ kpis, prev, topVideos, bestDayName, channel }) => {
       icon: 'alert-triangle',
       color: 'warning',
       title: `CTR dropped ${Math.abs(kpis.ctr.change)}% — thumbnail may need a refresh`,
-      body: `Fewer people are clicking your videos despite similar impressions. Try a brighter thumbnail with a face and bold text. Use TubeOS AI Thumbnail Scorer to test before publishing.`,
+      body: `Fewer people are clicking your videos despite similar impressions. Try a brighter thumbnail with a face and bold text. Use Vezrin AI Thumbnail Scorer to test before publishing.`,
     });
   }
 
@@ -234,7 +234,7 @@ const generateInsights = ({ kpis, prev, topVideos, bestDayName, channel }) => {
       icon: 'message-circle',
       color: 'accent',
       title: `${kpis.comments.value} comments need your attention`,
-      body: `Replying to comments in the first 24 hours boosts YouTube algorithm ranking. Use TubeOS AI Reply to respond to all comments in one click.`,
+      body: `Replying to comments in the first 24 hours boosts YouTube algorithm ranking. Use Vezrin AI Reply to respond to all comments in one click.`,
     });
   }
 
@@ -313,9 +313,9 @@ const generateSubjectLine = (userName, kpis, weekRange) => {
   const views = kpis?.views?.value || 0;
 
   if (subs >= 10) return `${firstName}, you gained ${subs} subscribers this week! 🎉`;
-  if (subs > 0) return `+${subs} new subscribers · Your weekly TubeOS report`;
+  if (subs > 0) return `+${subs} new subscribers · Your weekly Vezrin report`;
   if (viewsChange >= 30) return `${firstName}, views up ${viewsChange}% this week 📈`;
-  if (views > 0) return `${fmtNum(views)} views this week · Your TubeOS report`;
+  if (views > 0) return `${fmtNum(views)} views this week · Your Vezrin report`;
   return `Your weekly YouTube performance report — ${weekRange}`;
 };
 

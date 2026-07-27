@@ -83,12 +83,10 @@ export const Sidebar = ({ collapsed = false, open = false, onClose }) => {
         {/* Logo */}
         <div className="p-4 border-b border-white/8 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-brand-gradient rounded-lg flex items-center justify-center shrink-0 shadow-brand">
-              <Zap size={16} className="text-white" />
-            </div>
+            <img src="/icon.png" alt="Vezrin" className="w-8 h-8 rounded-lg shrink-0 shadow-brand" />
             {!collapsed && (
               <div>
-                <p className="font-display font-bold text-white text-base leading-none">TubeOS</p>
+                <p className="font-display font-bold text-white text-base leading-none">Vezrin</p>
                 <p className="text-gray-500 text-2xs mt-0.5">Command Center</p>
               </div>
             )}

@@ -28,7 +28,7 @@ export const AdminLayout = () => {
             <Zap size={15} className="text-white" />
           </div>
           <div>
-            <p className="font-display font-bold text-white text-sm leading-none">TubeOS</p>
+            <p className="font-display font-bold text-white text-sm leading-none">Vezrin</p>
             <div className="flex items-center gap-1 mt-0.5">
               <ShieldCheck size={10} className="text-rose" />
               <p className="text-2xs text-rose font-medium">Admin</p>

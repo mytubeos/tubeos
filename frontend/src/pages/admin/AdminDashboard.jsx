@@ -43,7 +43,7 @@ export const AdminDashboard = () => {
     <div className="p-8 space-y-8">
       <div>
         <h1 className="font-display font-bold text-white text-2xl">Admin Dashboard</h1>
-        <p className="text-gray-500 text-sm mt-1">TubeOS platform overview</p>
+        <p className="text-gray-500 text-sm mt-1">Vezrin platform overview</p>
       </div>
 
       {/* User Stats */}

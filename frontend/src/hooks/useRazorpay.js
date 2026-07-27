@@ -38,7 +38,7 @@ export const useRazorpay = ({ onSuccess } = {}) => {
         key: keyId,
         amount,
         currency,
-        name: 'TubeOS',
+        name: 'Vezrin',
         description: label,
         order_id: orderId,
         prefill: { name: userName, email: userEmail },

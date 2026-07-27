@@ -83,7 +83,7 @@ export const ForgotPassword = () => {
                 </div>
                 <div>
                   <p className="text-slate-200 font-medium">Check your email</p>
-                  <p className="text-sm text-slate-400">Look for an email from TubeOS</p>
+                  <p className="text-sm text-slate-400">Look for an email from Vezrin</p>
                 </div>
               </div>
 

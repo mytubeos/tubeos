@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎬 TubeOS 3.0
+# 🎬 Vezrin 3.0
 
 ### AI-Powered YouTube Creator Management Platform
 
@@ -623,6 +623,6 @@ All the critical/high/medium issues that used to be tracked here (video file per
 <div align="center">
 
 Made with ❤️ by Satish Kumar  
-**TubeOS 3.0 — MVP**
+**Vezrin 3.0 — MVP**
 
 </div>

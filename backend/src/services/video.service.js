@@ -208,7 +208,7 @@ const uploadVideo = async (userId, videoId, fileRef, mimeType) => {
         await createNotification(
           userId,
           'welcome',
-          'Pehla video upload ho gaya! Ye TubeOS ka sabse important step tha — badhai ho 🎉',
+          'Pehla video upload ho gaya! Ye Vezrin ka sabse important step tha — badhai ho 🎉',
           'celebrate'
         );
       }
