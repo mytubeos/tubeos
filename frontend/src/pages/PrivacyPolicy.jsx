@@ -238,7 +238,7 @@ export function PrivacyPolicy() {
               <li>We process data based on legal basis (consent, contract, or legitimate interest)</li>
               <li>We implement Privacy by Design principles</li>
               <li>You have rights to access, rectify, erase, restrict, and port your data</li>
-              <li>You may contact us at hello@vezrin.com for any GDPR-related inquiries</li>
+              <li>Our Data Protection Officer, Raj Yadav, is available at hello@vezrin.com for any GDPR-related inquiries</li>
             </ul>
           </section>
 
@@ -292,6 +292,10 @@ export function PrivacyPolicy() {
               <strong>Email:</strong> hello@vezrin.com<br />
               <strong>Website:</strong> vezrin.com<br />
               <strong>Address:</strong> India
+            </p>
+            <p className="mt-4">
+              <strong>Data Protection Officer:</strong> Raj Yadav — hello@vezrin.com<br />
+              (For GDPR-related queries)
             </p>
           </section>
 
