@@ -332,7 +332,7 @@ const forgotPassword = async (email) => {
   }
 
   // Reset link logged at debug level only — contains the plaintext token
-  const clientUrl = process.env.CLIENT_URL || 'https://tubeos-eight.vercel.app';
+  const clientUrl = process.env.CLIENT_URL || 'https://vezrin.com';
   logger.debug(
     `[forgotPassword] RESET LINK for ${user.email}: ${clientUrl}/reset-password?token=${resetToken}`
   );

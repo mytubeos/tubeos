@@ -5,7 +5,7 @@ const { config } = require('../config/env');
 const logger = require('../config/logger');
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const EMAIL_FROM = process.env.EMAIL_FROM_ADDRESS || 'noreply@tubeos.in';
+const EMAIL_FROM = process.env.EMAIL_FROM_ADDRESS || 'hello@vezrin.com';
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
 // Check if Brevo is configured
@@ -620,7 +620,7 @@ const buildWeeklyReportHtml = (user, data) => {
 
     <!-- CTA -->
     <div style="text-align:center;margin:24px 0 4px;">
-      <a href="${process.env.CLIENT_URL || 'https://tubeos-eight.vercel.app'}/dashboard"
+      <a href="${process.env.CLIENT_URL || 'https://vezrin.com'}/dashboard"
          style="display:inline-block;background:#00a0fd;color:#fff;padding:13px 32px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;">
         View Full Dashboard →
       </a>
@@ -636,8 +636,8 @@ const buildWeeklyReportHtml = (user, data) => {
         <div style="font-size:13px;font-weight:600;color:${healthClr};font-family:monospace;">${healthBar} ${healthScore}/100</div>
       </td>
       <td style="text-align:right;">
-        <a href="${process.env.CLIENT_URL || 'https://tubeos-eight.vercel.app'}/settings" style="font-size:11px;color:#9ca3af;text-decoration:none;margin-left:12px;">Change frequency</a>
-        <a href="${process.env.CLIENT_URL || 'https://tubeos-eight.vercel.app'}/settings" style="font-size:11px;color:#9ca3af;text-decoration:none;margin-left:12px;">Unsubscribe</a>
+        <a href="${process.env.CLIENT_URL || 'https://vezrin.com'}/settings" style="font-size:11px;color:#9ca3af;text-decoration:none;margin-left:12px;">Change frequency</a>
+        <a href="${process.env.CLIENT_URL || 'https://vezrin.com'}/settings" style="font-size:11px;color:#9ca3af;text-decoration:none;margin-left:12px;">Unsubscribe</a>
       </td>
     </tr></table>
     <div style="margin-top:10px;font-size:11px;color:#d1d5db;text-align:center;">© 2025 Vezrin · AI-Powered YouTube Management</div>
