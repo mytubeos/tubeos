@@ -107,7 +107,7 @@ export const Sidebar = ({ collapsed = false, open = false, onClose }) => {
               <img
                 src={
                   activeChannel.thumbnail ||
-                  `https://ui-avatars.com/api/?name=${activeChannel.channelName}&background=4F46E5&color=fff`
+                  `https://ui-avatars.com/api/?name=${activeChannel.channelName}&background=00A0FD&color=fff`
                 }
                 alt={activeChannel.channelName}
                 className="w-8 h-8 rounded-full object-cover ring-1 ring-brand/30"

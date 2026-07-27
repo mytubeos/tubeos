@@ -22,7 +22,7 @@ registerSW({
               window.location.reload()
             }}
             style={{
-              background: '#4F46E5',
+              background: '#00A0FD',
               color: '#fff',
               border: 'none',
               borderRadius: 8,

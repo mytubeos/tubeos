@@ -93,7 +93,7 @@ export const Navbar = ({ title, onMenuClick }) => {
                 <img
                   src={
                     activeChannel.thumbnail ||
-                    `https://ui-avatars.com/api/?name=${activeChannel.channelName}&background=4F46E5&color=fff`
+                    `https://ui-avatars.com/api/?name=${activeChannel.channelName}&background=00A0FD&color=fff`
                   }
                   className="w-5 h-5 rounded-full object-cover"
                   alt=""
@@ -132,7 +132,7 @@ export const Navbar = ({ title, onMenuClick }) => {
                         <img
                           src={
                             ch.thumbnail ||
-                            `https://ui-avatars.com/api/?name=${ch.channelName}&background=4F46E5&color=fff`
+                            `https://ui-avatars.com/api/?name=${ch.channelName}&background=00A0FD&color=fff`
                           }
                           className="w-7 h-7 rounded-full object-cover"
                           alt=""

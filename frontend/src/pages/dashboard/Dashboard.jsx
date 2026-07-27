@@ -178,7 +178,7 @@ export const Dashboard = () => {
               }, [])}
               dataKey="value"
               label="Total Views"
-              color="#4F46E5"
+              color="#00A0FD"
               height={220}
               xKey="date"
             />

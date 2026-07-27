@@ -88,7 +88,7 @@ export const PERIODS = [
 ]
 
 export const CHART_COLORS = {
-  brand: '#4F46E5',
+  brand: '#00A0FD',
   cyan: '#06B6D4',
   rose: '#F43F5E',
   emerald: '#10B981',

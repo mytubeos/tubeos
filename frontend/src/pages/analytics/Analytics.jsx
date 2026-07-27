@@ -14,7 +14,7 @@ import { PERIODS } from '../../utils/constants'
 import toast from 'react-hot-toast'
 
 const METRIC_TABS = [
-  { key: 'views', label: 'Views', color: '#4F46E5' },
+  { key: 'views', label: 'Views', color: '#00A0FD' },
   { key: 'subscribers', label: 'Subscribers', color: '#06B6D4' },
   { key: 'watchTime', label: 'Watch Time', color: '#10B981' },
   { key: 'ctr', label: 'CTR', color: '#F59E0B' },
@@ -191,7 +191,7 @@ export const Analytics = () => {
             data={graphData?.data || []}
             dataKey="value"
             label={METRIC_TABS.find((m) => m.key === activeMetric)?.label}
-            color={METRIC_TABS.find((m) => m.key === activeMetric)?.color || '#4F46E5'}
+            color={METRIC_TABS.find((m) => m.key === activeMetric)?.color || '#00A0FD'}
             height={240}
           />
         )}

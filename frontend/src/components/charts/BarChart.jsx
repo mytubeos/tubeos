@@ -30,7 +30,7 @@ export const BarChart = ({
   data = [],
   dataKey = 'value',
   xKey = 'label',
-  color = '#4F46E5',
+  color = '#00A0FD',
   height = 200,
   highlightIndex = -1,
   horizontal = false,
@@ -125,7 +125,7 @@ export const DayWiseBar = ({ data = [], height = 200 }) => {
           {data.map((entry, idx) => (
             <Cell
               key={idx}
-              fill={entry.avgViews === max ? '#10B981' : '#4F46E5'}
+              fill={entry.avgViews === max ? '#10B981' : '#00A0FD'}
               fillOpacity={entry.avgViews === max ? 1 : 0.6}
             />
           ))}

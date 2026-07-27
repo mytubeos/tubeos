@@ -36,7 +36,7 @@ export const AreaLineChart = ({
   data = [],
   dataKey = 'value',
   label = 'Value',
-  color = '#4F46E5',
+  color = '#00A0FD',
   height = 220,
   formatter,
   gradientId = 'chartGrad',

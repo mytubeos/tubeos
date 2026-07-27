@@ -46,7 +46,7 @@ export const VideoAnalytics = () => {
   const { video, totals, daily } = data
 
   const METRICS = [
-    { key: 'views', label: 'Views', color: '#4F46E5' },
+    { key: 'views', label: 'Views', color: '#00A0FD' },
     { key: 'watchTime', label: 'Watch Time', color: '#10B981' },
     { key: 'likes', label: 'Likes', color: '#F59E0B' },
     { key: 'ctr', label: 'CTR', color: '#06B6D4' },
@@ -158,7 +158,7 @@ export const VideoAnalytics = () => {
           }))}
           dataKey="value"
           label={METRICS.find((m) => m.key === activeMetric)?.label}
-          color={METRICS.find((m) => m.key === activeMetric)?.color || '#4F46E5'}
+          color={METRICS.find((m) => m.key === activeMetric)?.color || '#00A0FD'}
           height={220}
         />
       </Card>

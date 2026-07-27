@@ -42,7 +42,7 @@ export const useRazorpay = ({ onSuccess } = {}) => {
         description: label,
         order_id: orderId,
         prefill: { name: userName, email: userEmail },
-        theme: { color: '#4F46E5' },
+        theme: { color: '#00A0FD' },
         handler: async (response) => {
           try {
             await paymentAPI.verifyPayment({
