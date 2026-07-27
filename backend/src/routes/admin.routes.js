@@ -8,6 +8,7 @@ const {
   listUsers,
   changeUserPlan,
   toggleBanUser,
+  toggleDeleteUser,
   getCouponStats,
   listCoupons,
   createCoupon,
@@ -22,6 +23,7 @@ router.get('/users/stats', getUserStats);
 router.get('/users', listUsers);
 router.patch('/users/:id/plan', changeUserPlan);
 router.patch('/users/:id/ban', toggleBanUser);
+router.patch('/users/:id/delete', toggleDeleteUser);
 
 // Coupons
 router.get('/coupons/stats', getCouponStats);

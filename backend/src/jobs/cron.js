@@ -292,6 +292,38 @@ const generateNudges = async () => {
   }
 };
 
+// ---------- Data retention purge ----------
+// Enforces the specific windows promised in the Privacy Policy (section 4):
+// YouTube channel data 30 days after disconnect, account data 90 days after
+// deletion. Both fields already exist independent of this job (disconnect
+// already soft-deletes a channel; admin delete already sets User.deletedAt) —
+// this job's only role is the final hard-delete once the window has passed.
+const purgeExpiredData = async () => {
+  try {
+    const User = require('../models/user.model');
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const channelResult = await YoutubeChannel.deleteMany({
+      connectionStatus: 'disconnected',
+      updatedAt: { $lte: thirtyDaysAgo },
+    });
+
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    const userResult = await User.deleteMany({
+      deletedAt: { $ne: null, $lte: ninetyDaysAgo },
+    });
+
+    if (channelResult.deletedCount || userResult.deletedCount) {
+      logger.info('[cron] data-retention purge', {
+        channelsPurged: channelResult.deletedCount,
+        usersPurged: userResult.deletedCount,
+      });
+    }
+  } catch (err) {
+    logger.error('[cron] purgeExpiredData error', { error: err.message });
+  }
+};
+
 const startCron = () => {
   logger.info('In-process cron started');
 
@@ -316,6 +348,9 @@ const startCron = () => {
   // Every 6h: Chingari nudge rules (stagnation checks only, see generateNudges)
   timers.push(setInterval(generateNudges, 6 * 60 * 60 * 1000));
 
+  // Every 24h: purge data past its Privacy Policy retention window
+  timers.push(setInterval(purgeExpiredData, 24 * 60 * 60 * 1000));
+
   // Fire once on boot (best-effort)
   setTimeout(reapPublishedSchedules, 5_000);
   setTimeout(refreshTrends, 10_000);
@@ -323,6 +358,9 @@ const startCron = () => {
   setTimeout(syncAllChannelsAnalytics, 30_000);
   // Subscribe all channels on boot (picks up any that missed their renewal window)
   setTimeout(renewPubSubSubscriptions, 15_000);
+  // Free-tier instances can restart more often than once a day, which would
+  // otherwise mean this setInterval never actually fires — boot-fire too.
+  setTimeout(purgeExpiredData, 20_000);
 };
 
 const stopCron = () => {
@@ -340,4 +378,5 @@ module.exports = {
   sendMonthlyReports,
   renewPubSubSubscriptions,
   generateNudges,
+  purgeExpiredData,
 };

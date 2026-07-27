@@ -86,6 +86,12 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Soft-delete marker for the account-deletion Privacy Policy promise
+    // (90 days after this is set, cron.purgeExpiredData hard-deletes the doc).
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
 
     // ==================== SUBSCRIPTION ====================
     plan: {

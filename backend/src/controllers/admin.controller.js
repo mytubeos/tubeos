@@ -1,6 +1,7 @@
 // src/controllers/admin.controller.js
 const couponService = require('../services/coupon.service');
 const User = require('../models/user.model');
+const YoutubeChannel = require('../models/youtube-channel.model');
 const { successResponse, errorResponse, paginatedResponse } = require('../utils/response.utils');
 
 // ==================== USER ENDPOINTS ====================
@@ -49,7 +50,7 @@ const listUsers = async (req, res) => {
     const [users, total] = await Promise.all([
       User.find(query)
         .select(
-          'name email plan isBanned isEmailVerified createdAt subscriptionExpiresAt lastLoginAt'
+          'name email plan isBanned isEmailVerified createdAt subscriptionExpiresAt lastLoginAt deletedAt'
         )
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -103,6 +104,40 @@ const toggleBanUser = async (req, res) => {
     await user.save();
     return successResponse(res, 200, user.isBanned ? 'User banned' : 'User unbanned', {
       isBanned: user.isBanned,
+    });
+  } catch (err) {
+    return errorResponse(res, 500, err.message);
+  }
+};
+
+// PATCH /api/v1/admin/users/:id/delete
+// Soft-delete: marks deletedAt (cron purges the doc + disconnects their
+// YouTube channels after the 90-day retention window in the Privacy Policy).
+// Calling again on an already soft-deleted user restores it (clears deletedAt).
+const toggleDeleteUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('name email deletedAt');
+    if (!user) return errorResponse(res, 404, 'User not found');
+
+    if (user.deletedAt) {
+      user.deletedAt = null;
+      await user.save();
+      return successResponse(res, 200, 'Account deletion cancelled', { deletedAt: null });
+    }
+
+    user.deletedAt = new Date();
+    await user.save();
+
+    // Disconnect their channels now — the existing 30-day channel purge job
+    // then cleans those up on its own schedule, so we don't need separate
+    // cascade-delete logic here.
+    await YoutubeChannel.updateMany(
+      { userId: user._id, connectionStatus: { $ne: 'disconnected' } },
+      { connectionStatus: 'disconnected', isActive: false }
+    );
+
+    return successResponse(res, 200, 'Account marked for deletion', {
+      deletedAt: user.deletedAt,
     });
   } catch (err) {
     return errorResponse(res, 500, err.message);
@@ -175,6 +210,7 @@ module.exports = {
   listUsers,
   changeUserPlan,
   toggleBanUser,
+  toggleDeleteUser,
   getCouponStats,
   listCoupons,
   createCoupon,

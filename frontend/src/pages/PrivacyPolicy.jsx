@@ -116,7 +116,10 @@ export function PrivacyPolicy() {
             <ul className="list-disc list-inside space-y-2 ml-4">
               <li>Account data: Retained while account is active + 90 days after deletion</li>
               <li>YouTube data: Retained while connected + 30 days after disconnection</li>
-              <li>Usage logs: Retained for 12 months</li>
+              <li>
+                Server request/error logs: Retained per our hosting and monitoring providers'
+                own log-retention windows, not by Vezrin directly
+              </li>
               <li>Backup data: Retained for disaster recovery purposes</li>
             </ul>
           </section>

@@ -12,6 +12,8 @@ import {
   Mail,
   Calendar,
   Clock,
+  Trash2,
+  RotateCcw,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Badge } from '../../components/ui/Badge'
@@ -203,6 +205,61 @@ const BanModal = ({ user, onClose, onBanned }) => {
   )
 }
 
+// ─── Delete Modal ─────────────────────────────────────────────────────────────
+// Soft-delete only — sets deletedAt and disconnects their channels. The
+// account + its channels are hard-purged 90/30 days later by the retention
+// cron job (see backend/src/jobs/cron.js purgeExpiredData), per the Privacy
+// Policy's Data Retention section. Calling the same endpoint again restores it.
+
+const DeleteModal = ({ user, onClose, onDeleted }) => {
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      await adminAPI.toggleDeleteUser(user._id)
+      toast.success('Account marked for deletion')
+      onDeleted()
+      onClose()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete account')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <Modal
+      isOpen={!!user}
+      onClose={onClose}
+      title="Delete Account"
+      size="sm"
+      footer={
+        <>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            loading={deleting}
+            onClick={handleDelete}
+            icon={Trash2}
+          >
+            Delete Account
+          </Button>
+        </>
+      }
+    >
+      <p className="text-sm text-gray-400">
+        Delete <span className="text-white font-medium">{user?.name}</span> ({user?.email})? Their
+        channels disconnect immediately. Per the Privacy Policy's retention window, the account is
+        permanently purged in 90 days (channel data in 30) — you can restore it before then.
+      </p>
+    </Modal>
+  )
+}
+
 // ─── Main Users Page ──────────────────────────────────────────────────────────
 
 export const AdminUsers = () => {
@@ -218,6 +275,9 @@ export const AdminUsers = () => {
   const [banTarget, setBanTarget] = useState(null)
   const [unbanTarget, setUnbanTarget] = useState(null)
   const [unbanning, setUnbanning] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [restoreTarget, setRestoreTarget] = useState(null)
+  const [restoring, setRestoring] = useState(false)
 
   const LIMIT = 20
 
@@ -255,6 +315,20 @@ export const AdminUsers = () => {
       toast.error('Failed to unban user')
     } finally {
       setUnbanning(false)
+    }
+  }
+
+  const handleRestore = async () => {
+    setRestoring(true)
+    try {
+      await adminAPI.toggleDeleteUser(restoreTarget._id)
+      toast.success('Account deletion cancelled')
+      setRestoreTarget(null)
+      fetchUsers()
+    } catch {
+      toast.error('Failed to restore account')
+    } finally {
+      setRestoring(false)
     }
   }
 
@@ -409,7 +483,12 @@ export const AdminUsers = () => {
 
                     {/* Status */}
                     <td className="px-4 py-3.5">
-                      {u.isBanned ? (
+                      {u.deletedAt ? (
+                        <Badge variant="rose" size="xs">
+                          <Trash2 size={9} className="mr-0.5" />
+                          Deleted
+                        </Badge>
+                      ) : u.isBanned ? (
                         <Badge variant="rose" size="xs">
                           <ShieldOff size={9} className="mr-0.5" />
                           Banned
@@ -418,6 +497,11 @@ export const AdminUsers = () => {
                         <Badge variant="emerald" size="xs" dot>
                           Active
                         </Badge>
+                      )}
+                      {u.deletedAt && (
+                        <p className="text-2xs text-gray-600 mt-0.5">
+                          purges {fmt(new Date(new Date(u.deletedAt).getTime() + 90 * 86400000))}
+                        </p>
                       )}
                       {u.isBanned && u.bannedReason && (
                         <p
@@ -478,6 +562,27 @@ export const AdminUsers = () => {
                             <UserX size={12} /> Ban
                           </button>
                         )}
+                        {u.deletedAt ? (
+                          <button
+                            onClick={() => setRestoreTarget(u)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs
+                                       glass border border-emerald/20 text-emerald/70
+                                       hover:border-emerald/40 hover:text-emerald transition-all"
+                            title="Restore"
+                          >
+                            <RotateCcw size={12} /> Restore
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setDeleteTarget(u)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs
+                                       glass border border-rose/20 text-rose/60
+                                       hover:border-rose/40 hover:text-rose transition-all"
+                            title="Delete"
+                          >
+                            <Trash2 size={12} /> Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -535,6 +640,26 @@ export const AdminUsers = () => {
         message={`Unban "${unbanTarget?.name}"? They will be able to login again.`}
         confirmLabel="Unban"
         loading={unbanning}
+      />
+
+      {/* Delete Modal */}
+      {deleteTarget && (
+        <DeleteModal
+          user={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={fetchUsers}
+        />
+      )}
+
+      {/* Restore Confirm */}
+      <ConfirmModal
+        isOpen={!!restoreTarget}
+        onClose={() => setRestoreTarget(null)}
+        onConfirm={handleRestore}
+        title="Restore Account"
+        message={`Cancel deletion for "${restoreTarget?.name}"? Their channels stay disconnected — reconnect separately if needed.`}
+        confirmLabel="Restore"
+        loading={restoring}
       />
     </div>
   )

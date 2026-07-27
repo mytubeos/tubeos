@@ -7,6 +7,7 @@ const adminAPI = {
   listUsers: (params = {}) => api.get('/admin/users', { params }),
   changeUserPlan: (id, plan) => api.patch(`/admin/users/${id}/plan`, { plan }),
   toggleBanUser: (id, reason) => api.patch(`/admin/users/${id}/ban`, { reason }),
+  toggleDeleteUser: (id) => api.patch(`/admin/users/${id}/delete`),
 
   // Coupon stats + management
   getCouponStats: () => api.get('/admin/coupons/stats'),
