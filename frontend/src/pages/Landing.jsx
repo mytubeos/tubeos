@@ -122,7 +122,10 @@ export const Landing = () => {
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-base-900/80 backdrop-blur-sm border-b border-white/5">
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
-          <img src="/logo-full.png" alt="Vezrin" className="h-8 w-auto" />
+          <div className="flex items-center gap-2.5">
+            <img src="/icon.png" alt="Vezrin" className="w-8 h-8 rounded-lg" />
+            <span className="font-display font-bold text-white text-lg">Vezrin</span>
+          </div>
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
               Sign In
