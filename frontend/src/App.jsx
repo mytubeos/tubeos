@@ -24,6 +24,8 @@ import { ResetPassword } from './pages/auth/ResetPassword'
 import { Landing } from './pages/Landing'
 import { Pricing } from './pages/Pricing'
 import { YouTubeCallback } from './pages/YouTubeCallback'
+import { PrivacyPolicy } from './pages/PrivacyPolicy'
+import { TermsAndConditions } from './pages/TermsAndConditions'
 
 // Part 2
 import { Dashboard } from './pages/dashboard/Dashboard'
@@ -70,6 +72,8 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/pricing" element={<Pricing />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/terms" element={<TermsAndConditions />} />
 
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
