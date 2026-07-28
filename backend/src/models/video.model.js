@@ -109,6 +109,19 @@ const videoSchema = new mongoose.Schema(
       default: null,
     },
 
+    // --- Staged file (for schedule-then-upload-later) ---
+    // Set when a draft has a video file streamed to GCS ahead of time via
+    // POST /:videoId/stage, without uploading to YouTube yet. The scheduler
+    // cron (reapPublishedSchedules) uses this to perform the real upload
+    // once the scheduled time arrives. Cleared once that upload runs
+    // (success or failure) — uploadVideo() itself deletes the GCS object.
+    stagedFile: {
+      gcsPath: { type: String, default: null },
+      bucket: { type: String, default: null },
+      size: { type: Number, default: null },
+      mimeType: { type: String, default: null },
+    },
+
     // --- AI Suggestions (stored for reference) ---
     aiSuggestions: {
       titles: [{ type: String }],

@@ -13,13 +13,27 @@ let analyticsSyncRunning = false;
 const timers = [];
 
 // ---------- Scheduled video publish reaper ----------
-// Videos are uploaded to YouTube as private with `publishAt`. YouTube
-// publishes them automatically. This job just updates our DB status.
+// Two independent sources of "scheduled" videos, both handled here:
+//
+// 1. Schedule documents (created via the Scheduler page's "+ Schedule
+//    Video", picking an existing draft that has a file staged via
+//    POST /:videoId/stage). The file was never sent to YouTube — this is
+//    the moment it actually happens, reusing video.service's uploadVideo()
+//    (the same, already-hardened upload path a direct "Upload Now" uses).
+// 2. Plain Video records scheduled directly from the Upload page's own
+//    "Schedule for later" field — these were uploaded to YouTube
+//    immediately as private with a native `publishAt`; YouTube makes them
+//    public automatically. This just refreshes our own DB status once that
+//    time has passed, so the Videos list doesn't keep showing "Scheduled"
+//    long after it's actually gone live.
 const reapPublishedSchedules = async () => {
   if (running) return;
   running = true;
   try {
     const now = new Date();
+    const videoService = require('../services/video.service');
+
+    // ---- 1. Schedule-backed drafts: perform the real upload now ----
     const due = await Schedule.find({
       status: 'pending',
       scheduledAt: { $lte: now },
@@ -36,16 +50,50 @@ const reapPublishedSchedules = async () => {
           continue;
         }
 
-        // YouTube handles the privacy flip; mark our records as published.
-        video.status = 'published';
-        video.publishedAt = video.publishedAt || s.scheduledAt;
+        if (!video.stagedFile?.gcsPath) {
+          s.status = 'failed';
+          s.failReason = 'No video file was attached to this draft';
+          s.failedAt = new Date();
+          await s.save();
+          continue;
+        }
+
+        // uploadVideo() treats a truthy scheduledAt as "still in the
+        // future, ask YouTube to hold it private via publishAt" — clear it
+        // first since that future has already arrived; it should publish
+        // per the video's own privacy setting right now.
+        video.scheduledAt = null;
         await video.save();
 
-        s.status = 'published';
-        s.executedAt = new Date();
-        await s.save();
+        const fileRef = {
+          gcsPath: video.stagedFile.gcsPath,
+          bucket: video.stagedFile.bucket,
+          size: video.stagedFile.size,
+        };
 
-        logger.info(`[cron] schedule ${s._id} marked published`, { videoId: video._id });
+        try {
+          await videoService.uploadVideo(
+            s.userId.toString(),
+            s.videoId.toString(),
+            fileRef,
+            video.stagedFile.mimeType
+          );
+          s.status = 'published';
+          s.executedAt = new Date();
+          logger.info(`[cron] schedule ${s._id} uploaded + published`, { videoId: video._id });
+        } catch (uploadErr) {
+          s.status = 'failed';
+          s.failReason = uploadErr.message;
+          s.failedAt = new Date();
+          logger.error(`[cron] schedule ${s._id} upload failed`, { error: uploadErr.message });
+        }
+
+        // uploadVideo()'s own finally block already deleted the GCS
+        // staging object on both success and failure — clear the now-
+        // dangling reference so a later re-schedule attempt doesn't think
+        // a file is still attached.
+        await Video.findByIdAndUpdate(s.videoId, { $unset: { stagedFile: 1 } });
+        await s.save();
       } catch (err) {
         s.status = 'failed';
         s.failReason = err.message;
@@ -53,6 +101,20 @@ const reapPublishedSchedules = async () => {
         await s.save();
         logger.error(`[cron] schedule ${s._id} failed`, { error: err.message });
       }
+    }
+
+    // ---- 2. Direct (Upload-page) schedules: just refresh the DB status ----
+    const dueDirect = await Video.find({
+      status: 'scheduled',
+      scheduledAt: { $lte: now },
+      youtubeVideoId: { $exists: true, $ne: null },
+    }).limit(50);
+
+    for (const video of dueDirect) {
+      video.status = 'published';
+      video.publishedAt = video.publishedAt || video.scheduledAt;
+      await video.save();
+      logger.info(`[cron] direct-scheduled video ${video._id} marked published`);
     }
   } catch (err) {
     logger.error('[cron] reapPublishedSchedules error', { error: err.message });

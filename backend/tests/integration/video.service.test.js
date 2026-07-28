@@ -190,3 +190,65 @@ describe('video.service.uploadVideo — GCS staging cleanup', () => {
     expect(storageService.deleteFile).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('video.service.stageFile — attaching a file to a draft for later scheduling', () => {
+  it('saves the GCS reference on the draft without touching YouTube', async () => {
+    const { user, video } = await createFixtures();
+    const fileRef = fakeGcsFileRef();
+
+    const result = await videoService.stageFile(
+      user._id.toString(),
+      video._id.toString(),
+      fileRef,
+      'video/mp4'
+    );
+
+    expect(result.video.stagedFile.gcsPath).toBe(fileRef.gcsPath);
+    expect(result.video.status).toBe('draft'); // unchanged — no YouTube upload happened
+
+    const dbVideo = await Video.findById(video._id);
+    expect(dbVideo.stagedFile.gcsPath).toBe(fileRef.gcsPath);
+    expect(dbVideo.stagedFile.mimeType).toBe('video/mp4');
+    expect(dbVideo.youtubeVideoId).toBeFalsy();
+  });
+
+  it('deletes the previously staged GCS object when replacing it with a new file', async () => {
+    storageService.deleteFile = vi.fn(async () => {});
+    const { user, video } = await createFixtures();
+    const firstFile = fakeGcsFileRef();
+    await videoService.stageFile(user._id.toString(), video._id.toString(), firstFile, 'video/mp4');
+
+    const secondFile = fakeGcsFileRef();
+    await videoService.stageFile(
+      user._id.toString(),
+      video._id.toString(),
+      secondFile,
+      'video/mp4'
+    );
+
+    expect(storageService.deleteFile).toHaveBeenCalledWith(firstFile.gcsPath);
+
+    const dbVideo = await Video.findById(video._id);
+    expect(dbVideo.stagedFile.gcsPath).toBe(secondFile.gcsPath);
+  });
+
+  it('rejects staging a file onto a video that is not draft/failed', async () => {
+    const { user, video } = await createFixtures();
+    await Video.findByIdAndUpdate(video._id, { status: 'published' });
+    const fileRef = fakeGcsFileRef();
+
+    await expect(
+      videoService.stageFile(user._id.toString(), video._id.toString(), fileRef, 'video/mp4')
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('rejects when the video does not exist', async () => {
+    const { user } = await createFixtures();
+    const fileRef = fakeGcsFileRef();
+    const bogusVideoId = '507f1f77bcf86cd799439099';
+
+    await expect(
+      videoService.stageFile(user._id.toString(), bogusVideoId, fileRef, 'video/mp4')
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+});

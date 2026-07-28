@@ -82,6 +82,47 @@ const markUploadFailed = async (userId, videoId, errInfo) => {
   );
 };
 
+// ==================== STAGE FILE (schedule-then-upload-later) ====================
+// Streams a video file to GCS (via the same multer/GCS middleware as a real
+// upload) but does NOT touch YouTube yet — just records the GCS reference on
+// the draft so it can be scheduled. The scheduler cron performs the actual
+// YouTube upload later, at the scheduled time, reusing uploadVideo() below.
+/**
+ * @param {string} userId
+ * @param {string} videoId
+ * @param {{gcsPath: string, bucket?: string, size?: number}} fileRef
+ * @param {string} mimeType
+ */
+const stageFile = async (userId, videoId, fileRef, mimeType) => {
+  const video = await Video.findOne({ _id: videoId, userId });
+  if (!video) {
+    const err = new Error('Video not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  if (!['draft', 'failed'].includes(video.status)) {
+    const err = new Error(`Cannot attach a file to a video with status: ${video.status}`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Replacing a previously staged file — drop the old GCS object first so it
+  // doesn't leak.
+  if (video.stagedFile?.gcsPath) {
+    await storageService.deleteFile(video.stagedFile.gcsPath);
+  }
+
+  video.stagedFile = {
+    gcsPath: fileRef.gcsPath,
+    bucket: fileRef.bucket || null,
+    size: fileRef.size || null,
+    mimeType,
+  };
+  await video.save();
+
+  return { video, message: 'Video file attached — ready to schedule' };
+};
+
 // ==================== UPLOAD VIDEO TO YOUTUBE ====================
 // fileRef is either a Buffer (in-memory / dev fallback) or a GCS reference
 // { gcsPath, bucket, size } that we stream straight to YouTube without ever
@@ -109,7 +150,11 @@ const uploadVideo = async (userId, videoId, fileRef, mimeType) => {
       throw err;
     }
 
-    if (!['draft', 'failed'].includes(video.status)) {
+    // 'scheduled' is included so the reaper cron can perform the real
+    // upload when a Scheduler-page schedule comes due (createSchedule sets
+    // status to 'scheduled' the moment it's created, well before the
+    // upload itself actually happens).
+    if (!['draft', 'failed', 'scheduled'].includes(video.status)) {
       const err = new Error(`Cannot upload video with status: ${video.status}`);
       err.statusCode = 400;
       throw err;
@@ -547,6 +592,7 @@ const cancelScheduled = async (userId, videoId) => {
 module.exports = {
   createDraft,
   uploadVideo,
+  stageFile,
   markUploadFailed,
   updateVideo,
   deleteVideo,

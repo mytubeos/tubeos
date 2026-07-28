@@ -16,6 +16,13 @@ export const videoApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 10 * 60 * 1000,
     }),
+  // Streams the file to storage for a draft that will be scheduled later —
+  // same long timeout as upload(), doesn't touch YouTube yet.
+  stageFile: (videoId, formData) =>
+    api.post(`/videos/${videoId}/stage`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 10 * 60 * 1000,
+    }),
   uploadThumbnail: (videoId, formData) =>
     api.post(`/videos/${videoId}/thumbnail`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },

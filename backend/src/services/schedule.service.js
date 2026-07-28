@@ -1,17 +1,14 @@
 // src/services/schedule.service.js
-// Smart scheduling — create, update, cancel schedules
-// Integrates with BullMQ for job management
+// Smart scheduling — create, update, cancel schedules.
+// Actual publishing is done by the reaper cron (src/jobs/cron.js), which
+// polls for due Schedule documents and calls video.service's uploadVideo()
+// directly — there is no BullMQ/Redis job queue in the loop (see
+// config/queue.config.js's header comment for why).
 
 const Schedule = require('../models/schedule.model');
 const Video = require('../models/video.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
 const { getDefaultGrid } = require('./heatmap.service');
-const {
-  scheduleVideoPublish,
-  cancelScheduledJob,
-  getJobStatus,
-  getQueueStats,
-} = require('../config/queue.config');
 
 // ==================== CREATE SCHEDULE ====================
 const createSchedule = async (userId, videoId, scheduledAt, options = {}) => {
@@ -25,6 +22,14 @@ const createSchedule = async (userId, videoId, scheduledAt, options = {}) => {
 
   if (!['draft', 'failed', 'cancelled'].includes(video.status)) {
     const err = new Error(`Cannot schedule video with status: ${video.status}`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // A schedule with nothing to upload later is pointless — "Save as Draft"
+  // must have staged a file first (see video.service.js's stageFile()).
+  if (!video.stagedFile?.gcsPath) {
+    const err = new Error('Attach a video file to this draft before scheduling it');
     err.statusCode = 400;
     throw err;
   }
@@ -49,14 +54,10 @@ const createSchedule = async (userId, videoId, scheduledAt, options = {}) => {
   // 3. Cancel existing schedule if any
   const existing = await Schedule.findOne({ videoId: { $eq: videoId } });
   if (existing) {
-    await cancelScheduledJob(videoId);
     await existing.deleteOne();
   }
 
-  // 4. Create BullMQ job
-  const job = await scheduleVideoPublish(videoId, video.channelId, userId, scheduleDate);
-
-  // 5. Create schedule record
+  // 4. Create schedule record — the reaper cron picks this up once due
   const schedule = await Schedule.create({
     userId,
     channelId: video.channelId,
@@ -69,19 +70,16 @@ const createSchedule = async (userId, videoId, scheduledAt, options = {}) => {
     isAiRecommended: options.isAiRecommended || false,
     aiScore: options.aiScore || null,
     aiReason: options.aiReason || null,
-    bullJobId: job.id,
     status: 'pending',
   });
 
-  // 6. Update video
+  // 5. Update video
   video.status = 'scheduled';
   video.scheduledAt = scheduleDate;
-  video.scheduledJobId = job.id;
   await video.save();
 
   return {
     schedule,
-    job: { id: job.id, delay: job.opts.delay },
     message: `Video scheduled for ${scheduleDate.toISOString()}`,
   };
 };
@@ -101,17 +99,16 @@ const reschedule = async (userId, videoId, newScheduledAt) => {
     throw err;
   }
 
-  // Cancel old job
-  await cancelScheduledJob(videoId);
-
-  // Create new job
   const newDate = new Date(newScheduledAt);
+  if (newDate <= new Date()) {
+    const err = new Error('Scheduled time must be in the future');
+    err.statusCode = 400;
+    throw err;
+  }
   const video = await Video.findById(videoId);
-  const job = await scheduleVideoPublish(videoId, video.channelId, userId, newDate);
 
-  // Update schedule
+  // Update schedule — the reaper cron just re-reads scheduledAt each poll
   schedule.scheduledAt = newDate;
-  schedule.bullJobId = job.id;
   schedule.status = 'pending';
   schedule.failReason = null;
   await schedule.save();
@@ -119,7 +116,6 @@ const reschedule = async (userId, videoId, newScheduledAt) => {
   // Update video
   video.scheduledAt = newDate;
   video.status = 'scheduled';
-  video.scheduledJobId = job.id;
   await video.save();
 
   return {
@@ -137,20 +133,17 @@ const cancelSchedule = async (userId, videoId) => {
     throw err;
   }
 
-  // Cancel BullMQ job
-  await cancelScheduledJob(videoId);
-
   // Update schedule
   schedule.status = 'cancelled';
   await schedule.save();
 
-  // Update video back to draft
+  // Update video back to draft — its staged file stays attached, so it can
+  // be rescheduled again without re-uploading.
   await Video.findOneAndUpdate(
     { _id: { $eq: videoId } },
     {
       status: 'draft',
       scheduledAt: null,
-      scheduledJobId: null,
     }
   );
 
@@ -230,18 +223,40 @@ const getScheduleJobStatus = async (userId, videoId) => {
     throw err;
   }
 
-  const jobStatus = await getJobStatus(videoId);
-
   return {
     schedule,
-    job: jobStatus,
+    job: {
+      status: schedule.status,
+      scheduledAt: schedule.scheduledAt,
+      executedAt: schedule.executedAt,
+      failReason: schedule.failReason,
+    },
   };
 };
 
-// ==================== GET QUEUE STATS (Admin) ====================
-const getQueueDashboard = async () => {
-  const stats = await getQueueStats();
-  return { queue: QUEUE_NAMES.VIDEO_PUBLISH, stats };
+// ==================== GET QUEUE STATS ====================
+// Real counts from the Schedule collection — there's no BullMQ/Redis queue
+// behind this (see this file's header comment), so these numbers come
+// straight from what the reaper cron actually tracks.
+const getQueueDashboard = async (userId) => {
+  const now = new Date();
+  const [duePending, notYetDue, published, failed] = await Promise.all([
+    Schedule.countDocuments({ userId, status: 'pending', scheduledAt: { $lte: now } }),
+    Schedule.countDocuments({ userId, status: 'pending', scheduledAt: { $gt: now } }),
+    Schedule.countDocuments({ userId, status: 'published' }),
+    Schedule.countDocuments({ userId, status: 'failed' }),
+  ]);
+
+  return {
+    stats: {
+      // Waiting: scheduled for later, not due yet
+      delayed: notYetDue,
+      // Active: due now, will be picked up by the next reaper tick (runs every 60s)
+      active: duePending,
+      completed: published,
+      failed,
+    },
+  };
 };
 
 // ==================== AI BEST TIME RECOMMENDATION ====================
@@ -393,8 +408,6 @@ const getNextBestSlots = (bestDays, bestHours, count = 5, grid = null) => {
 
   return slots;
 };
-
-const { QUEUE_NAMES } = require('../config/queue.config');
 
 module.exports = {
   createSchedule,

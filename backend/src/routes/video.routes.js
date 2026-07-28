@@ -71,6 +71,23 @@ router.post(
 );
 
 /**
+ * @route   POST /api/v1/videos/:videoId/stage
+ * @desc    Stream a video file to GCS for a draft, without uploading to
+ *          YouTube yet — lets the draft be scheduled; the scheduler cron
+ *          performs the real upload when the scheduled time comes due.
+ * @access  Private
+ * @body    multipart/form-data with 'video' file
+ */
+router.post(
+  '/:videoId/stage',
+  protect,
+  uploadLimiter,
+  parseVideoUpload,
+  videoController.handleUploadStreamError,
+  videoController.stageVideoFile
+);
+
+/**
  * @route   PATCH /api/v1/videos/:videoId
  * @desc    Update video metadata
  * @access  Private

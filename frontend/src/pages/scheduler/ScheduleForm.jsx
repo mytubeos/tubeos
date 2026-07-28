@@ -35,13 +35,15 @@ export const ScheduleForm = ({ prefilledDate, prefilledTime, onSuccess, onCancel
     }
   }, [prefilledDate, prefilledTime])
 
-  // Load draft videos
+  // Load draft videos — only ones with a file already attached (via "Save
+  // as Draft" on the Upload page) can actually be scheduled; a fileless
+  // draft would have nothing to upload once its time comes.
   useEffect(() => {
     if (!activeChannel?._id) return
     setLoading(true)
     videoApi
       .getAll({ status: 'draft', channelId: activeChannel._id, limit: 20 })
-      .then((res) => setVideos(res.data.data || []))
+      .then((res) => setVideos((res.data.data || []).filter((v) => v.stagedFile?.gcsPath)))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [activeChannel?._id])
@@ -103,8 +105,10 @@ export const ScheduleForm = ({ prefilledDate, prefilledTime, onSuccess, onCancel
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            <p className="text-sm">No draft videos found.</p>
-            <p className="text-xs mt-1">Upload a video first to schedule it.</p>
+            <p className="text-sm">No videos ready to schedule.</p>
+            <p className="text-xs mt-1">
+              Select a video file and click "Save as Draft" on the Upload page first.
+            </p>
           </div>
         ) : (
           <div className="space-y-2 max-h-52 overflow-y-auto pr-1">

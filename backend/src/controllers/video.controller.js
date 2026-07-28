@@ -52,6 +52,31 @@ const uploadVideo = async (req, res) => {
   }
 };
 
+// POST /api/v1/videos/:videoId/stage
+// Streams a file to GCS without uploading to YouTube yet — used by "Save as
+// Draft" so a draft can later be scheduled (the scheduler cron performs the
+// real YouTube upload once the scheduled time comes due).
+const stageVideoFile = async (req, res) => {
+  try {
+    const { videoId } = req.params;
+    if (!req.file) {
+      return errorResponse(res, 400, 'Video file is required');
+    }
+    if (!req.file.gcsPath) {
+      return errorResponse(
+        res,
+        400,
+        'Scheduling a draft for later requires cloud storage to be configured'
+      );
+    }
+    const fileRef = { gcsPath: req.file.gcsPath, bucket: req.file.bucket, size: req.file.size };
+    const result = await videoService.stageFile(req.user.id, videoId, fileRef, req.file.mimetype);
+    return successResponse(res, 200, result.message, result.video);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
 // Error-handling middleware mounted right after the upload multer middleware.
 // Fires only if the multer/GCS streaming layer failed (client disconnect,
 // GCS write error, oversized file) — i.e. before videoService.uploadVideo()
@@ -179,6 +204,7 @@ const deleteThumbnail = async (req, res) => {
 module.exports = {
   createDraft,
   uploadVideo,
+  stageVideoFile,
   handleUploadStreamError,
   updateVideo,
   deleteVideo,

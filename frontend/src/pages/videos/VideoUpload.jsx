@@ -152,7 +152,7 @@ export const VideoUpload = () => {
         .split(',')
         .map((t) => t.trim())
         .filter(Boolean)
-      await videoApi.createDraft({
+      const draftRes = await videoApi.createDraft({
         channelId: activeChannel._id,
         title: form.title,
         description: form.description,
@@ -161,7 +161,28 @@ export const VideoUpload = () => {
         privacy: form.privacy,
         isShort: form.isShort,
       })
-      toast.success('Draft saved!')
+
+      // If a file was selected, stage it too — a draft with no file
+      // attached can never actually be scheduled later (nothing to upload
+      // when its time comes), so this is what makes "Schedule Video" on the
+      // Scheduler page possible for this draft.
+      if (file) {
+        const videoId = draftRes.data.data?._id
+        const stageData = new FormData()
+        stageData.append('video', file)
+        try {
+          await videoApi.stageFile(videoId, stageData)
+        } catch (stageErr) {
+          toast.error(
+            stageErr.response?.data?.message ||
+              'Draft saved, but attaching the video file failed — re-attach it before scheduling.'
+          )
+          navigate('/videos')
+          return
+        }
+      }
+
+      toast.success(file ? 'Draft saved with video — ready to schedule!' : 'Draft saved!')
       navigate('/videos')
     } catch {
       toast.error('Failed to save draft')

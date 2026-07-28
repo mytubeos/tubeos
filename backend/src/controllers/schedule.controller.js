@@ -100,7 +100,7 @@ const bulkSchedule = async (req, res) => {
 
 const getQueueStats = async (req, res) => {
   try {
-    const result = await scheduleService.getQueueDashboard();
+    const result = await scheduleService.getQueueDashboard(req.user.id);
     return successResponse(res, 200, 'Queue stats', result);
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);

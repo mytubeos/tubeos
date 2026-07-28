@@ -1,50 +1,95 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { createRequire } from 'module';
 
 // See tests/integration/auth.service.test.js for why createRequire is used
 // instead of `import` for local project files under test.
 const require = createRequire(import.meta.url);
 const { reapPublishedSchedules } = require('../../src/jobs/cron.js');
+const storageService = require('../../src/services/storage.service.js');
 const Schedule = require('../../src/models/schedule.model.js');
 const Video = require('../../src/models/video.model.js');
 const User = require('../../src/models/user.model.js');
 const YoutubeChannel = require('../../src/models/youtube-channel.model.js');
 
-const createBaseFixtures = async () => {
+// Same monkey-patch approach as video.service.test.js — storage.service.js
+// is loaded via the same createRequire "world" as cron.js's
+// require('../services/video.service'), which itself requires
+// storage.service.js, so patching its exports here is visible there too.
+const originalDeleteFile = storageService.deleteFile;
+const originalCreateReadStream = storageService.createReadStream;
+
+const setupFetchMock = ({ initOk = true, uploadOk = true } = {}) => {
+  const fetchMock = vi.fn(async (url) => {
+    if (typeof url === 'string' && url.includes('uploadType=resumable')) {
+      if (!initOk) {
+        return { ok: false, json: async () => ({ error: { message: 'YouTube init failed' } }) };
+      }
+      return { ok: true, headers: { get: () => 'https://upload.example.com/session123' } };
+    }
+    if (!uploadOk) {
+      return { ok: false, json: async () => ({ error: { message: 'YouTube upload failed' } }) };
+    }
+    return { ok: true, json: async () => ({ id: 'yt_video_123' }) };
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+};
+
+const createBaseFixtures = async (userOverrides = {}) => {
   const user = await User.create({
     name: 'Creator',
     email: `creator-${Date.now()}-${Math.random()}@example.com`,
     password: 'password123',
+    isEmailVerified: true,
+    plan: 'creator', // uploads limit 5 (free plan has 0)
+    ...userOverrides,
   });
   const channel = await YoutubeChannel.create({
     userId: user._id,
     channelId: `UC${Math.random().toString(36).slice(2, 24)}`,
     channelName: 'Test Channel',
+    isActive: true,
     oauth: {
-      accessToken: 'x',
-      refreshToken: 'x',
+      accessToken: 'fake-access-token',
+      refreshToken: 'fake-refresh-token',
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     },
   });
   return { user, channel };
 };
 
-describe('cron.reapPublishedSchedules', () => {
-  it('flips an overdue pending schedule and its video to published', async () => {
+const fakeStagedFile = () => ({
+  gcsPath: `staging/${Math.random()}/video.mp4`,
+  bucket: 'test-bucket',
+  size: 12345,
+  mimeType: 'video/mp4',
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  storageService.deleteFile = originalDeleteFile;
+  storageService.createReadStream = originalCreateReadStream;
+});
+
+describe('cron.reapPublishedSchedules — Schedule-backed drafts (real upload at due time)', () => {
+  it('uploads the staged file to YouTube and marks both records published', async () => {
+    setupFetchMock({ initOk: true, uploadOk: true });
+    storageService.createReadStream = vi.fn(() => 'fake-stream');
+    storageService.deleteFile = vi.fn(async () => {});
+
     const { user, channel } = await createBaseFixtures();
     const video = await Video.create({
       userId: user._id,
       channelId: channel._id,
-      title: 'Overdue Video',
+      title: 'Staged Video',
       status: 'scheduled',
-      youtubeVideoId: 'yt123',
+      stagedFile: fakeStagedFile(),
     });
-    const scheduledAt = new Date(Date.now() - 60 * 1000); // 1 minute ago
     const schedule = await Schedule.create({
       userId: user._id,
       channelId: channel._id,
       videoId: video._id,
-      scheduledAt,
+      scheduledAt: new Date(Date.now() - 60 * 1000),
     });
 
     await reapPublishedSchedules();
@@ -54,33 +99,66 @@ describe('cron.reapPublishedSchedules', () => {
     expect(dbSchedule.executedAt).toBeTruthy();
 
     const dbVideo = await Video.findById(video._id);
-    expect(dbVideo.status).toBe('published');
-    expect(dbVideo.publishedAt).toBeTruthy();
+    expect(dbVideo.status).toBe('processing'); // matches a direct "Upload Now" with no schedule
+    expect(dbVideo.youtubeVideoId).toBe('yt_video_123');
+    expect(dbVideo.stagedFile?.gcsPath).toBeFalsy(); // dangling reference cleared
+    expect(storageService.deleteFile).toHaveBeenCalledWith(video.stagedFile.gcsPath);
   });
 
-  it('leaves a schedule alone if scheduledAt is still in the future', async () => {
+  it('marks the schedule failed (not published) when the draft has no staged file', async () => {
     const { user, channel } = await createBaseFixtures();
     const video = await Video.create({
       userId: user._id,
       channelId: channel._id,
-      title: 'Future Video',
+      title: 'Fileless Draft',
       status: 'scheduled',
     });
-    const scheduledAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
     const schedule = await Schedule.create({
       userId: user._id,
       channelId: channel._id,
       videoId: video._id,
-      scheduledAt,
+      scheduledAt: new Date(Date.now() - 60 * 1000),
     });
 
     await reapPublishedSchedules();
 
     const dbSchedule = await Schedule.findById(schedule._id);
-    expect(dbSchedule.status).toBe('pending');
+    expect(dbSchedule.status).toBe('failed');
+    expect(dbSchedule.failReason).toMatch(/no video file/i);
 
     const dbVideo = await Video.findById(video._id);
-    expect(dbVideo.status).toBe('scheduled');
+    expect(dbVideo.status).toBe('scheduled'); // untouched — never attempted
+  });
+
+  it('marks the schedule failed when the real YouTube upload fails', async () => {
+    setupFetchMock({ initOk: false });
+    storageService.createReadStream = vi.fn(() => 'fake-stream');
+    storageService.deleteFile = vi.fn(async () => {});
+
+    const { user, channel } = await createBaseFixtures();
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'Will fail to upload',
+      status: 'scheduled',
+      stagedFile: fakeStagedFile(),
+    });
+    const schedule = await Schedule.create({
+      userId: user._id,
+      channelId: channel._id,
+      videoId: video._id,
+      scheduledAt: new Date(Date.now() - 60 * 1000),
+    });
+
+    await reapPublishedSchedules();
+
+    const dbSchedule = await Schedule.findById(schedule._id);
+    expect(dbSchedule.status).toBe('failed');
+    expect(dbSchedule.failReason).toMatch(/youtube init failed/i);
+
+    const dbVideo = await Video.findById(video._id);
+    expect(dbVideo.status).toBe('failed'); // set by uploadVideo()'s own catch block
+    expect(dbVideo.stagedFile?.gcsPath).toBeFalsy(); // still cleared, GCS object still deleted
   });
 
   it('marks the schedule failed when its linked video record no longer exists', async () => {
@@ -90,6 +168,7 @@ describe('cron.reapPublishedSchedules', () => {
       channelId: channel._id,
       title: 'Will be deleted',
       status: 'scheduled',
+      stagedFile: fakeStagedFile(),
     });
     const schedule = await Schedule.create({
       userId: user._id,
@@ -106,7 +185,38 @@ describe('cron.reapPublishedSchedules', () => {
     expect(dbSchedule.failReason).toMatch(/video record missing/i);
   });
 
+  it('leaves a schedule alone if scheduledAt is still in the future', async () => {
+    const { user, channel } = await createBaseFixtures();
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'Future Video',
+      status: 'scheduled',
+      stagedFile: fakeStagedFile(),
+    });
+    const scheduledAt = new Date(Date.now() + 60 * 60 * 1000);
+    const schedule = await Schedule.create({
+      userId: user._id,
+      channelId: channel._id,
+      videoId: video._id,
+      scheduledAt,
+    });
+
+    await reapPublishedSchedules();
+
+    const dbSchedule = await Schedule.findById(schedule._id);
+    expect(dbSchedule.status).toBe('pending');
+
+    const dbVideo = await Video.findById(video._id);
+    expect(dbVideo.status).toBe('scheduled');
+    expect(dbVideo.stagedFile?.gcsPath).toBeTruthy(); // untouched
+  });
+
   it('processes multiple due schedules in a single run and leaves not-yet-due ones untouched', async () => {
+    setupFetchMock({ initOk: true, uploadOk: true });
+    storageService.createReadStream = vi.fn(() => 'fake-stream');
+    storageService.deleteFile = vi.fn(async () => {});
+
     const { user, channel } = await createBaseFixtures();
 
     const dueVideos = await Promise.all(
@@ -116,6 +226,7 @@ describe('cron.reapPublishedSchedules', () => {
           channelId: channel._id,
           title: `Due Video ${i}`,
           status: 'scheduled',
+          stagedFile: fakeStagedFile(),
         })
       )
     );
@@ -135,6 +246,7 @@ describe('cron.reapPublishedSchedules', () => {
       channelId: channel._id,
       title: 'Not due yet',
       status: 'scheduled',
+      stagedFile: fakeStagedFile(),
     });
     const futureSchedule = await Schedule.create({
       userId: user._id,
@@ -151,5 +263,61 @@ describe('cron.reapPublishedSchedules', () => {
     }
     const untouchedSchedule = await Schedule.findById(futureSchedule._id);
     expect(untouchedSchedule.status).toBe('pending');
+  });
+});
+
+describe('cron.reapPublishedSchedules — direct (Upload-page) schedules', () => {
+  it('flips a due direct-scheduled video to published once its time has passed', async () => {
+    const { user, channel } = await createBaseFixtures();
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'Direct-scheduled video',
+      status: 'scheduled',
+      youtubeVideoId: 'yt_already_uploaded',
+      scheduledAt: new Date(Date.now() - 60 * 1000),
+    });
+
+    await reapPublishedSchedules();
+
+    const dbVideo = await Video.findById(video._id);
+    expect(dbVideo.status).toBe('published');
+    expect(dbVideo.publishedAt).toBeTruthy();
+  });
+
+  it('leaves a direct-scheduled video alone if its time is still in the future', async () => {
+    const { user, channel } = await createBaseFixtures();
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'Future direct-scheduled video',
+      status: 'scheduled',
+      youtubeVideoId: 'yt_already_uploaded',
+      scheduledAt: new Date(Date.now() + 60 * 60 * 1000),
+    });
+
+    await reapPublishedSchedules();
+
+    const dbVideo = await Video.findById(video._id);
+    expect(dbVideo.status).toBe('scheduled');
+  });
+
+  it('does not touch a due "scheduled" video that was never actually uploaded to YouTube', async () => {
+    // Defensive check: a plain Video.status='scheduled' with no
+    // youtubeVideoId shouldn't occur via either real code path, but if it
+    // ever did, this must not get marked published — nothing is live.
+    const { user, channel } = await createBaseFixtures();
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'Never uploaded',
+      status: 'scheduled',
+      scheduledAt: new Date(Date.now() - 60 * 1000),
+    });
+
+    await reapPublishedSchedules();
+
+    const dbVideo = await Video.findById(video._id);
+    expect(dbVideo.status).toBe('scheduled');
   });
 });
