@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { BestTimeWidget } from '../../components/features/BestTimeWidget'
 import { StatusBadge } from '../../components/ui/Badge'
+import { toDatetimeLocalValue } from '../../utils/formatters'
 import toast from 'react-hot-toast'
 
 export const ScheduleForm = ({ prefilledDate, prefilledTime, onSuccess, onCancel }) => {
@@ -23,15 +24,14 @@ export const ScheduleForm = ({ prefilledDate, prefilledTime, onSuccess, onCancel
   // Pre-fill datetime
   useEffect(() => {
     if (prefilledTime) {
-      const d = new Date(prefilledTime)
-      setScheduledAt(d.toISOString().slice(0, 16))
+      setScheduledAt(toDatetimeLocalValue(prefilledTime))
     } else if (prefilledDate) {
       setScheduledAt(`${prefilledDate}T19:00`)
     } else {
       const tomorrow = new Date()
       tomorrow.setDate(tomorrow.getDate() + 1)
       tomorrow.setHours(19, 0, 0, 0)
-      setScheduledAt(tomorrow.toISOString().slice(0, 16))
+      setScheduledAt(toDatetimeLocalValue(tomorrow))
     }
   }, [prefilledDate, prefilledTime])
 
@@ -69,6 +69,7 @@ export const ScheduleForm = ({ prefilledDate, prefilledTime, onSuccess, onCancel
       await scheduleApi.create({
         videoId: selectedVideo._id,
         scheduledAt: scheduleDate.toISOString(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       })
       toast.success('Video scheduled!')
       onSuccess?.()
@@ -154,7 +155,7 @@ export const ScheduleForm = ({ prefilledDate, prefilledTime, onSuccess, onCancel
       {/* AI best time */}
       <BestTimeWidget
         onSelectTime={(time) => {
-          setScheduledAt(new Date(time).toISOString().slice(0, 16))
+          setScheduledAt(toDatetimeLocalValue(time))
           toast.success('Best time auto-filled!')
         }}
       />

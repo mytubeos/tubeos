@@ -9,7 +9,7 @@ import { Textarea, Select } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { BestTimeWidget } from '../../components/features/BestTimeWidget'
 import { VIDEO_CATEGORIES } from '../../utils/constants'
-import { formatFileSize } from '../../utils/formatters'
+import { formatFileSize, toDatetimeLocalValue } from '../../utils/formatters'
 import toast from 'react-hot-toast'
 
 const PRIVACY_OPTIONS = [
@@ -193,7 +193,14 @@ export const VideoUpload = () => {
         tags,
         category: form.category,
         privacy: form.privacy,
-        scheduledAt: form.scheduledAt || null,
+        // form.scheduledAt is a naive "YYYY-MM-DDTHH:mm" string from the
+        // datetime-local input — new Date() here correctly interprets it as
+        // THIS browser's own local time (whatever timezone that is), and
+        // toISOString() turns it into an unambiguous UTC instant. Sending
+        // the naive string as-is let the backend (which runs in UTC) parse
+        // it as UTC instead of the user's local time, scheduling everything
+        // late by the user's own UTC offset.
+        scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null,
         isShort: form.isShort,
       })
       const videoId = draftRes.data.data?._id
@@ -489,7 +496,7 @@ export const VideoUpload = () => {
           {/* Best time widget */}
           <BestTimeWidget
             onSelectTime={(time) => {
-              setForm((p) => ({ ...p, scheduledAt: new Date(time).toISOString().slice(0, 16) }))
+              setForm((p) => ({ ...p, scheduledAt: toDatetimeLocalValue(time) }))
               toast.success('Best time auto-filled!')
             }}
           />

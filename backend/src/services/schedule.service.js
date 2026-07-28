@@ -62,7 +62,10 @@ const createSchedule = async (userId, videoId, scheduledAt, options = {}) => {
     channelId: video.channelId,
     videoId,
     scheduledAt: scheduleDate,
-    timezone: options.timezone || 'Asia/Kolkata',
+    // Purely informational (the actual instant is already the correct UTC
+    // value in scheduledAt) — don't assume every user is in India; fall
+    // back to UTC when the frontend genuinely didn't send one.
+    timezone: options.timezone || 'UTC',
     isAiRecommended: options.isAiRecommended || false,
     aiScore: options.aiScore || null,
     aiReason: options.aiReason || null,

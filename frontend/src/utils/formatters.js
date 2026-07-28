@@ -103,6 +103,16 @@ export const getInitials = (name) => {
     .substring(0, 2)
 }
 
+// Convert any timestamp (e.g. a UTC ISO string from the backend) into the
+// "YYYY-MM-DDTHH:mm" string a <input type="datetime-local"> expects — using
+// the LOCAL getters (not getUTC*/toISOString) so the value shown to the user
+// is their own wall-clock time, correct in any timezone, not just IST.
+export const toDatetimeLocalValue = (timestamp) => {
+  const d = new Date(timestamp)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 // Format file size
 export const formatFileSize = (bytes) => {
   if (!bytes) return '0 B'

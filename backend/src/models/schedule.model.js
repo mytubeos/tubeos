@@ -34,7 +34,7 @@ const scheduleSchema = new mongoose.Schema(
 
     timezone: {
       type: String,
-      default: 'Asia/Kolkata',
+      default: 'UTC',
     },
 
     // --- AI Recommendation ---
