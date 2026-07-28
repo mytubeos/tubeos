@@ -74,6 +74,14 @@ const syncChannelVideos = async (channel, accessToken, userId) => {
         const duration = parseDuration(video.contentDetails?.duration || '');
         const isShort = duration > 0 && duration <= 60;
 
+        // YouTube's uploads-playlist response includes the owner's own
+        // still-private/scheduled videos alongside genuinely public ones —
+        // don't blindly mark everything 'published', or a video scheduled
+        // for the future gets mislabeled as already live.
+        const publishAt = video.status?.publishAt ? new Date(video.status.publishAt) : null;
+        const isScheduledFuture =
+          video.status?.privacyStatus === 'private' && publishAt && publishAt > new Date();
+
         return {
           updateOne: {
             filter: { youtubeVideoId: video.id },
@@ -88,7 +96,8 @@ const syncChannelVideos = async (channel, accessToken, userId) => {
                 tags: (video.snippet?.tags || []).slice(0, 30),
                 category: video.snippet?.categoryId || '22',
                 privacy: video.status?.privacyStatus || 'public',
-                status: 'published',
+                status: isScheduledFuture ? 'scheduled' : 'published',
+                ...(isScheduledFuture ? { scheduledAt: publishAt } : {}),
                 publishedAt: video.snippet?.publishedAt
                   ? new Date(video.snippet.publishedAt)
                   : null,
