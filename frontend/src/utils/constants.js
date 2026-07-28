@@ -3,8 +3,7 @@
 
 export const APP_NAME = 'Vezrin'
 export const APP_TAGLINE = 'Creator Command Center'
-export const API_URL =
-  import.meta.env.VITE_API_URL || 'https://api.vezrin.com/api/v1'
+export const API_URL = import.meta.env.VITE_API_URL || 'https://api.vezrin.com/api/v1'
 
 // Plans
 export const PLANS = {
