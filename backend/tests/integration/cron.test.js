@@ -35,6 +35,25 @@ const setupFetchMock = ({ initOk = true, uploadOk = true } = {}) => {
   return fetchMock;
 };
 
+// Mocks GET /videos?part=status&id=... — the uploadStatus lookup used by
+// Part 3 of reapPublishedSchedules (checking on still-"processing" videos).
+const setupUploadStatusFetchMock = (statusById) => {
+  const fetchMock = vi.fn(async (url) => {
+    const idsParam = new URL(url).searchParams.get('id');
+    const ids = (idsParam || '').split(',');
+    return {
+      ok: true,
+      json: async () => ({
+        items: ids
+          .filter((id) => statusById[id])
+          .map((id) => ({ id, status: { uploadStatus: statusById[id] } })),
+      }),
+    };
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+};
+
 const createBaseFixtures = async (userOverrides = {}) => {
   const user = await User.create({
     name: 'Creator',
@@ -319,5 +338,85 @@ describe('cron.reapPublishedSchedules — direct (Upload-page) schedules', () =>
 
     const dbVideo = await Video.findById(video._id);
     expect(dbVideo.status).toBe('scheduled');
+  });
+});
+
+describe('cron.reapPublishedSchedules — refreshing "processing" videos', () => {
+  it('marks a video published once YouTube reports it finished processing', async () => {
+    const { user, channel } = await createBaseFixtures();
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'Short video',
+      status: 'processing',
+      youtubeVideoId: 'yt_short_video',
+    });
+    setupUploadStatusFetchMock({ yt_short_video: 'processed' });
+
+    await reapPublishedSchedules();
+
+    const dbVideo = await Video.findById(video._id);
+    expect(dbVideo.status).toBe('published');
+    expect(dbVideo.publishedAt).toBeTruthy();
+  });
+
+  it('marks a video failed if YouTube rejected/failed it after upload', async () => {
+    const { user, channel } = await createBaseFixtures();
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'Rejected video',
+      status: 'processing',
+      youtubeVideoId: 'yt_rejected_video',
+    });
+    setupUploadStatusFetchMock({ yt_rejected_video: 'rejected' });
+
+    await reapPublishedSchedules();
+
+    const dbVideo = await Video.findById(video._id);
+    expect(dbVideo.status).toBe('failed');
+    expect(dbVideo.lastError?.message).toMatch(/rejected/i);
+  });
+
+  it('leaves a video alone while YouTube still reports it as uploaded (still processing)', async () => {
+    const { user, channel } = await createBaseFixtures();
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'Still processing',
+      status: 'processing',
+      youtubeVideoId: 'yt_still_processing',
+    });
+    setupUploadStatusFetchMock({ yt_still_processing: 'uploaded' });
+
+    await reapPublishedSchedules();
+
+    const dbVideo = await Video.findById(video._id);
+    expect(dbVideo.status).toBe('processing');
+  });
+
+  it('checks multiple processing videos across different channels independently', async () => {
+    const { user: userA, channel: channelA } = await createBaseFixtures();
+    const { user: userB, channel: channelB } = await createBaseFixtures();
+    const videoA = await Video.create({
+      userId: userA._id,
+      channelId: channelA._id,
+      title: 'Channel A video',
+      status: 'processing',
+      youtubeVideoId: 'yt_a',
+    });
+    const videoB = await Video.create({
+      userId: userB._id,
+      channelId: channelB._id,
+      title: 'Channel B video',
+      status: 'processing',
+      youtubeVideoId: 'yt_b',
+    });
+    setupUploadStatusFetchMock({ yt_a: 'processed', yt_b: 'uploaded' });
+
+    await reapPublishedSchedules();
+
+    expect((await Video.findById(videoA._id)).status).toBe('published');
+    expect((await Video.findById(videoB._id)).status).toBe('processing');
   });
 });

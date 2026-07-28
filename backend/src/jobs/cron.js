@@ -116,6 +116,73 @@ const reapPublishedSchedules = async () => {
       await video.save();
       logger.info(`[cron] direct-scheduled video ${video._id} marked published`);
     }
+
+    // ---- 3. Videos still "processing": check if YouTube has finished ----
+    // uploadVideo() sets status:'processing' the instant the YouTube API
+    // call returns — long before YouTube's own transcoding actually
+    // finishes. Nothing else ever checked back, so a small/short video
+    // could sit showing "Processing" indefinitely even once it's genuinely
+    // live. This refreshes any that have actually finished (or failed) on
+    // YouTube's side.
+    const stillProcessing = await Video.find({
+      status: 'processing',
+      youtubeVideoId: { $exists: true, $ne: null },
+    }).limit(50);
+
+    if (stillProcessing.length > 0) {
+      const { getValidAccessToken } = require('../services/youtube.service');
+      const { youtubeRequest } = require('../config/youtube.config');
+
+      const byChannel = new Map();
+      for (const video of stillProcessing) {
+        const key = video.channelId.toString();
+        if (!byChannel.has(key)) byChannel.set(key, []);
+        byChannel.get(key).push(video);
+      }
+
+      for (const [channelId, videos] of byChannel) {
+        try {
+          const channel = await YoutubeChannel.findById(channelId).select(
+            '+oauth.accessToken +oauth.refreshToken +oauth.expiresAt'
+          );
+          if (!channel) continue;
+          const accessToken = await getValidAccessToken(channel);
+
+          const ids = videos.map((v) => v.youtubeVideoId).join(',');
+          const data = await youtubeRequest(`/videos?part=status&id=${ids}`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          const statusById = new Map(
+            (data.items || []).map((item) => [item.id, item.status?.uploadStatus])
+          );
+
+          for (const video of videos) {
+            const uploadStatus = statusById.get(video.youtubeVideoId);
+            if (uploadStatus === 'processed') {
+              video.status = 'published';
+              video.publishedAt = video.publishedAt || new Date();
+              await video.save();
+              logger.info(`[cron] video ${video._id} finished processing, marked published`);
+            } else if (uploadStatus === 'failed' || uploadStatus === 'rejected') {
+              video.status = 'failed';
+              video.lastError = {
+                message: `YouTube ${uploadStatus} this video after upload`,
+                code: 'YOUTUBE_PROCESSING_FAILED',
+                occurredAt: new Date(),
+              };
+              await video.save();
+              logger.error(`[cron] video ${video._id} ${uploadStatus} on YouTube`);
+            }
+            // 'uploaded' (still processing) or missing from the response —
+            // leave alone, the next tick will check again.
+          }
+        } catch (err) {
+          logger.error(`[cron] processing-status check failed for channel ${channelId}`, {
+            error: err.message,
+          });
+        }
+      }
+    }
   } catch (err) {
     logger.error('[cron] reapPublishedSchedules error', { error: err.message });
   } finally {
