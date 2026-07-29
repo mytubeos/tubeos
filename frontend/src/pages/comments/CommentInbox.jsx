@@ -1,9 +1,10 @@
 // src/pages/comments/CommentInbox.jsx
 import { useState, useEffect } from 'react'
-import { MessageCircle, RefreshCw, Search, Sparkles, CheckCheck } from 'lucide-react'
+import { MessageCircle, RefreshCw, Search, Sparkles, CheckCheck, ListChecks } from 'lucide-react'
 import { useChannelStore } from '../../store/channelStore'
 import { aiApi } from '../../api/ai.api'
 import { CommentCard } from '../../components/features/CommentCard'
+import { BulkReplyReviewModal } from '../../components/features/BulkReplyReviewModal'
 import { Button } from '../../components/ui/Button'
 import { formatNumber } from '../../utils/formatters'
 import toast from 'react-hot-toast'
@@ -42,6 +43,7 @@ export const CommentInbox = () => {
   const [generatingId, setGeneratingId] = useState(null)
   const [postingId, setPostingId] = useState(null)
   const [bulkGenerating, setBulkGenerating] = useState(false)
+  const [showReviewModal, setShowReviewModal] = useState(false)
 
   const fetchComments = async () => {
     if (!channelId) return
@@ -206,6 +208,17 @@ export const CommentInbox = () => {
           </Button>
         )}
 
+        {stats.pendingReply > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={ListChecks}
+            onClick={() => setShowReviewModal(true)}
+          >
+            Review & Post ({stats.pendingReply})
+          </Button>
+        )}
+
         <Button variant="ghost" size="sm" icon={RefreshCw} onClick={handleSync} loading={syncing}>
           Sync
         </Button>
@@ -339,6 +352,13 @@ export const CommentInbox = () => {
           </Button>
         </div>
       )}
+
+      <BulkReplyReviewModal
+        isOpen={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        channelId={channelId}
+        onDone={fetchComments}
+      />
     </div>
   )
 }

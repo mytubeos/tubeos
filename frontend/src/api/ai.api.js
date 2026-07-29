@@ -11,6 +11,7 @@ export const aiApi = {
   postReply: (commentId, replyText) =>
     api.post(`/ai/comments/${commentId}/post-reply`, { replyText }),
   bulkGenerateReplies: (data) => api.post('/ai/comments/bulk-generate', data),
+  bulkPostReplies: (replies) => api.post('/ai/comments/bulk-post-reply', { replies }),
   updateCommentStatus: (commentId, status) =>
     api.patch(`/ai/comments/${commentId}/status`, { status }),
 

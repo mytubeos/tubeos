@@ -63,6 +63,20 @@ router.post(
 );
 
 /**
+ * @route   POST /api/v1/ai/comments/bulk-post-reply
+ * @desc    Post multiple already-generated (optionally edited) AI replies to
+ *          YouTube in one go — the "Approve & Post All" step after review
+ * @access  Private (Creator+)
+ * @body    { replies: [{ commentId, replyText? }] } — max 20
+ */
+router.post(
+  '/comments/bulk-post-reply',
+  protect,
+  requirePlan('creator'),
+  aiController.bulkPostReplies
+);
+
+/**
  * @route   PATCH /api/v1/ai/comments/:commentId/status
  * @desc    Update comment status
  * @access  Private

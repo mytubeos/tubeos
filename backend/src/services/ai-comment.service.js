@@ -399,6 +399,31 @@ const bulkGenerateReplies = async (userId, channelId, commentIds, tone = 'friend
   };
 };
 
+// ==================== BULK POST REPLIES (review-then-post-all) ====================
+// replies: [{ commentId, replyText? }] — replyText overrides the stored
+// comment.aiReply.text if the user edited the draft before approving it.
+const bulkPostReplies = async (userId, replies) => {
+  const results = [];
+  for (const { commentId, replyText } of replies.slice(0, 20)) {
+    // Max 20 at once
+    try {
+      await postReply(userId, commentId, replyText || null);
+      results.push({ commentId, success: true });
+    } catch (err) {
+      results.push({ commentId, success: false, error: err.message });
+    }
+  }
+
+  return {
+    results,
+    summary: {
+      total: results.length,
+      successful: results.filter((r) => r.success).length,
+      failed: results.filter((r) => !r.success).length,
+    },
+  };
+};
+
 // ==================== MARK STATUS ====================
 const updateCommentStatus = async (userId, commentId, status) => {
   const comment = await Comment.findOneAndUpdate(
@@ -420,6 +445,7 @@ module.exports = {
   postReply,
   getCommentInbox,
   bulkGenerateReplies,
+  bulkPostReplies,
   updateCommentStatus,
   analyzeSentimentBatch,
 };

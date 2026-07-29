@@ -75,6 +75,19 @@ const bulkGenerateReplies = async (req, res) => {
   }
 };
 
+const bulkPostReplies = async (req, res) => {
+  try {
+    const { replies } = req.body;
+    if (!Array.isArray(replies) || !replies.length) {
+      return errorResponse(res, 400, 'replies array required');
+    }
+    const result = await aiCommentService.bulkPostReplies(req.user.id, replies);
+    return successResponse(res, 200, 'Replies posted', result);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
 const updateStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -256,6 +269,7 @@ module.exports = {
   generateReply,
   postReply,
   bulkGenerateReplies,
+  bulkPostReplies,
   updateStatus,
   generateTitles,
   generateTags,

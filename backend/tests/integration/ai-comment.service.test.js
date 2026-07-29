@@ -43,6 +43,40 @@ const fakeCommentThread = (overrides = {}) => ({
   },
 });
 
+// Mocks the POST /comments?part=snippet call postReply() makes to publish a
+// reply to YouTube. Captures the request so tests can assert the exact body
+// sent (e.g. an edited reply overriding the stored AI draft).
+const setupPostReplyFetchMock = ({ ok = true } = {}) => {
+  let counter = 0;
+  const fetchMock = vi.fn(async () => {
+    if (!ok) {
+      return {
+        ok: false,
+        status: 500,
+        json: async () => ({ error: { message: 'YouTube post failed' } }),
+      };
+    }
+    counter += 1;
+    return { ok: true, json: async () => ({ id: `yt_reply_${counter}` }) };
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+};
+
+const createCommentWithDraft = async (userId, channelId, overrides = {}) =>
+  require('../../src/models/comment.model.js').create({
+    userId,
+    channelId,
+    youtubeCommentId: `yt_c_${Math.random().toString(36).slice(2, 10)}`,
+    youtubeVideoId: 'yt_video_abc',
+    authorName: 'Viewer',
+    text: 'Nice video',
+    publishedAt: new Date(),
+    status: 'pending_reply',
+    aiReply: { text: 'Thanks a lot!', generatedAt: new Date(), model: 'creator', tone: 'friendly' },
+    ...overrides,
+  });
+
 const createFixtures = async () => {
   const user = await User.create({
     name: 'Creator',
@@ -137,5 +171,63 @@ describe('ai-comment.service.syncComments — bulkWrite upsert', () => {
       statusCode: 403,
       code: 'COMMENTS_SCOPE_MISSING',
     });
+  });
+});
+
+describe('ai-comment.service.bulkPostReplies — review-then-post-all', () => {
+  it('posts multiple approved drafts to YouTube and marks each comment replied', async () => {
+    const { user, channel } = await createFixtures();
+    const c1 = await createCommentWithDraft(user._id, channel._id);
+    const c2 = await createCommentWithDraft(user._id, channel._id, { text: 'Second comment' });
+    setupPostReplyFetchMock();
+
+    const result = await aiCommentService.bulkPostReplies(user._id.toString(), [
+      { commentId: c1._id.toString() },
+      { commentId: c2._id.toString() },
+    ]);
+
+    expect(result.summary).toEqual({ total: 2, successful: 2, failed: 0 });
+
+    const dbC1 = await Comment.findById(c1._id);
+    expect(dbC1.status).toBe('replied');
+    expect(dbC1.youtubeReplyId).toMatch(/^yt_reply_/);
+    expect(dbC1.aiReply.isEdited).toBe(false); // posted as-generated, not edited
+  });
+
+  it('uses an edited replyText override instead of the stored aiReply.text', async () => {
+    const { user, channel } = await createFixtures();
+    const c1 = await createCommentWithDraft(user._id, channel._id);
+    const fetchMock = setupPostReplyFetchMock();
+
+    await aiCommentService.bulkPostReplies(user._id.toString(), [
+      { commentId: c1._id.toString(), replyText: 'Edited reply text' },
+    ]);
+
+    const postCall = fetchMock.mock.calls.find(([url]) =>
+      String(url).includes('/comments?part=snippet')
+    );
+    const sentBody = JSON.parse(postCall[1].body);
+    expect(sentBody.snippet.textOriginal).toBe('Edited reply text');
+
+    const dbC1 = await Comment.findById(c1._id);
+    expect(dbC1.aiReply.isEdited).toBe(true);
+  });
+
+  it('continues past a failure and reports it in the summary instead of aborting the batch', async () => {
+    const { user, channel } = await createFixtures();
+    const c1 = await createCommentWithDraft(user._id, channel._id);
+    setupPostReplyFetchMock();
+
+    const result = await aiCommentService.bulkPostReplies(user._id.toString(), [
+      { commentId: c1._id.toString() },
+      { commentId: '507f1f77bcf86cd799439011' }, // valid ObjectId shape, doesn't exist
+    ]);
+
+    expect(result.summary).toEqual({ total: 2, successful: 1, failed: 1 });
+    const failedResult = result.results.find((r) => !r.success);
+    expect(failedResult.error).toMatch(/not found/i);
+
+    const dbC1 = await Comment.findById(c1._id);
+    expect(dbC1.status).toBe('replied'); // the valid one still went through
   });
 });
