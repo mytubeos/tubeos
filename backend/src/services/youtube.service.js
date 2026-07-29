@@ -22,6 +22,7 @@ const getOAuthUrl = async (userId, plan) => {
   const existingChannels = await YoutubeChannel.countDocuments({
     userId,
     isActive: true,
+    connectionStatus: 'connected', // token_expired channels don't count — user is reconnecting
   });
 
   if (existingChannels >= limit) {
