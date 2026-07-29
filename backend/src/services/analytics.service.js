@@ -443,7 +443,19 @@ const syncVideoAnalyticsBatch = async (
       const response = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      if (!response.ok) continue; // skip video on error (e.g. too old, no data) — don't fail the whole sync
+      if (!response.ok) {
+        // Skip this video, don't fail the whole batch — very common for a
+        // just-published video: YouTube Analytics has a real 24-48h+
+        // processing lag before per-video daily data is queryable, even
+        // though the channel has full Analytics access. Still log it so a
+        // genuine auth/quota failure isn't completely invisible.
+        const errBody = await response.json().catch(() => ({}));
+        logger.warn(`[analytics] per-video analytics fetch not ok for ${video.youtubeVideoId}`, {
+          status: response.status,
+          error: errBody.error?.message,
+        });
+        continue;
+      }
 
       const data = await response.json();
       const rows = data.rows || [];

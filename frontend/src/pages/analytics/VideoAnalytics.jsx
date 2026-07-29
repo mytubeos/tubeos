@@ -54,6 +54,12 @@ export const VideoAnalytics = () => {
   if (!data) return null
   const { video, totals, daily } = data
 
+  const hasNoDailyData = !daily || daily.length === 0
+  const publishedRecently =
+    video.publishedAt &&
+    Date.now() - new Date(video.publishedAt).getTime() < 2 * 24 * 60 * 60 * 1000
+  const isFullAnalytics = video.channel?.analyticsMode === 'full'
+
   const METRICS = [
     { key: 'views', label: 'Views', color: '#00A0FD' },
     { key: 'watchTime', label: 'Watch Time', color: '#10B981' },
@@ -115,7 +121,7 @@ export const VideoAnalytics = () => {
       </div>
 
       {/* Basic-mode notice — detailed per-video breakdown needs the Analytics scope granted */}
-      {video.channel?.analyticsMode !== 'full' && (
+      {!isFullAnalytics && (
         <div className="flex items-center gap-3 p-4 rounded-xl border border-amber/20 bg-amber/5">
           <BarChart2 size={18} className="text-amber shrink-0" />
           <div className="flex-1 min-w-0">
@@ -134,6 +140,32 @@ export const VideoAnalytics = () => {
           >
             Enable Analytics
           </Button>
+        </div>
+      )}
+
+      {/* Full analytics access exists, but this video has no daily breakdown yet */}
+      {isFullAnalytics && hasNoDailyData && publishedRecently && (
+        <div className="flex items-center gap-3 p-4 rounded-xl border border-cyan/20 bg-cyan/5">
+          <Clock size={18} className="text-cyan shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white">Analytics still processing</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              This video was published recently — YouTube usually takes 24–48 hours to make detailed
+              per-video stats available. Views/likes above will fill in once it's ready.
+            </p>
+          </div>
+        </div>
+      )}
+      {isFullAnalytics && hasNoDailyData && !publishedRecently && (
+        <div className="flex items-center gap-3 p-4 rounded-xl border border-white/10 bg-white/[0.02]">
+          <BarChart2 size={18} className="text-gray-400 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white">No detailed data available yet</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Try clicking Sync on the Dashboard or Analytics page to refresh this video's daily
+              breakdown.
+            </p>
+          </div>
         </div>
       )}
 
