@@ -229,14 +229,14 @@ export const AIContent = () => {
 
   return (
     <div className="space-y-5">
-      {/* Tab selector */}
-      <div className="flex items-center glass rounded-xl p-1 overflow-x-auto">
+      {/* Tab selector — 2 rows of 3 on mobile so all 6 are visible at once, single row on desktop */}
+      <div className="grid grid-cols-3 gap-1 sm:flex sm:items-center glass rounded-xl p-1">
         {TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
-                        whitespace-nowrap transition-all
+            className={`flex flex-col sm:flex-row items-center justify-center text-center gap-1 sm:gap-2 px-1 sm:px-4 py-2 rounded-lg text-[10px] sm:text-sm font-medium leading-tight
+                        whitespace-normal sm:whitespace-nowrap transition-all
                         ${
                           activeTab === key
                             ? 'bg-brand text-white shadow-lg'

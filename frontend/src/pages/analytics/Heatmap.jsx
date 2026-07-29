@@ -145,7 +145,7 @@ export const Heatmap = () => {
       </Card>
 
       {/* Best time slots + Low traffic */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-2 gap-2 sm:gap-5">
         {/* Best slots */}
         <Card>
           <CardHeader
@@ -167,36 +167,37 @@ export const Heatmap = () => {
               {(bestSlots?.nextOptimalSlots || []).map((slot, i) => (
                 <div
                   key={i}
-                  className={`flex items-center justify-between p-3 rounded-xl transition-all
+                  className={`flex items-center justify-between gap-1 p-2 sm:p-3 rounded-xl transition-all
                               ${
                                 i === 0
                                   ? 'bg-emerald/10 border border-emerald/25'
                                   : 'glass hover:bg-white/[0.06]'
                               }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
                     <div
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm
+                      className={`w-6 h-6 sm:w-8 sm:h-8 shrink-0 rounded-lg flex items-center justify-center text-xs sm:text-sm
                                     ${i === 0 ? 'bg-emerald/20' : 'bg-white/5'}`}
                     >
                       {i === 0 ? '⚡' : `#${i + 1}`}
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p
-                        className={`text-sm font-medium ${i === 0 ? 'text-emerald' : 'text-white'}`}
+                        className={`text-[11px] sm:text-sm font-medium truncate ${i === 0 ? 'text-emerald' : 'text-white'}`}
                       >
                         {new Date(slot.datetime).toLocaleDateString('en-IN', {
-                          weekday: 'long',
-                          month: 'short',
+                          weekday: 'short',
                           day: 'numeric',
                         })}
                       </p>
-                      <p className="text-xs text-gray-500">{slot.time}</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500 truncate">{slot.time}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className={`text-sm font-bold ${i === 0 ? 'text-emerald' : 'text-brand'}`}>
-                      {slot.score}/100
+                  <div className="text-right shrink-0">
+                    <p
+                      className={`text-[11px] sm:text-sm font-bold ${i === 0 ? 'text-emerald' : 'text-brand'}`}
+                    >
+                      {slot.score}
                     </p>
                   </div>
                 </div>
@@ -230,16 +231,21 @@ export const Heatmap = () => {
           ) : (
             <div className="space-y-2">
               {(lowTraffic?.avoidSlots || []).map((slot, i) => (
-                <div key={i} className="flex items-center justify-between p-3 glass rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-rose/10 flex items-center justify-center text-sm">
+                <div
+                  key={i}
+                  className="flex items-center justify-between gap-1 p-2 sm:p-3 glass rounded-xl"
+                >
+                  <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 shrink-0 rounded-lg bg-rose/10 flex items-center justify-center text-xs sm:text-sm">
                       😴
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        {DAY_NAMES[slot.day]} at {slot.label}
+                    <div className="min-w-0">
+                      <p className="text-[11px] sm:text-sm font-medium text-white truncate">
+                        {DAY_NAMES[slot.day].slice(0, 3)} {slot.label}
                       </p>
-                      <p className="text-xs text-gray-600">Activity score: {slot.score}/100</p>
+                      <p className="hidden sm:block text-xs text-gray-600">
+                        Activity score: {slot.score}/100
+                      </p>
                     </div>
                   </div>
                   <Badge variant="rose" size="xs">
@@ -249,9 +255,9 @@ export const Heatmap = () => {
               ))}
 
               {lowTraffic?.avoidDays?.length > 0 && (
-                <div className="mt-3 p-3 bg-rose/5 border border-rose/15 rounded-xl">
-                  <p className="text-xs text-gray-400 mb-1.5">Worst days overall:</p>
-                  <div className="flex flex-wrap gap-2">
+                <div className="mt-3 p-2 sm:p-3 bg-rose/5 border border-rose/15 rounded-xl">
+                  <p className="text-[10px] sm:text-xs text-gray-400 mb-1.5">Worst days:</p>
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
                     {lowTraffic.avoidDays.map((d) => (
                       <Badge key={d} variant="rose" size="xs">
                         {d}

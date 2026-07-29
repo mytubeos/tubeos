@@ -9,7 +9,7 @@ export const Card = ({ children, className = '', hover = false, glow = null }) =
 
   return (
     <div
-      className={`glass p-5 transition-all duration-300
+      className={`glass p-4 sm:p-5 transition-all duration-300
                      ${hover ? `cursor-pointer ${glowColors[glow] || 'hover:border-white/15 hover:bg-white/[0.06]'}` : ''}
                      ${className}`}
     >
@@ -28,7 +28,7 @@ export const CardHeader = ({ title, subtitle, action, icon: Icon, iconColor = 'b
   }
 
   return (
-    <div className="flex items-start justify-between mb-4">
+    <div className="flex items-start justify-between mb-3 sm:mb-4">
       <div className="flex items-center gap-3">
         {Icon && (
           <div
@@ -69,7 +69,7 @@ export const MetricCard = ({
 
   if (loading) {
     return (
-      <div className="glass p-5">
+      <div className="glass p-4 sm:p-5">
         <div className="shimmer h-4 w-24 rounded mb-4" />
         <div className="shimmer h-8 w-32 rounded mb-2" />
         <div className="shimmer h-3 w-20 rounded" />
@@ -78,8 +78,8 @@ export const MetricCard = ({
   }
 
   return (
-    <div className="glass p-5 hover:border-white/12 transition-all duration-300 group">
-      <div className="flex items-start justify-between mb-4">
+    <div className="glass p-4 sm:p-5 hover:border-white/12 transition-all duration-300 group">
+      <div className="flex items-start justify-between mb-3 sm:mb-4">
         <p className="text-gray-400 text-sm font-medium">{label}</p>
         {Icon && (
           <div

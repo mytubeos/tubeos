@@ -86,7 +86,6 @@ export const GrowthPredictionCard = ({ data, loading = false }) => {
     <Card>
       <CardHeader
         title="Growth Prediction"
-        subtitle={`Trend: ${data.trendDirection}`}
         icon={TrendingUp}
         iconColor={
           data.trendDirection === 'growing'
@@ -103,21 +102,28 @@ export const GrowthPredictionCard = ({ data, loading = false }) => {
         }
       />
 
-      {/* Prediction boxes */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+      {/* Prediction boxes — always 3-up so it doesn't stack into 3 tall rows on mobile */}
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-3 mb-5">
         {[
           { label: '30 Days', data: preds.thirtyDays, color: 'brand' },
           { label: '90 Days', data: preds.ninetyDays, color: 'cyan' },
           { label: '1 Year', data: preds.oneYear, color: 'emerald' },
         ].map(({ label, data: pd, color }) => (
-          <div key={label} className={`glass p-3 rounded-xl border border-${color}/20`}>
-            <p className="text-2xs text-gray-500 mb-1.5">{label}</p>
-            <p className={`font-display font-bold text-lg text-${color}`}>
+          <div
+            key={label}
+            className={`glass p-2 sm:p-3 rounded-xl border border-${color}/20 min-w-0`}
+          >
+            <p className="text-[9px] sm:text-2xs text-gray-500 mb-1 sm:mb-1.5 truncate">{label}</p>
+            <p className={`font-display font-bold text-sm sm:text-lg text-${color} truncate`}>
               {pd?.subscribers ? formatNumber(pd.subscribers) : '—'}
             </p>
-            {pd?.gain > 0 && <p className="text-2xs text-gray-600">+{formatNumber(pd.gain)}</p>}
+            {pd?.gain > 0 && (
+              <p className="hidden sm:block text-2xs text-gray-600">+{formatNumber(pd.gain)}</p>
+            )}
             {pd?.confidence > 0 && (
-              <p className="text-2xs text-gray-600 mt-1">{pd.confidence}% confidence</p>
+              <p className="hidden sm:block text-2xs text-gray-600 mt-1">
+                {pd.confidence}% confidence
+              </p>
             )}
           </div>
         ))}

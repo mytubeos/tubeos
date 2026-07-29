@@ -105,7 +105,7 @@ export const KPIGrid = ({ overview, loading = false, channelStats = null, period
     : 'Total subscribers'
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
       <KPICard
         type="views"
         value={metrics.views?.value}

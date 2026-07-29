@@ -111,18 +111,18 @@ export const Scheduler = () => {
 
       {/* Queue stats bar */}
       {queueStats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-2 sm:gap-3">
           {[
             { label: 'Waiting', value: queueStats.delayed || 0, color: 'brand' },
             { label: 'Active', value: queueStats.active || 0, color: 'cyan', dot: true },
             { label: 'Published', value: queueStats.completed || 0, color: 'emerald' },
             { label: 'Failed', value: queueStats.failed || 0, color: 'rose' },
           ].map(({ label, value, color, dot }) => (
-            <div key={label} className="glass p-3 rounded-xl text-center">
-              <p className={`font-display font-bold text-xl text-${color}`}>{value}</p>
-              <div className="flex items-center justify-center gap-1.5 mt-1">
+            <div key={label} className="glass p-2 sm:p-3 rounded-xl text-center">
+              <p className={`font-display font-bold text-base sm:text-xl text-${color}`}>{value}</p>
+              <div className="flex items-center justify-center gap-1 sm:gap-1.5 mt-0.5 sm:mt-1">
                 {dot && <span className={`w-1.5 h-1.5 rounded-full bg-${color} animate-pulse`} />}
-                <p className="text-xs text-gray-500">{label}</p>
+                <p className="text-[10px] sm:text-xs text-gray-500">{label}</p>
               </div>
             </div>
           ))}

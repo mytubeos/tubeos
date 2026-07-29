@@ -202,16 +202,18 @@ export const Referral = () => {
           </div>
 
           {/* Stats row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-3 mb-5">
             {[
               { label: 'Referrals', value: stats.totalReferrals, icon: Users },
               { label: 'Active', value: stats.activeReferrals, icon: Zap },
               { label: 'Earned', value: `₹${formatNumber(stats.totalEarned)}`, icon: TrendingUp },
               { label: 'Pending', value: `₹${formatNumber(stats.pendingPayout)}`, icon: Gift },
             ].map(({ label, value, icon: Icon }) => (
-              <div key={label} className="glass p-3 rounded-xl text-center">
-                <p className="font-display font-bold text-white text-lg">{value}</p>
-                <p className="text-2xs text-gray-500">{label}</p>
+              <div key={label} className="glass p-1.5 sm:p-3 rounded-xl text-center min-w-0">
+                <p className="font-display font-bold text-white text-xs sm:text-lg truncate">
+                  {value}
+                </p>
+                <p className="text-[9px] sm:text-2xs text-gray-500 truncate">{label}</p>
               </div>
             ))}
           </div>

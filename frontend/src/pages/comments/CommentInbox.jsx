@@ -167,7 +167,7 @@ export const CommentInbox = () => {
   return (
     <div className="space-y-4">
       {/* Stats bar */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+      <div className="grid grid-cols-6 gap-1.5 sm:gap-3">
         {[
           { label: 'Total', value: stats.total, color: 'gray' },
           { label: 'Unread', value: stats.unread, color: 'brand' },
@@ -176,11 +176,11 @@ export const CommentInbox = () => {
           { label: 'Negative', value: stats.negative, color: 'rose' },
           { label: 'Questions', value: stats.questions, color: 'cyan' },
         ].map(({ label, value, color }) => (
-          <div key={label} className="glass p-3 rounded-xl text-center">
-            <p className={`font-display font-bold text-lg text-${color}`}>
+          <div key={label} className="glass p-1.5 sm:p-3 rounded-xl text-center">
+            <p className={`font-display font-bold text-sm sm:text-lg text-${color}`}>
               {formatNumber(value || 0)}
             </p>
-            <p className="text-2xs text-gray-500">{label}</p>
+            <p className="text-[9px] sm:text-2xs text-gray-500 leading-tight">{label}</p>
           </div>
         ))}
       </div>
