@@ -56,8 +56,8 @@ export const CommentInbox = () => {
       setComments(res.data.data || [])
       setStats(res.data.meta?.stats || {})
       setTotal(res.data.meta?.pagination?.total || 0)
-    } catch {
-      toast.error('Failed to load comments')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to load comments')
     } finally {
       setLoading(false)
     }
@@ -81,8 +81,8 @@ export const CommentInbox = () => {
       const res = await aiApi.syncComments(channelId)
       toast.success(res.data.message || 'Comments synced!')
       fetchComments()
-    } catch {
-      toast.error('Sync failed')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Sync failed')
     } finally {
       setSyncing(false)
     }
@@ -109,8 +109,8 @@ export const CommentInbox = () => {
         prev.map((c) => (c._id === commentId ? { ...c, status: 'replied' } : c))
       )
       toast.success('Reply posted!')
-    } catch {
-      toast.error('Failed to post reply')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to post reply')
     } finally {
       setPostingId(null)
     }
@@ -124,8 +124,8 @@ export const CommentInbox = () => {
       } else {
         setComments((prev) => prev.map((c) => (c._id === commentId ? { ...c, status } : c)))
       }
-    } catch {
-      toast.error('Failed to update status')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update status')
     }
   }
 
