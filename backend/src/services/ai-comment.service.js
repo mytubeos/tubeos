@@ -85,7 +85,6 @@ const syncComments = async (userId, channelId, youtubeVideoId = null, options = 
               authorChannelId: top.authorChannelId?.value || null,
               authorProfileImage: top.authorProfileImageUrl || null,
               text: top.textOriginal || top.textDisplay,
-              likeCount: top.likeCount || 0,
               publishedAt: new Date(top.publishedAt),
               status: 'unread',
             },
