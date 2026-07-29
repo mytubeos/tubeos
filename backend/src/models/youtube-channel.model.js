@@ -162,6 +162,14 @@ const youtubeChannelSchema = new mongoose.Schema(
       bestHours: [{ type: Number }], // [18, 19, 20]
       heatmapData: { type: mongoose.Schema.Types.Mixed, default: null },
     },
+
+    // --- Videos the user deliberately removed from Vezrin only (kept live
+    // on YouTube) --- syncChannelVideos() skips re-importing these, since
+    // otherwise the very next sync would silently undo a Vezrin-only delete.
+    excludedVideoIds: {
+      type: [String],
+      default: [],
+    },
   },
   {
     timestamps: true,

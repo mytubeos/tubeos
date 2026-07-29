@@ -284,6 +284,24 @@ describe('video.service.deleteVideo — optional YouTube deletion', () => {
     expect(await Video.findById(video._id)).toBeNull();
   });
 
+  it('remembers the youtubeVideoId on the channel so the next sync does not re-import it', async () => {
+    // Regression test: syncChannelVideos() upserts everything YouTube still
+    // has in the uploads playlist, so a Vezrin-only delete of a video that's
+    // still live on YouTube would otherwise get silently undone by the very
+    // next sync/refresh.
+    const { user, channel, video } = await createFixtures();
+    await Video.findByIdAndUpdate(video._id, {
+      youtubeVideoId: 'yt_keep_live',
+      status: 'published',
+    });
+    vi.stubGlobal('fetch', vi.fn());
+
+    await videoService.deleteVideo(user._id.toString(), video._id.toString(), false);
+
+    const dbChannel = await YoutubeChannel.findById(channel._id);
+    expect(dbChannel.excludedVideoIds).toContain('yt_keep_live');
+  });
+
   it('also deletes from YouTube when deleteFromYouTube is true', async () => {
     const { user, video } = await createFixtures();
     await Video.findByIdAndUpdate(video._id, { youtubeVideoId: 'yt_abc123', status: 'published' });

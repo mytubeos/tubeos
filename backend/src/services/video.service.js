@@ -495,6 +495,14 @@ const deleteVideo = async (userId, videoId, deleteFromYouTube = false) => {
         throw wrappedErr;
       }
     }
+  } else if (video.youtubeVideoId) {
+    // Vezrin-only delete of a video that's still genuinely live on YouTube —
+    // remember its id so the next channel sync doesn't just re-import it
+    // right back (syncChannelVideos upserts everything in the uploads
+    // playlist, which would otherwise silently undo this delete).
+    await YoutubeChannel.findByIdAndUpdate(video.channelId, {
+      $addToSet: { excludedVideoIds: video.youtubeVideoId },
+    });
   }
 
   await video.deleteOne();

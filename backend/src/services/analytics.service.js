@@ -53,11 +53,43 @@ const syncChannelVideos = async (channel, accessToken, userId) => {
 
     if (allVideoIds.length === 0) return 0;
 
+    // Skip videos the user deliberately removed from Vezrin only (kept live
+    // on YouTube on purpose) — otherwise this upsert loop would silently
+    // undo that delete by re-importing the same video right back.
+    const excluded = new Set(channel.excludedVideoIds || []);
+    const syncableVideoIds = allVideoIds.filter((id) => !excluded.has(id));
+
+    // Reconcile: any video previously synced for this channel whose id is no
+    // longer in the CURRENT uploads playlist was deleted directly on YouTube
+    // (outside Vezrin, not via the exclusion path above) — mark it failed
+    // with a clear reason instead of leaving it dangling forever with a
+    // stale "published" status and a dead thumbnail.
+    await Video.updateMany(
+      {
+        channelId: channel._id,
+        youtubeVideoId: { $ne: null, $nin: allVideoIds },
+        status: { $in: ['published', 'scheduled', 'processing'] },
+      },
+      {
+        $set: {
+          status: 'failed',
+          lastError: {
+            message:
+              'No longer found on YouTube — it may have been deleted directly on YouTube Studio.',
+            code: 'MISSING_FROM_YOUTUBE',
+            occurredAt: new Date(),
+          },
+        },
+      }
+    );
+
+    if (syncableVideoIds.length === 0) return 0;
+
     // 3. Fetch video details + stats in batches of 50
     let totalSynced = 0;
 
-    for (let i = 0; i < allVideoIds.length; i += 50) {
-      const batch = allVideoIds.slice(i, i + 50);
+    for (let i = 0; i < syncableVideoIds.length; i += 50) {
+      const batch = syncableVideoIds.slice(i, i + 50);
       const videosData = await youtubeRequest(
         `/videos?part=snippet,statistics,contentDetails,status&id=${batch.join(',')}`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
