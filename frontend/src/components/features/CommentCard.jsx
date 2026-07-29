@@ -129,28 +129,32 @@ export const CommentCard = ({
             </div>
           )}
 
-          {/* Actions */}
+          {/* Actions — Generate Reply + Ignore only make sense before a reply exists;
+              once drafted, the AI Reply box above already has its own Post Reply/Ignore.
+              Flag stays available either way (e.g. flagging as spam after seeing the draft). */}
           {comment.status !== 'replied' && (
             <div className="flex items-center gap-2 flex-wrap">
               {!comment.aiReply?.text && (
-                <button
-                  onClick={() => onGenerateReply?.(comment._id, 'friendly')}
-                  disabled={generating}
-                  className="flex items-center gap-1.5 px-3 py-1.5 glass text-brand
-                             text-xs rounded-lg border border-brand/20
-                             hover:bg-brand/10 transition-all disabled:opacity-50"
-                >
-                  <Sparkles size={12} />
-                  {generating ? 'Generating...' : 'Generate Reply'}
-                </button>
+                <>
+                  <button
+                    onClick={() => onGenerateReply?.(comment._id, 'friendly')}
+                    disabled={generating}
+                    className="flex items-center gap-1.5 px-3 py-1.5 glass text-brand
+                               text-xs rounded-lg border border-brand/20
+                               hover:bg-brand/10 transition-all disabled:opacity-50"
+                  >
+                    <Sparkles size={12} />
+                    {generating ? 'Generating...' : 'Generate Reply'}
+                  </button>
+                  <button
+                    onClick={() => onUpdateStatus?.(comment._id, 'ignored')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 glass text-gray-500
+                               text-xs rounded-lg hover:text-white transition-all"
+                  >
+                    <X size={12} /> Ignore
+                  </button>
+                </>
               )}
-              <button
-                onClick={() => onUpdateStatus?.(comment._id, 'ignored')}
-                className="flex items-center gap-1.5 px-3 py-1.5 glass text-gray-500
-                           text-xs rounded-lg hover:text-white transition-all"
-              >
-                <X size={12} /> Ignore
-              </button>
               <button
                 onClick={() => onUpdateStatus?.(comment._id, 'flagged')}
                 className="flex items-center gap-1.5 px-3 py-1.5 glass text-amber
