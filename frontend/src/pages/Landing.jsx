@@ -201,15 +201,15 @@ export const Landing = () => {
         </div>
 
         {/* Hero stats */}
-        <div className="max-w-3xl mx-auto mt-16 grid grid-cols-3 gap-4">
+        <div className="max-w-3xl mx-auto mt-16 grid grid-cols-3 gap-2 sm:gap-4">
           {[
             { value: '6hr', label: 'Saved per day' },
             { value: '100+', label: 'Features' },
             { value: '7×', label: 'Faster growth' },
           ].map(({ value, label }) => (
-            <div key={label} className="glass p-5 rounded-2xl text-center">
-              <p className="font-display font-bold text-white text-3xl">{value}</p>
-              <p className="text-gray-500 text-sm mt-1">{label}</p>
+            <div key={label} className="glass p-3 sm:p-5 rounded-2xl text-center">
+              <p className="font-display font-bold text-white text-2xl sm:text-3xl">{value}</p>
+              <p className="text-gray-500 text-xs sm:text-sm mt-1">{label}</p>
             </div>
           ))}
         </div>

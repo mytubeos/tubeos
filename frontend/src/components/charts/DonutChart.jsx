@@ -53,9 +53,9 @@ export const TrafficDonut = ({ data = [] }) => {
   const total = data.reduce((s, d) => s + (d.value || 0), 0)
 
   return (
-    <div className="flex items-center gap-6">
-      <div className="shrink-0">
-        <DonutChart data={data} height={180} />
+    <div className="flex items-center gap-4 sm:gap-6">
+      <div className="w-36 sm:w-44 shrink-0">
+        <DonutChart data={data} height={160} />
       </div>
 
       <div className="flex-1 space-y-2.5 min-w-0">

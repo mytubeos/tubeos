@@ -212,8 +212,8 @@ export const CommentInbox = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center glass rounded-xl p-1">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap">
+        <div className="flex items-center glass rounded-xl p-1 overflow-x-auto">
           {STATUS_FILTERS.map((f) => (
             <button
               key={f.value}
@@ -238,7 +238,7 @@ export const CommentInbox = () => {
           ))}
         </div>
 
-        <div className="flex items-center glass rounded-xl p-1">
+        <div className="flex items-center glass rounded-xl p-1 overflow-x-auto">
           {SENTIMENT_FILTERS.map((f) => (
             <button
               key={f.value}

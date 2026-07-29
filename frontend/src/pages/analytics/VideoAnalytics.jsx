@@ -31,7 +31,7 @@ export const VideoAnalytics = () => {
       <div className="space-y-5">
         <div className="shimmer h-8 w-48 rounded" />
         <div className="shimmer h-40 rounded-xl" />
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {Array(4)
             .fill(0)
             .map((_, i) => (
@@ -135,9 +135,9 @@ export const VideoAnalytics = () => {
 
       {/* Daily chart */}
       <Card>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
           <CardHeader title="Daily Performance" icon={Zap} />
-          <div className="flex items-center glass rounded-xl p-1">
+          <div className="flex items-center glass rounded-xl p-1 overflow-x-auto">
             {METRICS.map((m) => (
               <button
                 key={m.key}

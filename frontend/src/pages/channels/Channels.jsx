@@ -143,7 +143,7 @@ function ChannelCard({
   const needsAnalytics = isConnected && channel.analyticsMode !== 'full'
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl border border-white/7 bg-white/[0.03] hover:bg-white/[0.045] transition-colors">
+    <div className="flex flex-wrap items-center gap-3 px-4 py-3.5 rounded-xl border border-white/7 bg-white/[0.03] hover:bg-white/[0.045] transition-colors">
       {/* Avatar */}
       <div className="relative flex-shrink-0">
         {channel.thumbnail ? (
@@ -217,7 +217,7 @@ function ChannelCard({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1.5 flex-shrink-0">
+      <div className="flex items-center gap-1.5 ml-auto">
         {needsReconnect && (
           <button
             onClick={onReconnect}

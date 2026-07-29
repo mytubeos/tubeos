@@ -121,7 +121,7 @@ export const Analytics = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center glass rounded-xl p-1">
           {PERIODS.map((p) => (
             <button
@@ -168,9 +168,9 @@ export const Analytics = () => {
 
       {/* Chart with metric tabs */}
       <Card>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
           <CardHeader title="Performance Over Time" icon={TrendingUp} />
-          <div className="flex items-center glass rounded-xl p-1">
+          <div className="flex items-center glass rounded-xl p-1 overflow-x-auto">
             {METRIC_TABS.map((m) => (
               <button
                 key={m.key}

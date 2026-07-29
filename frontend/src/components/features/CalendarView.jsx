@@ -103,28 +103,32 @@ export const CalendarView = ({ calendar = {}, onDayClick, loading = false }) => 
           </button>
         </div>
       </div>
-
-      {/* Day headers */}
-      <div className="grid grid-cols-7 mb-2">
-        {DAY_NAMES.map((d) => (
-          <div key={d} className="text-center text-2xs font-semibold text-gray-600 uppercase py-2">
-            {d}
+      {/* Day headers + grid — scrollable on mobile */}
+      <div className="overflow-x-auto">
+        <div className="min-w-[400px]">
+          <div className="grid grid-cols-7 mb-2">
+            {DAY_NAMES.map((d) => (
+              <div
+                key={d}
+                className="text-center text-2xs font-semibold text-gray-600 uppercase py-2"
+              >
+                {d}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Calendar grid */}
-      {loading ? (
-        <div className="shimmer h-64 rounded-xl" />
-      ) : (
-        <div className="space-y-1">
-          {weeks.map((week, wi) => (
-            <div key={wi} className="grid grid-cols-7 gap-1">
-              {week.map((cell, di) => (
-                <div
-                  key={di}
-                  onClick={() => cell.currentMonth && cell.date && onDayClick?.(cell)}
-                  className={`min-h-[72px] p-1.5 rounded-xl transition-all
+          {/* Calendar grid */}
+          {loading ? (
+            <div className="shimmer h-64 rounded-xl" />
+          ) : (
+            <div className="space-y-1">
+              {weeks.map((week, wi) => (
+                <div key={wi} className="grid grid-cols-7 gap-1">
+                  {week.map((cell, di) => (
+                    <div
+                      key={di}
+                      onClick={() => cell.currentMonth && cell.date && onDayClick?.(cell)}
+                      className={`min-h-[72px] p-1.5 rounded-xl transition-all
                               ${
                                 cell.currentMonth
                                   ? 'cursor-pointer hover:bg-white/[0.05]'
@@ -132,9 +136,9 @@ export const CalendarView = ({ calendar = {}, onDayClick, loading = false }) => 
                               }
                               ${cell.isToday ? 'ring-1 ring-brand/50 bg-brand/5' : 'bg-white/[0.02]'}
                               ${cell.schedules?.length > 0 ? 'border border-white/8' : ''}`}
-                >
-                  <div
-                    className={`text-xs font-medium mb-1.5 w-6 h-6 flex items-center justify-center rounded-full
+                    >
+                      <div
+                        className={`text-xs font-medium mb-1.5 w-6 h-6 flex items-center justify-center rounded-full
                                    ${
                                      cell.isToday
                                        ? 'bg-brand text-white'
@@ -142,31 +146,36 @@ export const CalendarView = ({ calendar = {}, onDayClick, loading = false }) => 
                                          ? 'text-gray-300'
                                          : 'text-gray-600'
                                    }`}
-                  >
-                    {cell.day}
-                  </div>
-
-                  {/* Schedule dots */}
-                  <div className="space-y-0.5">
-                    {(cell.schedules || []).slice(0, 2).map((s, i) => (
-                      <div key={i} className="flex items-center gap-1 overflow-hidden">
-                        <StatusDot status={s.status} />
-                        <span className="text-2xs text-gray-400 truncate leading-none">
-                          {s.video?.title || 'Video'}
-                        </span>
+                      >
+                        {cell.day}
                       </div>
-                    ))}
-                    {(cell.schedules || []).length > 2 && (
-                      <p className="text-2xs text-gray-600">+{cell.schedules.length - 2} more</p>
-                    )}
-                  </div>
+
+                      {/* Schedule dots */}
+                      <div className="space-y-0.5">
+                        {(cell.schedules || []).slice(0, 2).map((s, i) => (
+                          <div key={i} className="flex items-center gap-1 overflow-hidden">
+                            <StatusDot status={s.status} />
+                            <span className="text-2xs text-gray-400 truncate leading-none">
+                              {s.video?.title || 'Video'}
+                            </span>
+                          </div>
+                        ))}
+                        {(cell.schedules || []).length > 2 && (
+                          <p className="text-2xs text-gray-600">
+                            +{cell.schedules.length - 2} more
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
-          ))}
-        </div>
-      )}
-
+          )}
+        </div>{' '}
+        {/* min-w-[400px] */}
+      </div>{' '}
+      {/* overflow-x-auto */}
       {/* Legend */}
       <div className="flex items-center gap-4 mt-4 pt-3 border-t border-white/5">
         {[

@@ -230,7 +230,7 @@ export const AIContent = () => {
   return (
     <div className="space-y-5">
       {/* Tab selector */}
-      <div className="flex items-center glass rounded-xl p-1 overflow-x-auto no-scrollbar">
+      <div className="flex items-center glass rounded-xl p-1 overflow-x-auto">
         {TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}

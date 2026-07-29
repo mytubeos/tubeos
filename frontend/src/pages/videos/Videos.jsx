@@ -114,7 +114,7 @@ export const Videos = () => {
       </div>
 
       {/* Status filter tabs */}
-      <div className="flex items-center glass rounded-xl p-1 w-fit">
+      <div className="flex items-center glass rounded-xl p-1 overflow-x-auto">
         {STATUS_FILTERS.map((f) => (
           <button
             key={f.value}

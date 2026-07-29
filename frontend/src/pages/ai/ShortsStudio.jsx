@@ -148,7 +148,7 @@ export const ShortsStudio = () => {
   return (
     <div className="space-y-5">
       {/* Tabs */}
-      <div className="flex items-center glass rounded-xl p-1 w-fit">
+      <div className="flex items-center glass rounded-xl p-1 overflow-x-auto">
         <button
           onClick={() => setActiveTab('script')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
