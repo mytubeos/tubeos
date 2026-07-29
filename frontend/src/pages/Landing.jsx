@@ -1,5 +1,5 @@
 // src/pages/Landing.jsx
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import {
   BarChart3,
   Calendar,
@@ -366,6 +366,14 @@ export const Landing = () => {
           <span className="font-display font-bold text-white">Vezrin</span>
         </div>
         <p className="text-gray-600 text-sm">© 2026 Vezrin. Built for YouTube creators. 🇮🇳</p>
+        <div className="flex items-center justify-center gap-4 mt-3 text-xs text-gray-500">
+          <Link to="/privacy" className="hover:text-white transition-colors">
+            Privacy Policy
+          </Link>
+          <Link to="/terms" className="hover:text-white transition-colors">
+            Terms of Service
+          </Link>
+        </div>
       </footer>
     </div>
   )

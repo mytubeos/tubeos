@@ -1,6 +1,6 @@
 // src/pages/settings/Settings.jsx
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { User, Lock, Bell, CreditCard, Check, Loader2, Tag, X } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import authApi from '../../api/auth.api'
@@ -655,6 +655,15 @@ export const Settings = () => {
           </Card>
         </div>
       )}
+
+      <div className="flex items-center justify-center gap-4 pt-2 text-2xs text-gray-600">
+        <Link to="/privacy" className="hover:text-gray-400 transition-colors">
+          Privacy Policy
+        </Link>
+        <Link to="/terms" className="hover:text-gray-400 transition-colors">
+          Terms of Service
+        </Link>
+      </div>
     </div>
   )
 }

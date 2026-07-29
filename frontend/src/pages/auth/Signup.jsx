@@ -202,6 +202,17 @@ export const Signup = () => {
               {loading ? 'Creating Account...' : 'Sign Up'}
             </Button>
 
+            <p className="text-center text-slate-500 text-xs mb-4">
+              By signing up, you agree to our{' '}
+              <Link to="/terms" className="text-purple-400 hover:text-purple-300">
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link to="/privacy" className="text-purple-400 hover:text-purple-300">
+                Privacy Policy
+              </Link>
+            </p>
+
             <p className="text-center text-slate-400">
               Already have an account?{' '}
               <Link to="/login" className="text-purple-400 hover:text-purple-300">
