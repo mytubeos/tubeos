@@ -155,3 +155,47 @@ describe('analytics.service.syncChannelVideos — reconciliation with the real Y
     expect(dbVideo.title).toBe('Video yt_brand_new');
   });
 });
+
+describe('analytics.service.getVideoBreakdown — channel analyticsMode passthrough', () => {
+  // Regression test: the video detail page showed all-zero totals with zero
+  // explanation whenever the channel never granted Analytics API access
+  // (basic mode) — the per-video daily breakdown structurally can't exist
+  // without that scope, but the frontend had no way to know why. Fixed by
+  // populating analyticsMode alongside the channel info already returned.
+  it('includes the channel analyticsMode so the frontend can explain empty/basic data', async () => {
+    const { user, channel } = await createFixtures({ analyticsMode: 'basic' });
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'Basic Mode Video',
+      status: 'published',
+      // No youtubeVideoId — skips the lazy on-demand YouTube Analytics fetch,
+      // keeping this test focused purely on the analyticsMode passthrough.
+    });
+
+    const result = await analyticsService.getVideoBreakdown(
+      user._id.toString(),
+      video._id.toString()
+    );
+
+    expect(result.video.channel.analyticsMode).toBe('basic');
+    expect(result.totals.views).toBe(0); // no VideoAnalytics rows exist for this video
+  });
+
+  it('reflects full mode when the channel has real Analytics access', async () => {
+    const { user, channel } = await createFixtures({ analyticsMode: 'full' });
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'Full Mode Video',
+      status: 'published',
+    });
+
+    const result = await analyticsService.getVideoBreakdown(
+      user._id.toString(),
+      video._id.toString()
+    );
+
+    expect(result.video.channel.analyticsMode).toBe('full');
+  });
+});

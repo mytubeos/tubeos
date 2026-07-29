@@ -1,20 +1,23 @@
 // src/pages/analytics/VideoAnalytics.jsx
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ExternalLink, Eye, ThumbsUp, Clock, Zap } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Eye, ThumbsUp, Clock, Zap, BarChart2 } from 'lucide-react'
 import { analyticsApi } from '../../api/analytics.api'
 import { AreaLineChart } from '../../components/charts/LineChart'
 import { Card, CardHeader, MetricCard } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { StatusBadge } from '../../components/ui/Badge'
 import { formatNumber, formatDate, formatDuration, formatPct } from '../../utils/formatters'
+import { useChannel } from '../../hooks/useChannel'
 
 export const VideoAnalytics = () => {
   const { videoId } = useParams()
   const navigate = useNavigate()
+  const { upgradeAnalytics } = useChannel()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeMetric, setActiveMetric] = useState('views')
+  const [upgrading, setUpgrading] = useState(false)
 
   useEffect(() => {
     if (!videoId) return
@@ -25,6 +28,12 @@ export const VideoAnalytics = () => {
       .catch(() => navigate(-1))
       .finally(() => setLoading(false))
   }, [videoId])
+
+  const handleUpgradeAnalytics = async (channelId) => {
+    setUpgrading(true)
+    await upgradeAnalytics(channelId)
+    setUpgrading(false)
+  }
 
   if (loading) {
     return (
@@ -104,6 +113,29 @@ export const VideoAnalytics = () => {
           </div>
         </div>
       </div>
+
+      {/* Basic-mode notice — detailed per-video breakdown needs the Analytics scope granted */}
+      {video.channel?.analyticsMode !== 'full' && (
+        <div className="flex items-center gap-3 p-4 rounded-xl border border-amber/20 bg-amber/5">
+          <BarChart2 size={18} className="text-amber shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white">
+              Limited data — Analytics access not enabled
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Detailed watch time, CTR, and daily performance for this video need Analytics access
+              on this channel. Basic view/like counts still update normally.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => handleUpgradeAnalytics(video.channel._id)}
+            loading={upgrading}
+          >
+            Enable Analytics
+          </Button>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

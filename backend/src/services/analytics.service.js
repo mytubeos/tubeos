@@ -892,7 +892,7 @@ const getVideoBreakdown = async (userId, videoId) => {
 
   const video = await Video.findOne({ _id: videoId, userId }).populate(
     'channelId',
-    'channelName thumbnail'
+    'channelName thumbnail analyticsMode'
   );
 
   if (!video) {
