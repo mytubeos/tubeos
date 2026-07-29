@@ -21,6 +21,7 @@ export const Heatmap = () => {
   const [lowTraffic, setLowTraffic] = useState(null)
   const [loading, setLoading] = useState(true)
   const [rebuilding, setRebuilding] = useState(false)
+  const [timeTab, setTimeTab] = useState('best') // 'best' | 'avoid' — mobile-only toggle, both shown side-by-side on desktop
 
   const fetchData = async () => {
     if (!channelId) return
@@ -145,9 +146,39 @@ export const Heatmap = () => {
       </Card>
 
       {/* Best time slots + Low traffic */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-5">
+      {/* Mobile: one card, toggle between the two lists (saves vertical space, full-width rows).
+          Desktop (sm+): both cards shown side-by-side like before. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {/* Mobile-only toggle header */}
+        <div className="sm:hidden -mb-2">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setTimeTab('best')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium transition-all
+                          ${
+                            timeTab === 'best'
+                              ? 'bg-emerald/15 text-emerald border border-emerald/30'
+                              : 'glass text-gray-400 hover:text-white'
+                          }`}
+            >
+              <Clock size={14} /> Best Times
+            </button>
+            <button
+              onClick={() => setTimeTab('avoid')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium transition-all
+                          ${
+                            timeTab === 'avoid'
+                              ? 'bg-rose/15 text-rose border border-rose/30'
+                              : 'glass text-gray-400 hover:text-white'
+                          }`}
+            >
+              <AlertTriangle size={14} /> Low Traffic
+            </button>
+          </div>
+        </div>
+
         {/* Best slots */}
-        <Card>
+        <Card className={timeTab === 'best' ? '' : 'hidden sm:block'}>
           <CardHeader
             title="Best Times to Post"
             subtitle="Highest audience activity"
@@ -167,37 +198,36 @@ export const Heatmap = () => {
               {(bestSlots?.nextOptimalSlots || []).map((slot, i) => (
                 <div
                   key={i}
-                  className={`flex items-center justify-between gap-1 p-2 sm:p-3 rounded-xl transition-all
+                  className={`flex items-center justify-between p-3 rounded-xl transition-all
                               ${
                                 i === 0
                                   ? 'bg-emerald/10 border border-emerald/25'
                                   : 'glass hover:bg-white/[0.06]'
                               }`}
                 >
-                  <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+                  <div className="flex items-center gap-3">
                     <div
-                      className={`w-6 h-6 sm:w-8 sm:h-8 shrink-0 rounded-lg flex items-center justify-center text-xs sm:text-sm
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm
                                     ${i === 0 ? 'bg-emerald/20' : 'bg-white/5'}`}
                     >
                       {i === 0 ? '⚡' : `#${i + 1}`}
                     </div>
-                    <div className="min-w-0">
+                    <div>
                       <p
-                        className={`text-[11px] sm:text-sm font-medium truncate ${i === 0 ? 'text-emerald' : 'text-white'}`}
+                        className={`text-sm font-medium ${i === 0 ? 'text-emerald' : 'text-white'}`}
                       >
                         {new Date(slot.datetime).toLocaleDateString('en-IN', {
-                          weekday: 'short',
+                          weekday: 'long',
+                          month: 'short',
                           day: 'numeric',
                         })}
                       </p>
-                      <p className="text-[10px] sm:text-xs text-gray-500 truncate">{slot.time}</p>
+                      <p className="text-xs text-gray-500">{slot.time}</p>
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <p
-                      className={`text-[11px] sm:text-sm font-bold ${i === 0 ? 'text-emerald' : 'text-brand'}`}
-                    >
-                      {slot.score}
+                  <div className="text-right">
+                    <p className={`text-sm font-bold ${i === 0 ? 'text-emerald' : 'text-brand'}`}>
+                      {slot.score}/100
                     </p>
                   </div>
                 </div>
@@ -213,7 +243,7 @@ export const Heatmap = () => {
         </Card>
 
         {/* Avoid times */}
-        <Card>
+        <Card className={timeTab === 'avoid' ? '' : 'hidden sm:block'}>
           <CardHeader
             title="Low Traffic Hours"
             subtitle="Avoid posting at these times"
@@ -231,21 +261,16 @@ export const Heatmap = () => {
           ) : (
             <div className="space-y-2">
               {(lowTraffic?.avoidSlots || []).map((slot, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between gap-1 p-2 sm:p-3 glass rounded-xl"
-                >
-                  <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
-                    <div className="w-6 h-6 sm:w-8 sm:h-8 shrink-0 rounded-lg bg-rose/10 flex items-center justify-center text-xs sm:text-sm">
+                <div key={i} className="flex items-center justify-between p-3 glass rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-rose/10 flex items-center justify-center text-sm">
                       😴
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-[11px] sm:text-sm font-medium text-white truncate">
-                        {DAY_NAMES[slot.day].slice(0, 3)} {slot.label}
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        {DAY_NAMES[slot.day]} at {slot.label}
                       </p>
-                      <p className="hidden sm:block text-xs text-gray-600">
-                        Activity score: {slot.score}/100
-                      </p>
+                      <p className="text-xs text-gray-600">Activity score: {slot.score}/100</p>
                     </div>
                   </div>
                   <Badge variant="rose" size="xs">
@@ -255,9 +280,9 @@ export const Heatmap = () => {
               ))}
 
               {lowTraffic?.avoidDays?.length > 0 && (
-                <div className="mt-3 p-2 sm:p-3 bg-rose/5 border border-rose/15 rounded-xl">
-                  <p className="text-[10px] sm:text-xs text-gray-400 mb-1.5">Worst days:</p>
-                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                <div className="mt-3 p-3 bg-rose/5 border border-rose/15 rounded-xl">
+                  <p className="text-xs text-gray-400 mb-1.5">Worst days overall:</p>
+                  <div className="flex flex-wrap gap-2">
                     {lowTraffic.avoidDays.map((d) => (
                       <Badge key={d} variant="rose" size="xs">
                         {d}

@@ -102,8 +102,8 @@ export const GrowthPredictionCard = ({ data, loading = false }) => {
         }
       />
 
-      {/* Prediction boxes — always 3-up so it doesn't stack into 3 tall rows on mobile */}
-      <div className="grid grid-cols-3 gap-1.5 sm:gap-3 mb-5">
+      {/* Prediction rows — full-width stacked rows read cleaner than 3 cramped columns on mobile */}
+      <div className="space-y-2 mb-5">
         {[
           { label: '30 Days', data: preds.thirtyDays, color: 'brand' },
           { label: '90 Days', data: preds.ninetyDays, color: 'cyan' },
@@ -111,20 +111,22 @@ export const GrowthPredictionCard = ({ data, loading = false }) => {
         ].map(({ label, data: pd, color }) => (
           <div
             key={label}
-            className={`glass p-2 sm:p-3 rounded-xl border border-${color}/20 min-w-0`}
+            className={`flex items-center justify-between p-3 glass rounded-xl border border-${color}/20`}
           >
-            <p className="text-[9px] sm:text-2xs text-gray-500 mb-1 sm:mb-1.5 truncate">{label}</p>
-            <p className={`font-display font-bold text-sm sm:text-lg text-${color} truncate`}>
-              {pd?.subscribers ? formatNumber(pd.subscribers) : '—'}
-            </p>
-            {pd?.gain > 0 && (
-              <p className="hidden sm:block text-2xs text-gray-600">+{formatNumber(pd.gain)}</p>
-            )}
-            {pd?.confidence > 0 && (
-              <p className="hidden sm:block text-2xs text-gray-600 mt-1">
-                {pd.confidence}% confidence
+            <div>
+              <p className="text-xs font-medium text-gray-400">{label}</p>
+              {pd?.confidence > 0 && (
+                <p className="text-2xs text-gray-600 mt-0.5">{pd.confidence}% confidence</p>
+              )}
+            </div>
+            <div className="text-right">
+              <p className={`font-display font-bold text-lg text-${color}`}>
+                {pd?.subscribers ? formatNumber(pd.subscribers) : '—'}
               </p>
-            )}
+              {pd?.gain > 0 && (
+                <p className="text-2xs text-gray-600">+{formatNumber(pd.gain)} subs</p>
+              )}
+            </div>
           </div>
         ))}
       </div>

@@ -99,7 +99,6 @@ const PLANS = [
     name: 'Agency',
     price: '₹2,999',
     period: '/month',
-    comingSoon: true,
     features: [
       '25 channels',
       'Unlimited AI replies',
@@ -108,7 +107,7 @@ const PLANS = [
       'Unlimited uploads',
       'Advanced team access',
     ],
-    cta: 'Notify Me',
+    cta: 'Start Agency Plan',
     highlighted: false,
   },
 ]
