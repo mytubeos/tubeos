@@ -8,7 +8,7 @@ import { scheduleApi } from '../../api/schedule.api'
 import { VideoCard } from '../../components/features/VideoCard'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
-import { ConfirmModal } from '../../components/ui/Modal'
+import { Modal } from '../../components/ui/Modal'
 import toast from 'react-hot-toast'
 
 const STATUS_FILTERS = [
@@ -30,6 +30,7 @@ export const Videos = () => {
   const [statusFilter, setStatusFilter] = useState('')
   const [deleteId, setDeleteId] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const [deleteFromYT, setDeleteFromYT] = useState(false)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
 
@@ -62,18 +63,21 @@ export const Videos = () => {
     return () => clearTimeout(timer)
   }, [search])
 
+  const deleteTarget = videos.find((v) => v._id === deleteId)
+
   const handleDelete = async () => {
     if (!deleteId) return
     setDeleting(true)
     try {
-      await videoApi.delete(deleteId)
-      toast.success('Video deleted')
+      const res = await videoApi.delete(deleteId, deleteFromYT)
+      toast.success(res.data.message || 'Video deleted')
       setVideos((prev) => prev.filter((v) => v._id !== deleteId))
-    } catch {
-      toast.error('Failed to delete video')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete video')
     } finally {
       setDeleting(false)
       setDeleteId(null)
+      setDeleteFromYT(false)
     }
   }
 
@@ -203,16 +207,65 @@ export const Videos = () => {
       )}
 
       {/* Delete confirm */}
-      <ConfirmModal
+      <Modal
         isOpen={!!deleteId}
-        onClose={() => setDeleteId(null)}
-        onConfirm={handleDelete}
+        onClose={() => {
+          setDeleteId(null)
+          setDeleteFromYT(false)
+        }}
         title="Delete Video"
-        message="Are you sure? This will delete the video from Vezrin. It won't be deleted from YouTube."
-        confirmLabel="Delete"
-        confirmVariant="danger"
-        loading={deleting}
-      />
+        size="sm"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setDeleteId(null)
+                setDeleteFromYT(false)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button variant="danger" size="sm" onClick={handleDelete} loading={deleting}>
+              Delete
+            </Button>
+          </>
+        }
+      >
+        <p className="text-gray-400 text-sm mb-3">
+          Are you sure you want to delete{' '}
+          {deleteTarget?.title ? (
+            <span className="text-white">"{deleteTarget.title}"</span>
+          ) : (
+            'this video'
+          )}
+          ?
+        </p>
+
+        {deleteTarget?.youtubeVideoId && (
+          <label className="flex items-start gap-2.5 p-3 glass rounded-xl cursor-pointer hover:bg-white/[0.04] transition-colors">
+            <input
+              type="checkbox"
+              checked={deleteFromYT}
+              onChange={(e) => setDeleteFromYT(e.target.checked)}
+              className="mt-0.5 accent-rose"
+            />
+            <span className="text-sm text-gray-300">
+              Also delete from YouTube{' '}
+              <span className="text-rose text-xs">(permanent — cannot be undone)</span>
+            </span>
+          </label>
+        )}
+
+        <p className="text-xs text-gray-600 mt-2">
+          {deleteTarget?.youtubeVideoId
+            ? deleteFromYT
+              ? 'This video will be permanently removed from YouTube too, along with all its views, likes, and comments.'
+              : "Only removes it from Vezrin's dashboard. The video stays live on YouTube."
+            : "This video only exists in Vezrin's dashboard — nothing to remove from YouTube."}
+        </p>
+      </Modal>
     </div>
   )
 }

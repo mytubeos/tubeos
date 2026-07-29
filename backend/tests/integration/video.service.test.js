@@ -77,6 +77,23 @@ const createFixtures = async (userOverrides = {}) => {
   return { user, channel, video };
 };
 
+// Mocks DELETE /videos?id=... — the YouTube API call deleteVideo() makes
+// when deleteFromYouTube is true.
+const setupYouTubeDeleteFetchMock = ({ ok = true, statusCode = 204 } = {}) => {
+  const fetchMock = vi.fn(async () => {
+    if (!ok) {
+      return {
+        ok: false,
+        status: statusCode,
+        json: async () => ({ error: { message: 'YouTube delete failed' } }),
+      };
+    }
+    return { ok: true, json: async () => ({}) };
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+};
+
 const fakeGcsFileRef = () => ({
   gcsPath: `staging/${Math.random()}/video.mp4`,
   bucket: 'test-bucket',
@@ -250,5 +267,70 @@ describe('video.service.stageFile — attaching a file to a draft for later sche
     await expect(
       videoService.stageFile(user._id.toString(), bogusVideoId, fileRef, 'video/mp4')
     ).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+describe('video.service.deleteVideo — optional YouTube deletion', () => {
+  it('deletes from Vezrin only when deleteFromYouTube is false, even if youtubeVideoId exists', async () => {
+    const { user, video } = await createFixtures();
+    await Video.findByIdAndUpdate(video._id, { youtubeVideoId: 'yt_abc123', status: 'published' });
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await videoService.deleteVideo(user._id.toString(), video._id.toString(), false);
+
+    expect(result.message).toBe('Video deleted from Vezrin');
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(await Video.findById(video._id)).toBeNull();
+  });
+
+  it('also deletes from YouTube when deleteFromYouTube is true', async () => {
+    const { user, video } = await createFixtures();
+    await Video.findByIdAndUpdate(video._id, { youtubeVideoId: 'yt_abc123', status: 'published' });
+    const fetchMock = setupYouTubeDeleteFetchMock();
+
+    const result = await videoService.deleteVideo(user._id.toString(), video._id.toString(), true);
+
+    expect(result.message).toBe('Video deleted from Vezrin and YouTube');
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/videos?id=yt_abc123'),
+      expect.objectContaining({ method: 'DELETE' })
+    );
+    expect(await Video.findById(video._id)).toBeNull();
+  });
+
+  it('does not delete the Vezrin record either if the YouTube deletion fails (no orphaning)', async () => {
+    const { user, video } = await createFixtures();
+    await Video.findByIdAndUpdate(video._id, { youtubeVideoId: 'yt_abc123', status: 'published' });
+    setupYouTubeDeleteFetchMock({ ok: false, statusCode: 403 });
+
+    await expect(
+      videoService.deleteVideo(user._id.toString(), video._id.toString(), true)
+    ).rejects.toMatchObject({ statusCode: 403 });
+
+    // Video must still exist — nothing was deleted since the explicit YouTube-delete request failed
+    expect(await Video.findById(video._id)).toBeTruthy();
+  });
+
+  it('treats a 404 from YouTube (already deleted there) as success and still removes the Vezrin record', async () => {
+    const { user, video } = await createFixtures();
+    await Video.findByIdAndUpdate(video._id, { youtubeVideoId: 'yt_abc123', status: 'published' });
+    setupYouTubeDeleteFetchMock({ ok: false, statusCode: 404 });
+
+    const result = await videoService.deleteVideo(user._id.toString(), video._id.toString(), true);
+
+    expect(result.message).toBe('Video deleted from Vezrin and YouTube');
+    expect(await Video.findById(video._id)).toBeNull();
+  });
+
+  it('ignores deleteFromYouTube when the video has no youtubeVideoId (never uploaded/draft)', async () => {
+    const { user, video } = await createFixtures(); // draft, no youtubeVideoId
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await videoService.deleteVideo(user._id.toString(), video._id.toString(), true);
+
+    expect(result.message).toBe('Video deleted from Vezrin');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

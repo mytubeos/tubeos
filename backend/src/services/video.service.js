@@ -466,25 +466,43 @@ const deleteVideo = async (userId, videoId, deleteFromYouTube = false) => {
     throw err;
   }
 
-  // Optionally delete from YouTube
-  if (deleteFromYouTube && video.youtubeVideoId) {
-    try {
-      const channel = await YoutubeChannel.findById(video.channelId).select(
-        '+oauth.accessToken +oauth.refreshToken +oauth.expiresAt'
-      );
-      const accessToken = await getValidAccessToken(channel);
+  const willDeleteFromYouTube = deleteFromYouTube && !!video.youtubeVideoId;
 
+  // Delete from YouTube first — if the user explicitly asked for this and it
+  // fails, abort entirely (don't remove the Vezrin record either) so the
+  // video isn't silently orphaned: still live on YouTube but no longer
+  // tracked anywhere in the app.
+  if (willDeleteFromYouTube) {
+    const channel = await YoutubeChannel.findById(video.channelId).select(
+      '+oauth.accessToken +oauth.refreshToken +oauth.expiresAt'
+    );
+    const accessToken = await getValidAccessToken(channel);
+
+    try {
       await youtubeRequest(`/videos?id=${video.youtubeVideoId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${accessToken}` },
       });
     } catch (err) {
-      logger.error('Failed to delete from YouTube', { error: err.message });
+      // 404 = already gone from YouTube (deleted out-of-band) — that's the
+      // desired end state already, so continue to the Vezrin-side delete.
+      if (err.statusCode !== 404) {
+        logger.error('Failed to delete from YouTube', { error: err.message });
+        const wrappedErr = new Error(
+          `Could not delete from YouTube: ${err.message}. Nothing was deleted — please try again.`
+        );
+        wrappedErr.statusCode = err.statusCode && err.statusCode < 500 ? err.statusCode : 502;
+        throw wrappedErr;
+      }
     }
   }
 
   await video.deleteOne();
-  return { message: 'Video deleted successfully' };
+  return {
+    message: willDeleteFromYouTube
+      ? 'Video deleted from Vezrin and YouTube'
+      : 'Video deleted from Vezrin',
+  };
 };
 
 // ==================== GET MY VIDEOS ====================
