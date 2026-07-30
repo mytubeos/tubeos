@@ -83,6 +83,32 @@ const syncChannelVideos = async (channel, accessToken, userId) => {
       }
     );
 
+    // Separate, narrower case: a record claiming to be published/scheduled/
+    // processing but with no youtubeVideoId at all was never actually sent
+    // to YouTube in the first place (every code path that sets these
+    // statuses sets the id in the same write — see uploadVideo() /
+    // cron.js's reapPublishedSchedules). Most likely a stale pre-existing
+    // record. Flagged separately from MISSING_FROM_YOUTUBE above since that
+    // message would be factually wrong here — this video was never on
+    // YouTube to be deleted from.
+    await Video.updateMany(
+      {
+        channelId: channel._id,
+        youtubeVideoId: null,
+        status: { $in: ['published', 'scheduled', 'processing'] },
+      },
+      {
+        $set: {
+          status: 'failed',
+          lastError: {
+            message: 'This video was never actually uploaded to YouTube.',
+            code: 'NEVER_UPLOADED',
+            occurredAt: new Date(),
+          },
+        },
+      }
+    );
+
     if (syncableVideoIds.length === 0) return 0;
 
     // 3. Fetch video details + stats in batches of 50

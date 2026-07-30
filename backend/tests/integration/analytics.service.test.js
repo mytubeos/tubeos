@@ -122,6 +122,25 @@ describe('analytics.service.syncChannelVideos — reconciliation with the real Y
     expect(dbVideo.lastError.code).toBe('MISSING_FROM_YOUTUBE');
   });
 
+  it('marks a video failed when it claims to be published but has no youtubeVideoId', async () => {
+    const { user, channel } = await createFixtures();
+    const ghost = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'unknown for trial',
+      youtubeVideoId: null,
+      status: 'published',
+    });
+
+    setupSyncFetchMock({ videoIdsInPlaylist: ['yt_real_1'] });
+
+    await analyticsService.syncChannelVideos(channel, 'fake-token', user._id.toString());
+
+    const dbVideo = await Video.findById(ghost._id);
+    expect(dbVideo.status).toBe('failed');
+    expect(dbVideo.lastError.code).toBe('NEVER_UPLOADED');
+  });
+
   it('does not touch local-only drafts (no youtubeVideoId) during reconciliation', async () => {
     const { user, channel } = await createFixtures();
     const draft = await Video.create({
