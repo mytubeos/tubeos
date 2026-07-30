@@ -984,7 +984,11 @@ const getVideoBreakdown = async (userId, videoId) => {
           startDate,
           endDate
         );
-        dailyData = await VideoAnalytics.find({ videoId }).sort({ date: 1 }).lean();
+        // Same lower date bound as the initial query above -- this re-fetch
+        // must not reintroduce pre-publish-date rows either.
+        dailyData = await VideoAnalytics.find({ videoId, date: { $gte: sinceDate } })
+          .sort({ date: 1 })
+          .lean();
       }
     } catch (err) {
       logger.error('[analytics] on-demand video sync failed', { error: err.message });

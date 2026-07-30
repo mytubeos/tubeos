@@ -271,6 +271,64 @@ describe("analytics.service.getVideoBreakdown — daily data bounded to the vide
     expect(result.totals.views).toBe(8);
     expect(result.totals.likes).toBe(3);
   });
+
+  // Regression test: the first fix above only bounded the *initial* query.
+  // When that bounded query comes back empty (the normal case for a video
+  // with no real post-publish data yet -- e.g. still within YouTube's 24-72h
+  // processing lag), getVideoBreakdown() falls into a lazy on-demand-sync
+  // branch that re-queries VideoAnalytics a second time after fetching fresh
+  // data -- that second query had the exact same unbounded
+  // VideoAnalytics.find({videoId}) shape and silently reintroduced the same
+  // pre-publish-date leak. Caught live: the initial-query fix alone did not
+  // change the production symptom at all, because this video's real
+  // Analytics data hadn't landed yet, so it always went through this path.
+  it('also excludes pre-publish-date rows when the lazy on-demand sync re-fetches', async () => {
+    const { user, channel } = await createFixtures({ analyticsMode: 'full' });
+    const publishedAt = new Date('2026-07-28T00:00:00.000Z');
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'Lazy Sync Video',
+      status: 'published',
+      youtubeVideoId: 'yt_lazy_1',
+      publishedAt,
+    });
+
+    // Only a stray pre-publish row exists -- the initial bounded query
+    // returns empty, which is exactly what triggers the lazy on-demand sync.
+    await VideoAnalytics.create({
+      userId: user._id,
+      channelId: channel._id,
+      videoId: video._id,
+      youtubeVideoId: video.youtubeVideoId,
+      date: new Date('2026-01-30T00:00:00.000Z'),
+      metrics: { views: 5 },
+    });
+
+    const fetchMock = vi.fn(async (url) => {
+      const urlStr = String(url);
+      if (urlStr.includes('youtubeanalytics.googleapis.com')) {
+        return {
+          ok: true,
+          json: async () => ({
+            columnHeaders: [{ name: 'day' }, { name: 'views' }, { name: 'likes' }],
+            rows: [['2026-07-29', 8, 3]],
+          }),
+        };
+      }
+      throw new Error(`Unexpected fetch URL in test: ${urlStr}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await analyticsService.getVideoBreakdown(
+      user._id.toString(),
+      video._id.toString()
+    );
+
+    expect(result.daily).toHaveLength(1);
+    expect(result.daily[0].date).toBe('2026-07-29');
+    expect(result.totals.views).toBe(8);
+  });
 });
 
 describe('analytics.service.invalidateAnalyticsCache — per-video cache busting', () => {
