@@ -88,7 +88,18 @@ const setupYouTubeDeleteFetchMock = ({ ok = true, statusCode = 204 } = {}) => {
         json: async () => ({ error: { message: 'YouTube delete failed' } }),
       };
     }
-    return { ok: true, json: async () => ({}) };
+    // Real YouTube DELETE responses are 204 No Content with a genuinely
+    // empty body — a real fetch() Response's .json() throws
+    // "Unexpected end of JSON input" on that, it does not resolve to {}.
+    // Regression coverage for that exact bug: see youtube.config.js's
+    // youtubeRequest() 204 short-circuit.
+    return {
+      ok: true,
+      status: 204,
+      json: async () => {
+        throw new SyntaxError('Unexpected end of JSON input');
+      },
+    };
   });
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;

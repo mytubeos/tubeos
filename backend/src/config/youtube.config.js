@@ -158,6 +158,12 @@ const youtubeRequest = async (endpoint, options = {}) => {
     throw err;
   }
 
+  // DELETE (and some other) calls return 204 No Content with an empty body —
+  // response.json() throws "Unexpected end of JSON input" on that, which
+  // callers can't distinguish from a real failure. Callers of a 204 endpoint
+  // (e.g. deleteVideo) only await the call for its side effect anyway.
+  if (response.status === 204) return null;
+
   return response.json();
 };
 
