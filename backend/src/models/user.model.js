@@ -2,7 +2,6 @@
 // FIXED: User model with proper password hashing, validation, and security
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema(
   {
@@ -48,16 +47,6 @@ const userSchema = new mongoose.Schema(
     },
 
     // ==================== SECURITY ====================
-    passwordResetToken: {
-      type: String,
-      default: null,
-      select: false,
-    },
-    passwordResetExpires: {
-      type: Date,
-      default: null,
-      select: false,
-    },
     passwordChangedAt: {
       type: Date,
       default: null,
@@ -295,14 +284,6 @@ userSchema.methods.changedPasswordAfter = function (jwtTimestamp) {
   return jwtTimestamp < changedTimestamp;
 };
 
-// Generate password reset token
-userSchema.methods.generatePasswordResetToken = function () {
-  const resetToken = crypto.randomBytes(32).toString('hex');
-  this.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-  this.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-  return resetToken;
-};
-
 // Increment login count
 userSchema.methods.incrementLoginCount = async function () {
   this.loginCount = (this.loginCount || 0) + 1;
@@ -375,8 +356,6 @@ userSchema.methods.getUsageStats = function () {
 userSchema.methods.getPublicProfile = function () {
   const obj = this.toObject();
   delete obj.password;
-  delete obj.passwordResetToken;
-  delete obj.passwordResetExpires;
   delete obj.passwordChangedAt;
   delete obj.oauth.youtubeRefreshToken;
   return obj;

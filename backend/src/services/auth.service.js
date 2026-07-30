@@ -2,8 +2,8 @@
 // FIXED: Full OTP verification via Brevo, forgot password, reset password, no bugs
 const crypto = require('crypto');
 const User = require('../models/user.model');
+const TempToken = require('../models/temp-token.model');
 const { generateTokenPair, verifyRefreshToken } = require('../utils/jwt.utils');
-const { setCache, getCache, deleteCache, getRedisClient } = require('../config/redis');
 const { sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail } = require('../utils/email.utils');
 const logger = require('../config/logger');
 
@@ -11,10 +11,35 @@ const logger = require('../config/logger');
 const sanitizeUser = (user) => {
   const obj = user.toObject ? user.toObject() : user;
   delete obj.password;
-  delete obj.passwordResetToken;
-  delete obj.passwordResetExpires;
   delete obj.oauth;
   return obj;
+};
+
+// ==================== SHORT-LIVED TOKEN STORAGE ====================
+// OTP codes and password-reset tokens, backed by Mongo's TTL index (see
+// temp-token.model.js) instead of Redis -- this keeps signup/login working
+// even if the Redis cache used elsewhere in the app is degraded or over its
+// usage quota.
+const setTempToken = async (key, value, ttlSeconds) => {
+  await TempToken.findOneAndUpdate(
+    { key },
+    { value, expiresAt: new Date(Date.now() + ttlSeconds * 1000) },
+    { upsert: true }
+  );
+};
+
+const getTempToken = async (key) => {
+  const doc = await TempToken.findOne({ key });
+  if (!doc) return null;
+  // Mongo's TTL monitor sweeps expired docs on its own schedule (~60s), not
+  // instantly -- check expiry here too so a just-expired token can't still
+  // be read as valid in that window.
+  if (doc.expiresAt <= new Date()) return null;
+  return doc.value;
+};
+
+const deleteTempToken = async (key) => {
+  await TempToken.deleteOne({ key });
 };
 
 const generateUniqueReferralCode = async (name) => {
@@ -72,20 +97,14 @@ const register = async ({ name, email, password, referralCode }) => {
   // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // Store OTP in Redis for 10 minutes with direct client for reliability
-  // (bypasses setCache() because setCache swallows errors — register() needs
-  // to actually throw on a Redis failure). Value must be JSON-encoded to
-  // match getCache()'s JSON.parse() on the read side in verifyEmail() —
-  // otherwise "482913" round-trips as the number 482913, which never
-  // strictly-equals the string OTP from the request body.
+  // Store OTP for 10 minutes. A newly-registered user with an unsaved OTP
+  // can never verify their account, so this must actually throw on failure
+  // rather than continue silently.
   const otpKey = `email_otp:${user._id.toString()}`;
   try {
-    const redisClient = getRedisClient();
-    await redisClient.set(otpKey, JSON.stringify(otp), 'EX', 600);
-    const stored = await redisClient.get(otpKey);
-    logger.debug(`[register] OTP stored in Redis: ${stored ? 'YES' : 'FAILED'}`, { key: otpKey });
-  } catch (redisErr) {
-    logger.error('[register] Redis SET failed', { error: redisErr.message });
+    await setTempToken(otpKey, otp, 600);
+  } catch (dbErr) {
+    logger.error('[register] Failed to save OTP', { error: dbErr.message });
     const err = new Error('Server error: Could not save OTP. Please try again.');
     err.statusCode = 500;
     throw err;
@@ -133,9 +152,9 @@ const verifyEmail = async (otp, userId) => {
     throw error;
   }
 
-  // Get OTP from Redis
-  const storedOtp = await getCache(`email_otp:${userId}`);
-  logger.debug('[verifyEmail] Redis lookup', { userId, storedOtp, inputOtp: otp });
+  // Get OTP
+  const storedOtp = await getTempToken(`email_otp:${userId}`);
+  logger.debug('[verifyEmail] OTP lookup', { userId, storedOtp, inputOtp: otp });
   if (!storedOtp) {
     const error = new Error('OTP expired or not found. Click "Resend OTP" to get a new one.');
     error.statusCode = 400;
@@ -158,8 +177,8 @@ const verifyEmail = async (otp, userId) => {
     throw error;
   }
 
-  // Delete OTP from Redis
-  await deleteCache(`email_otp:${userId}`);
+  // Delete OTP so it can't be reused
+  await deleteTempToken(`email_otp:${userId}`);
 
   // Generate tokens
   const tokens = generateTokenPair(user._id.toString(), user.email, user.plan);
@@ -202,8 +221,8 @@ const resendOTP = async (email) => {
   // Generate new OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // Store in Redis (10 minutes)
-  await setCache(`email_otp:${user._id.toString()}`, otp, 10 * 60);
+  // Store for 10 minutes
+  await setTempToken(`email_otp:${user._id.toString()}`, otp, 10 * 60);
 
   // Send email
   try {
@@ -312,24 +331,8 @@ const forgotPassword = async (email) => {
   const resetToken = crypto.randomBytes(32).toString('hex');
   const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
-  // Store in Redis (non-fatal)
-  try {
-    await setCache(`pwd_reset:${hashedToken}`, user._id.toString(), 15 * 60);
-    logger.debug('[forgotPassword] Token stored in Redis', { email: user.email });
-  } catch (redisErr) {
-    logger.warn('[forgotPassword] Redis store failed (non-fatal)', { error: redisErr.message });
-  }
-
-  // Store in DB for backup using findByIdAndUpdate (bypasses schema validation issues)
-  try {
-    await User.findByIdAndUpdate(user._id, {
-      passwordResetToken: hashedToken,
-      passwordResetExpires: new Date(Date.now() + 15 * 60 * 1000),
-    });
-    logger.debug('[forgotPassword] Token saved in DB', { email: user.email });
-  } catch (dbErr) {
-    logger.warn('[forgotPassword] DB save skipped (non-fatal)', { error: dbErr.message });
-  }
+  await setTempToken(`pwd_reset:${hashedToken}`, user._id.toString(), 15 * 60);
+  logger.debug('[forgotPassword] Reset token stored', { email: user.email });
 
   // Reset link logged at debug level only — contains the plaintext token
   const clientUrl = process.env.CLIENT_URL || 'https://vezrin.com';
@@ -346,7 +349,7 @@ const forgotPassword = async (email) => {
       error: emailError.message,
       brevoError: emailError.response?.data,
     });
-    // Don't throw — token is saved in DB, user can use the logged link above
+    // Don't throw — the token is already stored, user can retry "Resend"
   }
 
   return {
@@ -371,34 +374,16 @@ const resetPassword = async (resetToken, newPassword) => {
   // Hash token to match with stored value
   const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
-  // Check Redis directly
-  let userId = null;
-  try {
-    const redisClient = getRedisClient();
-    const raw = await redisClient.get(`pwd_reset:${hashedToken}`);
-    logger.debug('[resetPassword] Redis lookup', {
-      keyPrefix: hashedToken.slice(0, 8),
-      found: !!raw,
-    });
-    if (raw) userId = raw.replace(/^"|"$/g, ''); // strip JSON quotes if present
-  } catch (redisErr) {
-    logger.error('[resetPassword] Redis get error', { error: redisErr.message });
-  }
+  const userId = await getTempToken(`pwd_reset:${hashedToken}`);
+  logger.debug('[resetPassword] Token lookup', {
+    keyPrefix: hashedToken.slice(0, 8),
+    found: !!userId,
+  });
 
   if (!userId) {
-    // Check DB as backup
-    const user = await User.findOne({
-      passwordResetToken: hashedToken,
-      passwordResetExpires: { $gt: Date.now() },
-    });
-    logger.debug('[resetPassword] DB lookup', { found: !!user });
-
-    if (!user) {
-      const error = new Error('Reset token is invalid or expired');
-      error.statusCode = 400;
-      throw error;
-    }
-    userId = user._id.toString();
+    const error = new Error('Reset token is invalid or expired');
+    error.statusCode = 400;
+    throw error;
   }
 
   // Update password
@@ -410,13 +395,11 @@ const resetPassword = async (resetToken, newPassword) => {
   }
 
   user.password = newPassword; // Will be hashed by model
-  user.passwordResetToken = undefined;
-  user.passwordResetExpires = undefined;
   user.passwordChangedAt = new Date();
   await user.save();
 
-  // Clear from cache
-  await deleteCache(`pwd_reset:${hashedToken}`);
+  // Clear the used token so it can't be replayed
+  await deleteTempToken(`pwd_reset:${hashedToken}`);
 
   return {
     message: 'Password reset successful. You can now login with your new password.',

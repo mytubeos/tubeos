@@ -1,22 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { createRequire } from 'module';
-import { createFakeRedisClient } from '../mocks/redis.mock.js';
 
 // auth.service.js (plain CommonJS) is loaded through Node's native require()
-// mechanism, which is a *separate* module registry from this file's own ESM
-// import graph — an `import`-ed copy of a local file is a different instance
-// with its own closure state than a `require()`-d copy (confirmed via a
-// minimal repro: `import` and `require()` of the same file are `!==`).
-// vi.mock() also only reaches the ESM-import world, so it can't intercept
-// auth.service.js's internal `require('../config/redis')` either. Instead,
-// grab the exact instance auth.service.js's require() resolves to (via
-// createRequire) and inject a fake client directly into it.
+// mechanism -- see tests/integration/analytics.service.test.js for why
+// createRequire is used instead of `import` for local project files under
+// test. This file no longer touches Redis at all: OTP codes and password-
+// reset tokens are stored in Mongo (temp-token.model.js) specifically so
+// signup/login/reset don't depend on Redis's own uptime or usage quota.
 const require = createRequire(import.meta.url);
-const redisConfig = require('../../src/config/redis.js');
-redisConfig._setClientForTesting(createFakeRedisClient());
-
 const authService = require('../../src/services/auth.service.js');
 const User = require('../../src/models/user.model.js');
+const TempToken = require('../../src/models/temp-token.model.js');
+const crypto = require('crypto');
 
 const VALID_USER = {
   name: 'Test Creator',
@@ -25,8 +20,11 @@ const VALID_USER = {
 };
 
 // register()/resendOTP() never return the raw OTP (only emailed) — read it
-// back from Redis the same way verifyEmail() does.
-const getOtpFor = async (userId) => redisConfig.getCache(`email_otp:${userId}`);
+// back from Mongo the same way verifyEmail() does.
+const getOtpFor = async (userId) => {
+  const doc = await TempToken.findOne({ key: `email_otp:${userId}` });
+  return doc?.value ?? null;
+};
 
 const registerAndVerify = async (overrides = {}) => {
   const user = { ...VALID_USER, ...overrides };
@@ -39,12 +37,14 @@ const registerAndVerify = async (overrides = {}) => {
 describe('auth.service.register + verifyEmail (OTP flow)', () => {
   it('verifies successfully with the OTP from the very first registration email', async () => {
     // Regression test: register() used to store the OTP via a raw Redis
-    // client call without JSON-encoding it, while verifyEmail() always reads
-    // through getCache() (which JSON.parses). A bare 6-digit OTP string like
-    // "482913" round-trips through JSON.parse as the *number* 482913, which
-    // never strictly-equals the string OTP from the request body — so the
-    // very first OTP after signup always failed verification. Only a
-    // subsequent "Resend OTP" (which does go through setCache) ever worked.
+    // client call without JSON-encoding it, while verifyEmail() always read
+    // through getCache() (which JSON.parses) — a bare 6-digit OTP string
+    // like "482913" round-tripped through JSON.parse as the *number*
+    // 482913, which never strictly-equals the string OTP from the request
+    // body, so the very first OTP after signup always failed verification.
+    // Moot now that both sides go through the same plain Mongo string field
+    // (no JSON encode/decode layer at all), but kept as a guard against
+    // that whole class of mismatch recurring.
     const { userId } = await authService.register(VALID_USER);
     const otp = await getOtpFor(userId);
     expect(typeof otp).toBe('string');
@@ -79,6 +79,22 @@ describe('auth.service.register + verifyEmail (OTP flow)', () => {
 
     await authService.verifyEmail(otp, userId);
     await expect(authService.verifyEmail(otp, userId)).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it('rejects an OTP whose expiresAt has passed even if Mongo has not swept it yet', async () => {
+    // Regression guard for getTempToken()'s manual expiry check: Mongo's TTL
+    // monitor only sweeps expired docs on its own schedule (~60s), not
+    // instantly, so a stale-but-not-yet-deleted doc must still be treated
+    // as gone on read.
+    const { userId } = await authService.register(VALID_USER);
+    await TempToken.updateOne(
+      { key: `email_otp:${userId}` },
+      { expiresAt: new Date(Date.now() - 1000) }
+    );
+
+    await expect(authService.verifyEmail('123456', userId)).rejects.toMatchObject({
+      statusCode: 400,
+    });
   });
 });
 
@@ -126,16 +142,30 @@ describe('auth.service.forgotPassword + resetPassword', () => {
     expect(result.message).toMatch(/if an account exists/i);
   });
 
+  it('actually stores a lookup-able token for a real email', async () => {
+    const user = await registerAndVerify();
+    await authService.forgotPassword(user.email);
+
+    const stored = await TempToken.findOne({ key: { $regex: /^pwd_reset:/ } });
+    expect(stored).toBeTruthy();
+    expect(stored.expiresAt.getTime()).toBeGreaterThan(Date.now());
+  });
+
   it('lets a user reset their password with a valid token, and the old password stops working', async () => {
     const user = await registerAndVerify();
-
-    // forgotPassword() only ever returns a generic message (by design, to
-    // avoid leaking account existence) — the real raw token only ever goes
-    // out via email, so generate one the same way the model itself does and
-    // save it, mirroring what forgotPassword() does internally.
     const dbUser = await User.findOne({ email: user.email });
-    const rawToken = dbUser.generatePasswordResetToken();
-    await dbUser.save();
+
+    // forgotPassword() only ever emails the raw token (never returns it, by
+    // design, so it's never sitting in a response body/log anyone but the
+    // user can read) — mirror what it does internally to get a valid
+    // raw/hashed token pair for this test.
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+    await TempToken.create({
+      key: `pwd_reset:${hashedToken}`,
+      value: dbUser._id.toString(),
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+    });
 
     await authService.resetPassword(rawToken, 'brandNewPassword123');
 
@@ -148,6 +178,24 @@ describe('auth.service.forgotPassword + resetPassword', () => {
       password: 'brandNewPassword123',
     });
     expect(result.accessToken).toBeTruthy();
+  });
+
+  it('rejects a reset token that has already been used once', async () => {
+    const user = await registerAndVerify({ email: 'onetime@example.com' });
+    const dbUser = await User.findOne({ email: user.email });
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+    await TempToken.create({
+      key: `pwd_reset:${hashedToken}`,
+      value: dbUser._id.toString(),
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+    });
+
+    await authService.resetPassword(rawToken, 'firstNewPassword123');
+    await expect(authService.resetPassword(rawToken, 'secondNewPassword123')).rejects.toMatchObject(
+      { statusCode: 400 }
+    );
   });
 
   it('rejects an invalid/unknown reset token with 400', async () => {
