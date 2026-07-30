@@ -1,13 +1,18 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { createRequire } from 'module';
+import { createFakeRedisClient } from '../mocks/redis.mock.js';
 
 // See tests/integration/auth.service.test.js for why createRequire is used
 // instead of `import` for local project files under test.
 const require = createRequire(import.meta.url);
+const redisConfig = require('../../src/config/redis.js');
+redisConfig._setClientForTesting(createFakeRedisClient());
+
 const analyticsService = require('../../src/services/analytics.service.js');
 const Video = require('../../src/models/video.model.js');
 const User = require('../../src/models/user.model.js');
 const YoutubeChannel = require('../../src/models/youtube-channel.model.js');
+const { VideoAnalytics } = require('../../src/models/analytics.model.js');
 
 // Mocks the 3 YouTube API calls syncChannelVideos() makes in sequence:
 // GET /channels (uploads playlist id) -> GET /playlistItems (video ids) ->
@@ -216,5 +221,80 @@ describe('analytics.service.getVideoBreakdown — channel analyticsMode passthro
     );
 
     expect(result.video.channel.analyticsMode).toBe('full');
+  });
+});
+
+describe("analytics.service.getVideoBreakdown — daily data bounded to the video's own lifetime", () => {
+  // Regression test: the {youtubeVideoId, date} unique index on VideoAnalytics
+  // is global across the whole collection, not scoped per videoId -- so a
+  // stray row dated before a video was ever published (e.g. left over from
+  // an earlier, unrelated sync) could otherwise surface in that video's own
+  // breakdown, silently defeating the hasNoDailyData "still processing" /
+  // "basic mode" banners on the frontend (they'd never trigger since `daily`
+  // technically wasn't empty).
+  it('excludes VideoAnalytics rows dated before the video was published', async () => {
+    const { user, channel } = await createFixtures({ analyticsMode: 'full' });
+    const publishedAt = new Date('2026-07-28T00:00:00.000Z');
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'Recently Published Video',
+      status: 'published',
+      youtubeVideoId: 'yt_recent_1',
+      publishedAt,
+    });
+
+    await VideoAnalytics.create({
+      userId: user._id,
+      channelId: channel._id,
+      videoId: video._id,
+      youtubeVideoId: video.youtubeVideoId,
+      date: new Date('2026-01-30T00:00:00.000Z'), // months before publishedAt
+      metrics: { views: 5, likes: 2 },
+    });
+    await VideoAnalytics.create({
+      userId: user._id,
+      channelId: channel._id,
+      videoId: video._id,
+      youtubeVideoId: video.youtubeVideoId,
+      date: new Date('2026-07-29T00:00:00.000Z'), // within the video's real lifetime
+      metrics: { views: 8, likes: 3 },
+    });
+
+    const result = await analyticsService.getVideoBreakdown(
+      user._id.toString(),
+      video._id.toString()
+    );
+
+    expect(result.daily).toHaveLength(1);
+    expect(result.daily[0].date).toBe('2026-07-29');
+    expect(result.totals.views).toBe(8);
+    expect(result.totals.likes).toBe(3);
+  });
+});
+
+describe('analytics.service.invalidateAnalyticsCache — per-video cache busting', () => {
+  // Regression test: getVideoBreakdown() caches per-video (analytics:video:ID),
+  // but invalidateAnalyticsCache(channelId) -- called every time Sync runs --
+  // only ever cleared channel-level keys. A stale/wrong per-video breakdown
+  // could keep serving for its full 30-minute TTL no matter how many times
+  // the user clicked Sync.
+  it('clears cached per-video breakdowns for every video on the channel', async () => {
+    const { user, channel } = await createFixtures();
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'Cached Video',
+      status: 'published',
+      youtubeVideoId: 'yt_cached_1',
+    });
+
+    const cacheKey = `analytics:video:${video._id}`;
+    await redisConfig.setCache(cacheKey, { stale: true }, 1800);
+    expect(await redisConfig.getCache(cacheKey)).toEqual({ stale: true });
+
+    await analyticsService.invalidateAnalyticsCache(channel._id.toString());
+
+    expect(await redisConfig.getCache(cacheKey)).toBeNull();
   });
 });

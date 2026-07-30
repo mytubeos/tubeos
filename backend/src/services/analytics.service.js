@@ -201,6 +201,10 @@ const parseDuration = (iso) => {
 const invalidateAnalyticsCache = async (channelId) => {
   const periods = ['7d', '30d', '90d'];
   const metrics = ['views', 'subscribers', 'likes', 'comments', 'watchTime', 'ctr'];
+  // getVideoBreakdown() caches per-video, not per-channel -- without this,
+  // Sync never busts a video's own cached breakdown, so a bad/stale result
+  // could keep serving for up to its full 30-minute TTL after every sync.
+  const channelVideos = await Video.find({ channelId }).select('_id').lean();
   await Promise.all([
     ...periods.map((p) => deleteCache(`analytics:overview:${channelId}:${p}`)),
     ...periods.flatMap((p) =>
@@ -208,6 +212,7 @@ const invalidateAnalyticsCache = async (channelId) => {
     ),
     deleteCache(`analytics:topvideos:${channelId}:5:views`),
     deleteCache(`analytics:topvideos:${channelId}:10:views`),
+    ...channelVideos.map((v) => deleteCache(`analytics:video:${v._id}`)),
   ]);
 };
 
@@ -939,8 +944,17 @@ const getVideoBreakdown = async (userId, videoId) => {
     throw err;
   }
 
-  // Get daily breakdown
-  let dailyData = await VideoAnalytics.find({ videoId }).sort({ date: 1 }).lean();
+  // Get daily breakdown. Bounded to on/after the video's own publish (or, if
+  // not yet published, creation) date -- the {youtubeVideoId, date} unique
+  // index is global across the whole collection, not scoped per videoId, so
+  // stray rows from an earlier now-defunct video sharing this same document
+  // slot (e.g. repeated re-upload/delete cycles during testing) could
+  // otherwise surface as pre-publish-date data that was never really this
+  // video's, silently defeating the hasNoDailyData banner on the frontend.
+  const sinceDate = video.publishedAt || video.createdAt;
+  let dailyData = await VideoAnalytics.find({ videoId, date: { $gte: sinceDate } })
+    .sort({ date: 1 })
+    .lean();
 
   // Lazy sync: this video hasn't had its per-day breakdown pulled yet
   // (e.g. it wasn't in the top-N videos synced by the channel-wide sync).
@@ -1121,4 +1135,5 @@ module.exports = {
   getTopVideos,
   getVideoBreakdown,
   getTrafficSources,
+  invalidateAnalyticsCache,
 };
