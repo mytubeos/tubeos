@@ -36,17 +36,23 @@ const startServer = async () => {
     // 4. Job scheduling — BullMQ if Redis supports evalsha, setInterval cron as fallback.
     //    BullMQ ensures only ONE instance processes each job (safe for multi-instance Render).
     //    setInterval fallback runs on every instance (acceptable for single-instance free plan).
+    //    On a single Render instance (the common case, esp. free tier), BullMQ's own per-minute
+    //    polling is pure Redis command overhead with no safety benefit to show for it -- set
+    //    DISABLE_BULLMQ=true to skip straight to the free cron fallback.
     let bullmqRunning = false;
-    try {
-      const { startWorkers } = require('./src/jobs/index');
-      await startWorkers();
-      bullmqRunning = true;
-      logger.info('Job scheduling: BullMQ active (distributed, multi-instance safe)');
-    } catch (err) {
-      logger.warn('BullMQ unavailable — falling back to in-process setInterval cron', {
-        reason: err.message,
-        note: 'Upgrade to Upstash Pay-As-You-Go or a dedicated Redis to enable BullMQ',
-      });
+    if (process.env.DISABLE_BULLMQ === 'true') {
+      logger.info('Job scheduling: BullMQ disabled via DISABLE_BULLMQ, using setInterval cron');
+    } else {
+      try {
+        const { startWorkers } = require('./src/jobs/index');
+        await startWorkers();
+        bullmqRunning = true;
+        logger.info('Job scheduling: BullMQ active (distributed, multi-instance safe)');
+      } catch (err) {
+        logger.warn('BullMQ unavailable — falling back to in-process setInterval cron', {
+          reason: err.message,
+        });
+      }
     }
 
     if (!bullmqRunning) {
