@@ -961,7 +961,16 @@ const getVideoBreakdown = async (userId, videoId) => {
   // slot (e.g. repeated re-upload/delete cycles during testing) could
   // otherwise surface as pre-publish-date data that was never really this
   // video's, silently defeating the hasNoDailyData banner on the frontend.
-  const sinceDate = video.publishedAt || video.createdAt;
+  //
+  // Also capped at 1 year back even for older videos -- this page has no
+  // period selector (unlike the channel-level Analytics page's 7/30/90/365d
+  // tabs), so an old video (e.g. published years ago) would otherwise render
+  // a "Daily Performance" chart spanning its entire multi-year lifetime,
+  // crushing every real recent data point into a sliver at one edge. 1 year
+  // matches the largest window the rest of the app offers anywhere.
+  const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+  const publishedOrCreated = video.publishedAt || video.createdAt;
+  const sinceDate = publishedOrCreated > oneYearAgo ? publishedOrCreated : oneYearAgo;
   let dailyData = await VideoAnalytics.find({ videoId, date: { $gte: sinceDate } })
     .sort({ date: 1 })
     .lean();
@@ -979,13 +988,10 @@ const getVideoBreakdown = async (userId, videoId) => {
       if (channel) {
         const accessToken = await getValidAccessToken(channel);
         const endDate = new Date().toISOString().split('T')[0];
-        const startDate = (
-          video.publishedAt
-            ? new Date(video.publishedAt)
-            : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
-        )
-          .toISOString()
-          .split('T')[0];
+        // Same 1-year-capped lower bound as the query above -- no point
+        // asking the YouTube API for years of daily data this page will
+        // never display.
+        const startDate = sinceDate.toISOString().split('T')[0];
         await syncVideoAnalyticsBatch(
           channel,
           accessToken,

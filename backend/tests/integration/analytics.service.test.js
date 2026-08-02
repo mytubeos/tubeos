@@ -329,6 +329,52 @@ describe("analytics.service.getVideoBreakdown — daily data bounded to the vide
     expect(result.daily[0].date).toBe('2026-07-29');
     expect(result.totals.views).toBe(8);
   });
+
+  // Regression test: this page has no period selector (unlike the
+  // channel-level Analytics page's 7/30/90/365d tabs), so a video published
+  // years ago used to query VideoAnalytics all the way back to its own
+  // publishedAt -- the "Daily Performance" chart would then span that whole
+  // multi-year range, crushing every real recent data point into a sliver at
+  // one edge. Confirmed live on a video published in 2021.
+  it('caps the query window at 1 year back even for a video published years ago', async () => {
+    const { user, channel } = await createFixtures({ analyticsMode: 'full' });
+    const publishedAt = new Date(Date.now() - 3 * 365 * 24 * 60 * 60 * 1000); // 3 years ago
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'Old Video',
+      status: 'published',
+      youtubeVideoId: 'yt_old_1',
+      publishedAt,
+    });
+
+    await VideoAnalytics.create({
+      userId: user._id,
+      channelId: channel._id,
+      videoId: video._id,
+      youtubeVideoId: video.youtubeVideoId,
+      date: new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000), // 2 years ago, outside the 1-year cap
+      metrics: { views: 500 },
+    });
+    const recentDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000); // 10 days ago
+    await VideoAnalytics.create({
+      userId: user._id,
+      channelId: channel._id,
+      videoId: video._id,
+      youtubeVideoId: video.youtubeVideoId,
+      date: recentDate,
+      metrics: { views: 20 },
+    });
+
+    const result = await analyticsService.getVideoBreakdown(
+      user._id.toString(),
+      video._id.toString()
+    );
+
+    expect(result.daily).toHaveLength(1);
+    expect(result.daily[0].date).toBe(recentDate.toISOString().split('T')[0]);
+    expect(result.totals.views).toBe(20);
+  });
 });
 
 describe('analytics.service.invalidateAnalyticsCache — per-video cache busting', () => {
