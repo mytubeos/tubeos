@@ -254,8 +254,15 @@ const disconnectChannel = async (channelId, userId) => {
   }
 
   // Soft delete
+  const wasPrimary = channel.isPrimary;
   channel.isActive = false;
   channel.connectionStatus = 'disconnected';
+  // A disconnected channel must never keep isPrimary/isDefault set — otherwise
+  // reconnecting it later (handleOAuthCallback's upsert never touches these
+  // fields) resurrects a stale "primary" flag alongside whichever channel got
+  // promoted below, leaving two channels marked primary at once.
+  channel.isPrimary = false;
+  channel.isDefault = false;
   await channel.save();
   await invalidateChannelCache(userId);
 
@@ -267,7 +274,7 @@ const disconnectChannel = async (channelId, userId) => {
 
   // If this was default/primary, set another as default
   const remainingChannels = await YoutubeChannel.find({ userId, isActive: true });
-  if (channel.isPrimary && remainingChannels.length > 0) {
+  if (wasPrimary && remainingChannels.length > 0) {
     remainingChannels[0].isPrimary = true;
     remainingChannels[0].isDefault = true;
     await remainingChannels[0].save();
