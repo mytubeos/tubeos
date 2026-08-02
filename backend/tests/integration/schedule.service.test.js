@@ -217,3 +217,70 @@ describe('schedule.service.getQueueDashboard', () => {
     expect(dashboard.stats.completed).toBe(0); // the published one belongs to a different user
   });
 });
+
+describe('schedule.service.getBestTimeRecommendation — ranks slots by real score', () => {
+  // Regression test: bestHours is stored hour-of-day sorted (see
+  // heatmap.service.js's `.sort((a,b) => a-b)` on write), not score-sorted.
+  // getNextBestSlots() used to just walk bestHours in that stored order and
+  // stop at `count`, so the Dashboard/Scheduler/Upload widgets (which all
+  // label array[0] "Best ⚡") could crown a low-scored-but-earlier hour over
+  // a real 100/100 slot later the same day -- exactly what the live
+  // Heatmap page (which does sort by score) correctly ranked #1 instead.
+  const flatGrid = (fill = 0) => Array.from({ length: 7 }, () => Array(24).fill(fill));
+
+  it('labels the highest-scored hour "best" even when it is stored after a lower-scored hour', async () => {
+    const { user, channel } = await createFixtures();
+
+    const grid = flatGrid(0);
+    for (let d = 0; d < 7; d++) {
+      grid[d][5] = 0; // low score, but the earlier hour in stored order
+      grid[d][6] = 80; // real best hour, stored second
+    }
+
+    channel.bestTimeData = {
+      lastCalculatedAt: new Date(),
+      bestDays: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
+      bestHours: [5, 6], // ascending hour order, as heatmap.service.js stores it
+      heatmapData: { grid },
+    };
+    await channel.save();
+
+    const result = await scheduleService.getBestTimeRecommendation(
+      user._id.toString(),
+      channel._id.toString()
+    );
+
+    const top = result.recommendation.nextOptimalSlots[0];
+    expect(top.hour).toBe('6:00');
+    expect(top.score).toBe(80);
+  });
+
+  it('does not exclude a genuinely top-scored slot just because lower-scored slots occur first chronologically', async () => {
+    const { user, channel } = await createFixtures();
+
+    // Every day has hour 5 at a low score; only Saturday's hour 6 is the
+    // real standout. With count=1 and the old "stop collecting at count"
+    // behavior, today's (or tomorrow's) low-scored hour-5 slot would have
+    // been returned before this loop ever reached Saturday.
+    const grid = flatGrid(0);
+    for (let d = 0; d < 7; d++) grid[d][5] = 10;
+    grid[6][6] = 95; // Saturday (day index 6) hour 6 — the real best slot
+
+    channel.bestTimeData = {
+      lastCalculatedAt: new Date(),
+      bestDays: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
+      bestHours: [5, 6],
+      heatmapData: { grid },
+    };
+    await channel.save();
+
+    const result = await scheduleService.getBestTimeRecommendation(
+      user._id.toString(),
+      channel._id.toString()
+    );
+
+    const top = result.recommendation.nextOptimalSlots[0];
+    expect(top.score).toBe(95);
+    expect(top.day).toBe('saturday');
+  });
+});

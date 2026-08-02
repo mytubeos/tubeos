@@ -376,10 +376,21 @@ const getDefaultRecommendation = (channel) => {
 };
 
 const getNextBestSlots = (bestDays, bestHours, count = 5, grid = null) => {
-  const slots = [];
+  // Collect every matching slot in the window first, THEN rank by score --
+  // do not stop early at `count` while still walking chronologically. Two
+  // bugs used to live here: (1) bestHours is stored hour-of-day sorted (see
+  // heatmap.service.js's bestTimeData write, `.sort((a,b) => a-b)`), not
+  // score-sorted, so slots came out in whatever order the hours happened to
+  // be in -- the frontend (Dashboard/Scheduler/Upload widgets) always
+  // labels array[0] "Best ⚡", so a low-scored-but-earlier hour (e.g. 2 AM)
+  // could get crowned "Best" over a real 100/100 slot later the same day.
+  // (2) stopping the moment `count` slots were collected meant a genuinely
+  // top-scored slot a few days out could be excluded entirely just because
+  // lower-scored slots appeared first chronologically.
+  const candidates = [];
   const now = new Date();
 
-  for (let daysAhead = 0; daysAhead <= 14 && slots.length < count; daysAhead++) {
+  for (let daysAhead = 0; daysAhead <= 14; daysAhead++) {
     const date = new Date(now);
     date.setDate(date.getDate() + daysAhead);
     const dayIndex = date.getDay();
@@ -392,8 +403,8 @@ const getNextBestSlots = (bestDays, bestHours, count = 5, grid = null) => {
         const slot = new Date(date);
         slot.setHours(hour, 0, 0, 0);
 
-        if (slot > now && slots.length < count) {
-          slots.push({
+        if (slot > now) {
+          candidates.push({
             datetime: slot.toISOString(),
             day: dayName,
             hour: `${hour}:00`,
@@ -406,7 +417,11 @@ const getNextBestSlots = (bestDays, bestHours, count = 5, grid = null) => {
     }
   }
 
-  return slots;
+  // Highest score first; tie-break on soonest so equally-good slots still
+  // surface the one you can act on first.
+  candidates.sort((a, b) => b.score - a.score || new Date(a.datetime) - new Date(b.datetime));
+
+  return candidates.slice(0, count);
 };
 
 module.exports = {
