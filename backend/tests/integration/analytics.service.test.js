@@ -12,7 +12,7 @@ const analyticsService = require('../../src/services/analytics.service.js');
 const Video = require('../../src/models/video.model.js');
 const User = require('../../src/models/user.model.js');
 const YoutubeChannel = require('../../src/models/youtube-channel.model.js');
-const { VideoAnalytics } = require('../../src/models/analytics.model.js');
+const { ChannelAnalytics, VideoAnalytics } = require('../../src/models/analytics.model.js');
 
 // Mocks the 3 YouTube API calls syncChannelVideos() makes in sequence:
 // GET /channels (uploads playlist id) -> GET /playlistItems (video ids) ->
@@ -354,5 +354,63 @@ describe('analytics.service.invalidateAnalyticsCache — per-video cache busting
     await analyticsService.invalidateAnalyticsCache(channel._id.toString());
 
     expect(await redisConfig.getCache(cacheKey)).toBeNull();
+  });
+});
+
+describe('analytics.service.getOverview — views.delta always defined, unlike change', () => {
+  // Regression test: calcChange() returns null whenever the previous period
+  // had zero views -- extremely common for small/new channels, and it
+  // happens independently on every period tab (7d/30d/90d). That hid the %
+  // badge entirely on the frontend even though "0 -> N views" is real,
+  // meaningful growth. delta is a plain subtraction with no null-guard, so
+  // it's always a real number the frontend can fall back to.
+  it('reports a real delta even when the previous period had zero views (change is null)', async () => {
+    const { channel } = await createFixtures();
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+
+    // Current 7d window: 10 views. Previous 7d window (8-14 days ago): none.
+    await ChannelAnalytics.create({
+      userId: channel.userId,
+      channelId: channel._id,
+      date: new Date(now - 2 * day),
+      metrics: { views: 10 },
+    });
+
+    const result = await analyticsService.getOverview(
+      channel.userId.toString(),
+      channel._id.toString(),
+      '7d'
+    );
+
+    expect(result.metrics.views.change).toBeNull();
+    expect(result.metrics.views.delta).toBe(10);
+  });
+
+  it('reports a negative delta when views dropped between periods', async () => {
+    const { channel } = await createFixtures();
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+
+    await ChannelAnalytics.create({
+      userId: channel.userId,
+      channelId: channel._id,
+      date: new Date(now - 2 * day),
+      metrics: { views: 5 },
+    });
+    await ChannelAnalytics.create({
+      userId: channel.userId,
+      channelId: channel._id,
+      date: new Date(now - 10 * day),
+      metrics: { views: 20 },
+    });
+
+    const result = await analyticsService.getOverview(
+      channel.userId.toString(),
+      channel._id.toString(),
+      '7d'
+    );
+
+    expect(result.metrics.views.delta).toBe(-15);
   });
 });

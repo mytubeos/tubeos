@@ -61,7 +61,10 @@ describe('KPIGrid', () => {
     expect(screen.getByText('Total subscribers')).toBeInTheDocument()
   })
 
-  it('shows gained/lost subscriber data when real Analytics API data is present', () => {
+  it('shows the period net (not the total) as Subscriber Growth when channelStats is absent (Analytics)', () => {
+    // Regression test: Analytics.jsx never passes channelStats to KPIGrid, so
+    // the old code (which only ever read channelStats?.subscriberCount) left
+    // this card blank ("—") on the Analytics page even with real data present.
     const overview = {
       metrics: {
         views: { value: 1000, change: 5 },
@@ -72,6 +75,43 @@ describe('KPIGrid', () => {
     }
     render(<KPIGrid overview={overview} period="7d" />)
 
-    expect(screen.getByText(/gained · last 7 days/)).toBeInTheDocument()
+    expect(screen.getByText('Subscriber Growth')).toBeInTheDocument()
+    expect(screen.getByText('+45')).toBeInTheDocument()
+    expect(screen.getByText(/50 gained · 5 lost · last 7 days/)).toBeInTheDocument()
+  })
+
+  it('shows a negative net subscriber change as a real signed number, not a fake total', () => {
+    const overview = {
+      metrics: {
+        views: { value: 1000, change: 5 },
+        subscribers: { gained: 0, lost: 1, net: -1, change: null },
+        watchTime: { value: 120, change: 2 },
+        ctr: { value: 4.5 },
+      },
+    }
+    render(<KPIGrid overview={overview} period="30d" />)
+
+    expect(screen.getByText('-1')).toBeInTheDocument()
+  })
+
+  it('falls back to an absolute view-count delta when the % change is null (previous period had zero)', () => {
+    // Regression test: calcChange() on the backend returns null whenever the
+    // previous period had zero of a metric, which happens constantly on
+    // small/new channels across every period tab (7d/30d/90d) — hiding the
+    // change badge entirely even though "0 -> 10" is real, meaningful growth.
+    const overview = {
+      metrics: {
+        views: { value: 10, change: null, delta: 10 },
+        subscribers: { gained: 0, lost: 0, net: 0 },
+        watchTime: { value: 0, change: null },
+        ctr: { value: 0 },
+      },
+    }
+    render(<KPIGrid overview={overview} period="7d" />)
+
+    // Match on the arrow to target the change badge specifically — the
+    // headline value ("10") renders as separate, unmarked text nearby.
+    const changeEl = screen.getByText(/↑\s*10/)
+    expect(changeEl.textContent).not.toContain('%')
   })
 })

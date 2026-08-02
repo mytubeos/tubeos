@@ -10,7 +10,13 @@ import {
   Zap,
 } from 'lucide-react'
 import { MetricCard } from '../ui/Card'
-import { formatNumber, formatWatchTime, formatCurrency, formatPct } from '../../utils/formatters'
+import {
+  formatNumber,
+  formatWatchTime,
+  formatCurrency,
+  formatPct,
+  formatSignedNumber,
+} from '../../utils/formatters'
 
 const KPI_CONFIG = {
   views: {
@@ -24,6 +30,12 @@ const KPI_CONFIG = {
     icon: Users,
     iconColor: 'cyan',
     format: formatNumber,
+  },
+  subscriberGrowth: {
+    label: 'Subscriber Growth',
+    icon: Users,
+    iconColor: 'cyan',
+    format: formatSignedNumber,
   },
   watchTime: {
     label: 'Watch Time',
@@ -63,7 +75,14 @@ const KPI_CONFIG = {
   },
 }
 
-export const KPICard = ({ type, value, change = undefined, subtitle, loading = false }) => {
+export const KPICard = ({
+  type,
+  value,
+  change = undefined,
+  changeUnit = '%',
+  subtitle,
+  loading = false,
+}) => {
   const config = KPI_CONFIG[type] || KPI_CONFIG.views
 
   return (
@@ -71,6 +90,7 @@ export const KPICard = ({ type, value, change = undefined, subtitle, loading = f
       label={config.label}
       value={value !== undefined && value !== null ? config.format(value) : '—'}
       change={change}
+      changeUnit={changeUnit}
       trend={undefined}
       icon={config.icon}
       iconColor={config.iconColor}
@@ -94,29 +114,51 @@ export const KPIGrid = ({ overview, loading = false, channelStats = null, period
   // Detect basic mode: no daily analytics data, only video aggregate totals
   const isBasicMode = metrics.views?.change == null && !metrics.watchTime?.value
 
-  // Show period-based gained/lost only when we have real Analytics API data
+  // calcChange (backend) returns null whenever the previous period had zero
+  // views — common on small/new channels, and it happens on every period tab
+  // (7d/30d/90d), not just one — which hides the % badge even though "0 -> N"
+  // is real growth. delta is always defined, so fall back to an absolute
+  // "+N views" readout instead of showing nothing.
+  const viewsChangePct = metrics.views?.change
+  const viewsDelta = metrics.views?.delta ?? 0
+  const viewsChange = viewsChangePct ?? (viewsDelta !== 0 ? viewsDelta : undefined)
+  const viewsChangeUnit = viewsChangePct != null ? '%' : ''
+
+  // Dashboard passes channelStats (the channel's live totals) — that page is
+  // the "current state" snapshot, so Subscribers shows the real total there.
+  // Analytics doesn't pass it — that page is for picking a period and seeing
+  // how much you grew/shrank *within* it, so Subscribers shows the period's
+  // net gained-minus-lost instead (always defined, unlike the total which
+  // Analytics has no per-period value for).
+  const showSubTotal = !!channelStats
   const hasRealSubData =
     (metrics.subscribers?.gained || 0) > 0 || (metrics.subscribers?.lost || 0) > 0
-  // Card is always labeled "Total Subscribers" — always show the real total here,
-  // never the period net (gained − lost), which can be negative and isn't a total.
-  const subValue = channelStats?.subscriberCount
-  const subSubtitle = hasRealSubData
-    ? `+${formatNumber(metrics.subscribers?.gained ?? 0)} gained · ${periodLabel}`
-    : 'Total subscribers'
+  const netSubs = metrics.subscribers?.net ?? 0
+
+  const subType = showSubTotal ? 'subscribers' : 'subscriberGrowth'
+  const subValue = showSubTotal ? channelStats?.subscriberCount : netSubs
+  const subSubtitle = showSubTotal
+    ? hasRealSubData
+      ? `+${formatNumber(metrics.subscribers?.gained ?? 0)} gained · ${periodLabel}`
+      : 'Total subscribers'
+    : `${formatNumber(metrics.subscribers?.gained ?? 0)} gained · ${formatNumber(metrics.subscribers?.lost ?? 0)} lost · ${periodLabel}`
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
       <KPICard
         type="views"
         value={metrics.views?.value}
-        change={metrics.views?.change ?? undefined}
+        change={viewsChange}
+        changeUnit={viewsChangeUnit}
         subtitle={isBasicMode ? 'Total views (all videos)' : periodLabel}
         loading={loading}
       />
       <KPICard
-        type="subscribers"
+        type={subType}
         value={subValue}
-        change={hasRealSubData ? (metrics.subscribers?.change ?? undefined) : undefined}
+        change={
+          showSubTotal && hasRealSubData ? (metrics.subscribers?.change ?? undefined) : undefined
+        }
         subtitle={subSubtitle}
         loading={loading}
       />

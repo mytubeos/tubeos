@@ -80,6 +80,13 @@ export const formatChange = (change) => {
   }
 }
 
+// Format a signed delta count: 3 -> '+3', -1 -> '-1', 0 -> '0'
+export const formatSignedNumber = (num) => {
+  if (num === null || num === undefined) return '—'
+  if (num === 0) return '0'
+  return `${num > 0 ? '+' : '-'}${formatNumber(Math.abs(num))}`
+}
+
 // Format percentage
 export const formatPct = (num) => {
   if (!num && num !== 0) return '—'

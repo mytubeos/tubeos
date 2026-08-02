@@ -52,6 +52,7 @@ export const MetricCard = ({
   label,
   value,
   change,
+  changeUnit = '%',
   trend,
   icon: Icon,
   iconColor = 'brand',
@@ -97,7 +98,9 @@ export const MetricCard = ({
         {change !== undefined && (
           <div className="flex items-center gap-1.5 pt-1">
             <span className={`text-xs font-medium ${isPositive ? 'text-emerald' : 'text-rose'}`}>
-              {isPositive ? '↑' : '↓'} {Math.abs(change).toFixed(1)}%
+              {isPositive ? '↑' : '↓'}{' '}
+              {changeUnit === '%' ? Math.abs(change).toFixed(1) : Math.round(Math.abs(change))}
+              {changeUnit}
             </span>
             <span className="text-gray-600 text-xs">vs last period</span>
           </div>

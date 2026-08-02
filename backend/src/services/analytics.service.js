@@ -713,6 +713,11 @@ const getOverview = async (userId, channelId, period = '30d') => {
     metrics: {
       views: {
         value: curr.totalViews || 0,
+        // calcChange returns null whenever the previous period had zero views —
+        // common for small/new channels — which hides the % badge entirely even
+        // though "0 -> N" is real growth. delta is always defined (never null),
+        // so the frontend can fall back to an absolute "+N views" readout then.
+        delta: (curr.totalViews || 0) - (prev.totalViews || 0),
         change: calcChange(curr.totalViews, prev.totalViews),
         trend: getTrend(curr.totalViews, prev.totalViews),
       },
