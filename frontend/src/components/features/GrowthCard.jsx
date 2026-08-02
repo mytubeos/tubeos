@@ -10,6 +10,7 @@ const TrendIcon = ({ direction }) => {
 }
 
 const MilestoneRow = ({ milestone }) => {
+  const hasEstimate = milestone.daysAway != null
   const pct = Math.min(100, milestone.probability || 0)
   return (
     <div className="flex items-center gap-3 py-2.5 border-b border-white/5 last:border-0">
@@ -19,17 +20,27 @@ const MilestoneRow = ({ milestone }) => {
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
           <span className="text-sm font-medium text-white">{milestone.label} subs</span>
-          <span className="text-2xs text-gray-500">{milestone.daysAway}d away</span>
+          {hasEstimate && (
+            <span className="text-2xs text-gray-500">{milestone.daysAway}d away</span>
+          )}
         </div>
-        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-brand-gradient rounded-full transition-all duration-700"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-        <p className="text-2xs text-gray-600 mt-1">
-          {pct}% probability · Est. {formatDate(milestone.estimatedDate, 'medium')}
-        </p>
+        {hasEstimate ? (
+          <>
+            <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-brand-gradient rounded-full transition-all duration-700"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <p className="text-2xs text-gray-600 mt-1">
+              {pct}% probability · Est. {formatDate(milestone.estimatedDate, 'medium')}
+            </p>
+          </>
+        ) : (
+          <p className="text-2xs text-gray-600 mt-1">
+            Not gaining subscribers yet — post more to get an estimate
+          </p>
+        )}
       </div>
     </div>
   )

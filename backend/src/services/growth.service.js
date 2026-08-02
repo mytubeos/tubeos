@@ -468,19 +468,31 @@ const calculateMilestones = (current, weeklyGain, growthRate) => {
   );
 
   return milestoneTargets.slice(0, 4).map((target) => {
+    const label =
+      target >= 1000000
+        ? `${target / 1000000}M`
+        : target >= 1000
+          ? `${target / 1000}K`
+          : target.toString();
+
+    // With zero/negative weekly growth, linear extrapolation can't produce a
+    // real ETA for ANY target -- every milestone used to fall back to the
+    // same hardcoded "999 weeks away" placeholder, making 1K/5K/10K all show
+    // an identical days-away, estimated date, and probability (looked like a
+    // copy-paste bug; it was really a fabricated-looking sentinel applied
+    // uniformly). Say plainly that there's no estimate instead of faking one.
+    if (weeklyGain <= 0) {
+      return { target, label, estimatedDate: null, daysAway: null, probability: 0 };
+    }
+
     const gap = target - current;
-    const weeksNeeded = weeklyGain > 0 ? Math.ceil(gap / weeklyGain) : 999;
+    const weeksNeeded = Math.ceil(gap / weeklyGain);
     const daysNeeded = weeksNeeded * 7;
     const estimatedDate = new Date(Date.now() + daysNeeded * 24 * 60 * 60 * 1000);
 
     return {
       target,
-      label:
-        target >= 1000000
-          ? `${target / 1000000}M`
-          : target >= 1000
-            ? `${target / 1000}K`
-            : target.toString(),
+      label,
       estimatedDate,
       daysAway: daysNeeded,
       probability: daysNeeded <= 365 ? 80 : daysNeeded <= 730 ? 60 : 40,
