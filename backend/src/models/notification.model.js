@@ -19,6 +19,7 @@ const notificationSchema = new mongoose.Schema(
         'growth_win',
         'streak_milestone',
         'welcome',
+        'subscription_expired',
       ],
       required: true,
     },

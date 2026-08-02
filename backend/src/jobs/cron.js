@@ -421,6 +421,55 @@ const generateNudges = async () => {
   }
 };
 
+// ---------- Expired subscription downgrade ----------
+// Billing here is a manual monthly top-up, not an auto-charge subscription
+// (see payment.service.js -- verifyPayment/the webhook only ever set
+// subscriptionExpiresAt once, at payment time). Nothing else anywhere in
+// the codebase ever checked that date against "now", so a paid plan stayed
+// active forever after a single payment regardless of whether the user
+// ever paid again -- this is the only enforcement point. Immediate
+// downgrade, no grace period: "pay for a month, get a month" is the deal
+// subscriptionExpiresAt = paidAt + 1 month already implies.
+const downgradeExpiredSubscriptions = async () => {
+  try {
+    const User = require('../models/user.model');
+    const { createNotification } = require('../services/notification.service');
+
+    const expiredUsers = await User.find({
+      plan: { $ne: 'free' },
+      subscriptionExpiresAt: { $ne: null, $lte: new Date() },
+    })
+      .select('_id plan')
+      .lean();
+
+    if (expiredUsers.length === 0) return;
+
+    logger.info(`[cron] downgrading ${expiredUsers.length} expired subscription(s)`);
+    let downgraded = 0;
+
+    for (const user of expiredUsers) {
+      try {
+        await User.findByIdAndUpdate(user._id, { plan: 'free', subscriptionExpiresAt: null });
+        await createNotification(
+          user._id,
+          'subscription_expired',
+          `Your ${user.plan} plan has expired — upgrade again anytime to get ${user.plan} features back.`,
+          'nudge'
+        );
+        downgraded++;
+      } catch (err) {
+        logger.error(`[cron] failed to downgrade expired subscription for user ${user._id}`, {
+          error: err.message,
+        });
+      }
+    }
+
+    logger.info(`[cron] expired-subscription downgrade done: ${downgraded}/${expiredUsers.length}`);
+  } catch (err) {
+    logger.error('[cron] downgradeExpiredSubscriptions error', { error: err.message });
+  }
+};
+
 // ---------- Data retention purge ----------
 // Enforces the specific windows promised in the Privacy Policy (section 4):
 // YouTube channel data 30 days after disconnect, account data 90 days after
@@ -480,6 +529,9 @@ const startCron = () => {
   // Every 24h: purge data past its Privacy Policy retention window
   timers.push(setInterval(purgeExpiredData, 24 * 60 * 60 * 1000));
 
+  // Every 24h: downgrade any subscription whose paid-for month has ended
+  timers.push(setInterval(downgradeExpiredSubscriptions, 24 * 60 * 60 * 1000));
+
   // Fire once on boot (best-effort)
   setTimeout(reapPublishedSchedules, 5_000);
   setTimeout(refreshTrends, 10_000);
@@ -490,6 +542,7 @@ const startCron = () => {
   // Free-tier instances can restart more often than once a day, which would
   // otherwise mean this setInterval never actually fires — boot-fire too.
   setTimeout(purgeExpiredData, 20_000);
+  setTimeout(downgradeExpiredSubscriptions, 25_000);
 };
 
 const stopCron = () => {
@@ -508,4 +561,5 @@ module.exports = {
   renewPubSubSubscriptions,
   generateNudges,
   purgeExpiredData,
+  downgradeExpiredSubscriptions,
 };

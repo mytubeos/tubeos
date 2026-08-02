@@ -4,12 +4,13 @@ import { createRequire } from 'module';
 // See tests/integration/auth.service.test.js for why createRequire is used
 // instead of `import` for local project files under test.
 const require = createRequire(import.meta.url);
-const { reapPublishedSchedules } = require('../../src/jobs/cron.js');
+const { reapPublishedSchedules, downgradeExpiredSubscriptions } = require('../../src/jobs/cron.js');
 const storageService = require('../../src/services/storage.service.js');
 const Schedule = require('../../src/models/schedule.model.js');
 const Video = require('../../src/models/video.model.js');
 const User = require('../../src/models/user.model.js');
 const YoutubeChannel = require('../../src/models/youtube-channel.model.js');
+const Notification = require('../../src/models/notification.model.js');
 
 // Same monkey-patch approach as video.service.test.js — storage.service.js
 // is loaded via the same createRequire "world" as cron.js's
@@ -418,5 +419,66 @@ describe('cron.reapPublishedSchedules — refreshing "processing" videos', () =>
 
     expect((await Video.findById(videoA._id)).status).toBe('published');
     expect((await Video.findById(videoB._id)).status).toBe('processing');
+  });
+});
+
+describe('cron.downgradeExpiredSubscriptions', () => {
+  // Regression test: billing here is a manual monthly top-up, not an
+  // auto-charge subscription (see payment.service.js) -- nothing anywhere
+  // else in the codebase ever checked subscriptionExpiresAt against "now",
+  // so a paid plan stayed active forever after a single payment. This job
+  // is the only enforcement point.
+  it('downgrades a user whose subscriptionExpiresAt has already passed', async () => {
+    const user = await User.create({
+      name: 'Expired Payer',
+      email: `expired-${Date.now()}-${Math.random()}@example.com`,
+      password: 'password123',
+      plan: 'agency',
+      subscriptionExpiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // yesterday
+    });
+
+    await downgradeExpiredSubscriptions();
+
+    const dbUser = await User.findById(user._id);
+    expect(dbUser.plan).toBe('free');
+    expect(dbUser.subscriptionExpiresAt).toBeNull();
+
+    const notification = await Notification.findOne({ userId: user._id });
+    expect(notification).toBeTruthy();
+    expect(notification.type).toBe('subscription_expired');
+    expect(notification.message).toMatch(/agency/i);
+  });
+
+  it('leaves a still-active paid subscription untouched', async () => {
+    const user = await User.create({
+      name: 'Active Payer',
+      email: `active-${Date.now()}-${Math.random()}@example.com`,
+      password: 'password123',
+      plan: 'pro',
+      subscriptionExpiresAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days from now
+    });
+
+    await downgradeExpiredSubscriptions();
+
+    const dbUser = await User.findById(user._id);
+    expect(dbUser.plan).toBe('pro');
+    expect(dbUser.subscriptionExpiresAt).toBeTruthy();
+
+    const notification = await Notification.findOne({ userId: user._id });
+    expect(notification).toBeNull();
+  });
+
+  it('does not touch users already on the free plan', async () => {
+    const user = await User.create({
+      name: 'Free User',
+      email: `free-${Date.now()}-${Math.random()}@example.com`,
+      password: 'password123',
+      plan: 'free',
+    });
+
+    await downgradeExpiredSubscriptions();
+
+    const dbUser = await User.findById(user._id);
+    expect(dbUser.plan).toBe('free');
   });
 });
