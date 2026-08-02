@@ -213,6 +213,11 @@ const invalidateAnalyticsCache = async (channelId) => {
     deleteCache(`analytics:topvideos:${channelId}:5:views`),
     deleteCache(`analytics:topvideos:${channelId}:10:views`),
     ...channelVideos.map((v) => deleteCache(`analytics:video:${v._id}`)),
+    // growth.service.js's getGrowthPrediction() caches for 12h with no other
+    // invalidation hook anywhere -- without this, a Sync right after fixing
+    // a real data/growth issue (or just normal day-to-day subscriber growth)
+    // would keep serving a stale prediction for up to 12h regardless.
+    deleteCache(`growth:prediction:${channelId}`),
   ]);
 };
 

@@ -355,6 +355,23 @@ describe('analytics.service.invalidateAnalyticsCache — per-video cache busting
 
     expect(await redisConfig.getCache(cacheKey)).toBeNull();
   });
+
+  // Regression test: growth.service.js's getGrowthPrediction() caches for
+  // 12h with no invalidation hook anywhere else in the codebase -- a stale
+  // prediction (e.g. one computed before a real data or code fix) would
+  // keep serving for up to 12h after every single Sync click, regardless of
+  // how many times the user re-synced.
+  it('clears the 12h growth prediction cache too', async () => {
+    const { channel } = await createFixtures();
+
+    const cacheKey = `growth:prediction:${channel._id}`;
+    await redisConfig.setCache(cacheKey, { stale: true }, 12 * 60 * 60);
+    expect(await redisConfig.getCache(cacheKey)).toEqual({ stale: true });
+
+    await analyticsService.invalidateAnalyticsCache(channel._id.toString());
+
+    expect(await redisConfig.getCache(cacheKey)).toBeNull();
+  });
 });
 
 describe('analytics.service.getOverview — views.delta always defined, unlike change', () => {
