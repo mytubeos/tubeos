@@ -57,6 +57,16 @@ export const formatDate = (date, format = 'short') => {
   return d.toISOString()
 }
 
+// Whether a subscriptionExpiresAt date has already passed. Billing here is a
+// manual monthly top-up, not an auto-charge subscription -- nothing renews
+// or downgrades the account when this date passes, so callers need to know
+// which side of "now" it's on to avoid showing a stale "Renews on <past
+// date>" as if it were still upcoming.
+export const isSubscriptionExpired = (expiresAt) => {
+  if (!expiresAt) return false
+  return new Date(expiresAt) < new Date()
+}
+
 // Relative time: "2 hours ago"
 export const timeAgo = (date) => {
   if (!date) return ''

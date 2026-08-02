@@ -11,6 +11,7 @@ import {
   truncate,
   getInitials,
   formatFileSize,
+  isSubscriptionExpired,
   cn,
 } from '../../src/utils/formatters'
 
@@ -103,6 +104,29 @@ describe('formatDate', () => {
   it('composes datetime from short date + time', () => {
     const result = formatDate('2024-03-27T10:00:00Z', 'datetime')
     expect(result).toContain('·')
+  })
+})
+
+describe('isSubscriptionExpired', () => {
+  // Regression test: Settings.jsx used to unconditionally label
+  // subscriptionExpiresAt "Renews on <date>" even once that date was in the
+  // past -- misleading since billing here is a manual top-up (no
+  // auto-charge), so nothing actually renews and nothing downgrades the
+  // account either. This is the check the fix uses to tell the two states
+  // apart.
+  it('returns false for a falsy date', () => {
+    expect(isSubscriptionExpired(null)).toBe(false)
+    expect(isSubscriptionExpired(undefined)).toBe(false)
+  })
+
+  it('returns false for a date in the future', () => {
+    const future = new Date(Date.now() + 24 * 60 * 60 * 1000)
+    expect(isSubscriptionExpired(future.toISOString())).toBe(false)
+  })
+
+  it('returns true for a date in the past', () => {
+    const past = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    expect(isSubscriptionExpired(past.toISOString())).toBe(true)
   })
 })
 

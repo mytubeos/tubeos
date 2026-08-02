@@ -11,7 +11,7 @@ import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/Modal'
 import { PlanBadge } from '../../components/ui/Badge'
 import { PLANS } from '../../utils/constants'
-import { formatNumber, formatDate } from '../../utils/formatters'
+import { formatNumber, formatDate, isSubscriptionExpired } from '../../utils/formatters'
 import { useRazorpay } from '../../hooks/useRazorpay'
 import toast from 'react-hot-toast'
 
@@ -314,11 +314,24 @@ export const Settings = () => {
                     `₹${currentPlanPayment ? Math.round(currentPlanPayment.amount / 100) : planConfig?.price?.inr}/month`
                   )}
                 </p>
-                {plan !== 'free' && user?.subscriptionExpiresAt && (
-                  <p className="text-2xs text-gray-600 mt-0.5">
-                    Renews on {formatDate(user.subscriptionExpiresAt, 'medium')}
-                  </p>
-                )}
+                {plan !== 'free' &&
+                  user?.subscriptionExpiresAt &&
+                  // Billing here is a manual monthly top-up, not an auto-charge
+                  // subscription (see payment.service.js) -- nothing actually
+                  // "renews" on this date, and nothing downgrades the account
+                  // when it passes either. Once it's in the past, say so
+                  // plainly instead of "Renews on <past date>", which reads as
+                  // broken and implies an auto-renewal that never happens.
+                  (isSubscriptionExpired(user.subscriptionExpiresAt) ? (
+                    <p className="text-2xs text-rose mt-0.5">
+                      Expired on {formatDate(user.subscriptionExpiresAt, 'medium')} — pay again to
+                      keep {plan} features
+                    </p>
+                  ) : (
+                    <p className="text-2xs text-gray-600 mt-0.5">
+                      Access until {formatDate(user.subscriptionExpiresAt, 'medium')}
+                    </p>
+                  ))}
               </div>
               {plan !== 'agency' && (
                 <Button size="sm" onClick={() => navigate('/pricing')}>
