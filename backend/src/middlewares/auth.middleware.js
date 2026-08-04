@@ -54,10 +54,16 @@ const protect = async (req, res, next) => {
     }
 
     // 7. Attach user to request object (use .id, not ._id)
+    // Read email/plan off the freshly-fetched `user` doc, NOT the decoded JWT
+    // payload -- the token's plan claim is a snapshot from whenever it was
+    // issued (login or last refresh), so requirePlan() below would keep
+    // enforcing a stale plan for up to the token's full TTL after any
+    // upgrade/downgrade (including the expired-subscription cron job's own
+    // downgrades) even though `user` here already has the current value.
     req.user = {
       id: decoded.id,
-      email: decoded.email,
-      plan: decoded.plan,
+      email: user.email,
+      plan: user.plan,
     };
 
     next();
@@ -84,10 +90,12 @@ const optionalAuth = async (req, res, next) => {
       const user = await User.findById(decoded.id).lean();
 
       if (user && user.isActive && !user.isBanned) {
+        // Same fix as protect() above -- use the freshly-fetched user's
+        // plan/email, not the JWT's stale snapshot from token-issue time.
         req.user = {
           id: decoded.id,
-          email: decoded.email,
-          plan: decoded.plan,
+          email: user.email,
+          plan: user.plan,
         };
       }
     } catch {
