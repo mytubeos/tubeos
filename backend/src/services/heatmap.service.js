@@ -522,10 +522,19 @@ const getDefaultHeatmapResponse = (channelId) => ({
 });
 
 const generateNextSlots = (bestSlots, count) => {
+  // Collect every matching upcoming slot first, THEN rank by score -- do not
+  // let the outer day-by-day loop decide final order. bestSlots (from
+  // extractAllSlots) is already sorted by score, so .slice(0, 2) below still
+  // picks each individual day's 2 best -- but across *different* days, the
+  // old chronological push order meant a lower-scored slot on a sooner date
+  // could rank ahead of a real top slot a few days out. Same bug, same fix
+  // as schedule.service.js's getNextBestSlots() (2026-08-02) -- this is the
+  // other of the two parallel "best time" implementations that had drifted;
+  // this page's own displayed "#1 Best" wasn't always the actual best slot.
   const now = new Date();
-  const slots = [];
+  const candidates = [];
 
-  for (let daysAhead = 0; daysAhead <= 14 && slots.length < count; daysAhead++) {
+  for (let daysAhead = 0; daysAhead <= 14; daysAhead++) {
     const date = new Date(now);
     date.setDate(date.getDate() + daysAhead);
     const dayOfWeek = date.getDay();
@@ -535,8 +544,8 @@ const generateNextSlots = (bestSlots, count) => {
     daySlots.forEach((slot) => {
       const slotDate = new Date(date);
       slotDate.setHours(slot.hour, 0, 0, 0);
-      if (slotDate > now && slots.length < count) {
-        slots.push({
+      if (slotDate > now) {
+        candidates.push({
           datetime: slotDate.toISOString(),
           day: DAY_NAMES[slot.day],
           time: slot.label,
@@ -546,7 +555,11 @@ const generateNextSlots = (bestSlots, count) => {
     });
   }
 
-  return slots;
+  // Highest score first; tie-break on soonest so equally-good slots still
+  // surface the one you can act on first.
+  candidates.sort((a, b) => b.score - a.score || new Date(a.datetime) - new Date(b.datetime));
+
+  return candidates.slice(0, count);
 };
 
 const getWorstDays = (grid) => {
