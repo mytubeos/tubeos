@@ -34,6 +34,17 @@ beforeAll(async () => {
       dbName: `test-${crypto.randomBytes(6).toString('hex')}`,
     });
   }
+  // Mongoose builds schema-declared indexes (unique, etc.) in the background
+  // after a model is registered -- it does NOT wait for that build to finish
+  // before allowing writes, so a test that inserts+asserts-on-uniqueness
+  // right after model load can race ahead of the real index and see it not
+  // enforced yet (confirmed directly: a duplicate insert succeeded with a
+  // null error code even though listIndexes() already showed the unique
+  // index as present). syncIndexes() actually waits for every model
+  // registered on this connection to have its indexes built before
+  // resolving, closing that race for every test file, not just the one it
+  // was first caught in.
+  await mongoose.connection.syncIndexes();
 }, 30000);
 
 afterEach(async () => {
