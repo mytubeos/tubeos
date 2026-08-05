@@ -11,6 +11,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Input } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import { useAuthStore } from '../../store/authStore'
+import { formatChange, formatSignedNumber, getCompetitorGrowth } from '../../utils/formatters'
 import toast from 'react-hot-toast'
 
 export const Growth = () => {
@@ -22,6 +23,7 @@ export const Growth = () => {
   const [suggestions, setSuggestions] = useState([])
   const [competitors, setCompetitors] = useState([])
   const [trends, setTrends] = useState([])
+  const [ownGrowth, setOwnGrowth] = useState(null)
   const [loading, setLoading] = useState(true)
   const [syncingId, setSyncingId] = useState(null)
   const [showAddCompetitor, setShowAddCompetitor] = useState(false)
@@ -57,6 +59,18 @@ export const Growth = () => {
   useEffect(() => {
     fetchAll()
   }, [channelId])
+
+  // Own-channel side of the "you vs competitors" growth comparison — kept as
+  // its own fetch rather than folded into fetchAll's Promise.allSettled array
+  // (whose result indices are position-based) to avoid coupling this to the
+  // existing competitors/trends conditional-push ordering.
+  useEffect(() => {
+    if (!channelId || !canAccessCompetitors) return
+    analyticsApi
+      .getOverview(channelId, '7d')
+      .then((res) => setOwnGrowth(res.data.data?.metrics?.views || null))
+      .catch(() => {})
+  }, [channelId, canAccessCompetitors])
 
   const handleAddCompetitor = async () => {
     if (!competitorUrl.trim()) {
@@ -146,6 +160,33 @@ export const Growth = () => {
             )
           }
         />
+
+        {canAccessCompetitors && competitors.length > 0 && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-4 pb-4 border-b border-white/5 text-xs">
+            <span className="text-gray-500">Views growth (~7d):</span>
+            {ownGrowth &&
+              (ownGrowth.change != null ? (
+                <span className={formatChange(ownGrowth.change)?.color}>
+                  You {formatChange(ownGrowth.change)?.value}
+                </span>
+              ) : (
+                <span className="text-gray-400">You {formatSignedNumber(ownGrowth.delta)}</span>
+              ))}
+            {competitors.map((c) => {
+              const g = getCompetitorGrowth(c.history, c.stats?.totalViews)
+              if (!g) return null
+              const fc = formatChange(g.pct)
+              return (
+                <span key={c._id} className={fc?.color}>
+                  {c.channelName} {fc?.value}
+                  {Math.abs(g.actualDays - 7) > 2 && (
+                    <span className="text-gray-600"> (~{g.actualDays}d)</span>
+                  )}
+                </span>
+              )
+            })}
+          </div>
+        )}
 
         {!canAccessCompetitors ? (
           <div className="text-center py-8">

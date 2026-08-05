@@ -90,6 +90,38 @@ export const formatChange = (change) => {
   }
 }
 
+// Finds the history[] entry closest to `targetDays` ago and computes %
+// growth vs. currentValue. Competitor history only accumulates on manual
+// sync (no cron auto-syncs competitors), so entries are irregularly spaced —
+// this is honest about the *actual* elapsed time rather than assuming a
+// clean N-day gap exists. Returns null when there isn't enough historical
+// data to say anything meaningful yet.
+export const getCompetitorGrowth = (history, currentValue, targetDays = 7) => {
+  if (!Array.isArray(history) || history.length < 2) return null
+
+  const now = Date.now()
+  const targetTime = now - targetDays * 24 * 60 * 60 * 1000
+
+  let closest = null
+  let closestDiff = Infinity
+  for (const entry of history) {
+    const diff = Math.abs(new Date(entry.date).getTime() - targetTime)
+    if (diff < closestDiff) {
+      closestDiff = diff
+      closest = entry
+    }
+  }
+  if (!closest) return null
+
+  const actualDays = Math.round((now - new Date(closest.date).getTime()) / (24 * 60 * 60 * 1000))
+  if (actualDays < 1) return null // no meaningful time gap yet
+
+  const pastValue = closest.totalViews
+  if (!pastValue) return null // avoid a meaningless/divide-by-zero % off a 0 baseline
+
+  return { pct: ((currentValue - pastValue) / pastValue) * 100, actualDays }
+}
+
 // Format a signed delta count: 3 -> '+3', -1 -> '-1', 0 -> '0'
 export const formatSignedNumber = (num) => {
   if (num === null || num === undefined) return '—'

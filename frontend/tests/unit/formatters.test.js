@@ -12,8 +12,11 @@ import {
   getInitials,
   formatFileSize,
   isSubscriptionExpired,
+  getCompetitorGrowth,
   cn,
 } from '../../src/utils/formatters'
+
+const daysAgo = (n) => new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString()
 
 describe('formatNumber', () => {
   it('returns em-dash for null/undefined', () => {
@@ -173,6 +176,52 @@ describe('formatChange', () => {
 
   it('treats zero as positive', () => {
     expect(formatChange(0).isPositive).toBe(true)
+  })
+})
+
+describe('getCompetitorGrowth', () => {
+  it('returns null when history is missing or too short', () => {
+    expect(getCompetitorGrowth(undefined, 1000)).toBeNull()
+    expect(getCompetitorGrowth([], 1000)).toBeNull()
+    expect(getCompetitorGrowth([{ date: daysAgo(7), totalViews: 900 }], 1000)).toBeNull()
+  })
+
+  it('computes % growth against the history entry closest to 7 days ago', () => {
+    const history = [
+      { date: daysAgo(30), totalViews: 500 },
+      { date: daysAgo(7), totalViews: 1000 },
+      { date: daysAgo(1), totalViews: 1080 },
+    ]
+    const result = getCompetitorGrowth(history, 1100, 7)
+    expect(result.pct).toBeCloseTo(10, 5) // (1100-1000)/1000 * 100
+    expect(result.actualDays).toBe(7)
+  })
+
+  it('picks the entry closest to the target even when spacing is irregular', () => {
+    // nearest to "7 days ago" is the day-9 entry (distance 2) vs day-1 (distance 6)
+    const history = [
+      { date: daysAgo(9), totalViews: 800 },
+      { date: daysAgo(1), totalViews: 1080 },
+    ]
+    const result = getCompetitorGrowth(history, 1000, 7)
+    expect(result.actualDays).toBe(9)
+    expect(result.pct).toBeCloseTo(25, 5) // (1000-800)/800 * 100
+  })
+
+  it('returns null when the closest entry has no meaningful time gap (same day)', () => {
+    const history = [
+      { date: daysAgo(0), totalViews: 900 },
+      { date: daysAgo(0), totalViews: 1000 },
+    ]
+    expect(getCompetitorGrowth(history, 1000, 7)).toBeNull()
+  })
+
+  it('returns null rather than dividing by a zero baseline', () => {
+    const history = [
+      { date: daysAgo(10), totalViews: 0 },
+      { date: daysAgo(1), totalViews: 500 },
+    ]
+    expect(getCompetitorGrowth(history, 1000, 7)).toBeNull()
   })
 })
 
