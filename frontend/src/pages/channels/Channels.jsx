@@ -37,7 +37,9 @@ export const Channels = () => {
         <div>
           <h1 className="text-[15px] font-semibold text-white">YouTube Channels</h1>
           <p className="text-[11px] text-white/35 mt-0.5">
-            {channels.length} / {channelLimit} channels connected
+            {channels.length > channelLimit
+              ? `${channels.length} channels connected, ${channelLimit} allowed`
+              : `${channels.length} / ${channelLimit} channels connected`}
             {user?.plan && (
               <span className="ml-1 capitalize text-indigo-400">({user.plan} plan)</span>
             )}
