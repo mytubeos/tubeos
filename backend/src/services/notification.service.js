@@ -10,7 +10,8 @@ const getNotifications = async (userId, { page = 1, limit = 20, unreadOnly } = {
   const pageNum = parseInt(page) || 1;
   const limitNum = parseInt(limit) || 20;
   const skip = (pageNum - 1) * limitNum;
-  const filter = unreadOnly === 'true' || unreadOnly === true ? { userId, read: false } : { userId };
+  const filter =
+    unreadOnly === 'true' || unreadOnly === true ? { userId, read: false } : { userId };
 
   const [notifications, total, unreadCount] = await Promise.all([
     Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limitNum).lean(),
