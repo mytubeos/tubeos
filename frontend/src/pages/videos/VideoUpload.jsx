@@ -1,14 +1,15 @@
 // src/pages/videos/VideoUpload.jsx
 import { useState, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Upload, Sparkles, X, ArrowLeft, Image, Tag, Clock } from 'lucide-react'
+import { Upload, Sparkles, X, ArrowLeft, Image, Tag, Clock, AlertTriangle } from 'lucide-react'
 import { videoApi } from '../../api/video.api'
 import { aiApi } from '../../api/ai.api'
 import { useChannelStore } from '../../store/channelStore'
+import { useAuthStore } from '../../store/authStore'
 import { Textarea, Select } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { BestTimeWidget } from '../../components/features/BestTimeWidget'
-import { VIDEO_CATEGORIES } from '../../utils/constants'
+import { VIDEO_CATEGORIES, PLANS } from '../../utils/constants'
 import { formatFileSize, toDatetimeLocalValue } from '../../utils/formatters'
 import toast from 'react-hot-toast'
 
@@ -27,8 +28,16 @@ export const VideoUpload = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { activeChannel } = useChannelStore()
+  const { user } = useAuthStore()
   const fileRef = useRef()
   const thumbRef = useRef()
+
+  // "Save as Draft" has no usage check server-side (see video.routes.js —
+  // only POST /:videoId/upload carries checkUsageLimit('upload')), so only
+  // the actual publish action needs to warn/disable here.
+  const planConfig = PLANS[user?.plan] || PLANS.free
+  const uploadsUsed = user?.usage?.uploadsUsed || 0
+  const uploadsExhausted = planConfig.uploads !== -1 && uploadsUsed >= planConfig.uploads
 
   const [file, setFile] = useState(null)
   const [form, setForm] = useState({
@@ -256,6 +265,25 @@ export const VideoUpload = () => {
       <Button variant="ghost" size="sm" icon={ArrowLeft} onClick={() => navigate('/videos')}>
         Back to Videos
       </Button>
+
+      {uploadsExhausted && (
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/30 bg-amber-500/10">
+          <AlertTriangle size={18} className="text-amber-400 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm text-amber-200 font-medium">
+              {planConfig.uploads === 0
+                ? `Video uploads aren't included on the ${planConfig.name} plan.`
+                : `You've used all ${planConfig.uploads} uploads this month on the ${planConfig.name} plan.`}
+            </p>
+            <p className="text-xs text-amber-200/70 mt-0.5">
+              You can still fill this in and save it as a draft — upgrade to publish it to YouTube.
+            </p>
+          </div>
+          <Button size="sm" onClick={() => navigate('/pricing')}>
+            Upgrade
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Left — Form */}
@@ -524,8 +552,17 @@ export const VideoUpload = () => {
 
           {/* Action buttons */}
           <div className="space-y-2">
-            <Button fullWidth onClick={handleUpload} loading={uploading} disabled={!file}>
-              {form.scheduledAt ? '📅 Schedule Upload' : '🚀 Upload Now'}
+            <Button
+              fullWidth
+              onClick={handleUpload}
+              loading={uploading}
+              disabled={!file || uploadsExhausted}
+            >
+              {uploadsExhausted
+                ? 'Upgrade to publish'
+                : form.scheduledAt
+                  ? '📅 Schedule Upload'
+                  : '🚀 Upload Now'}
             </Button>
             <Button fullWidth variant="ghost" onClick={saveDraft} loading={savingDraft}>
               Save as Draft
