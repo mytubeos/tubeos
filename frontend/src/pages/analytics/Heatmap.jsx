@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { Flame, RefreshCw, Clock, AlertTriangle, Zap } from 'lucide-react'
 import { useChannelStore } from '../../store/channelStore'
+import { useAuthStore } from '../../store/authStore'
 import { analyticsApi } from '../../api/analytics.api'
 import { HeatmapGrid } from '../../components/charts/HeatmapGrid'
 import { Card, CardHeader } from '../../components/ui/Card'
@@ -14,7 +15,13 @@ const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 
 export const Heatmap = () => {
   const { activeChannel } = useChannelStore()
+  const { user } = useAuthStore()
   const channelId = activeChannel?._id
+  // heatmap/best-time/low-traffic all share the same requirePlan('creator', ...)
+  // gate server-side (analytics.routes.js) — mirror it here so Free-plan users
+  // get the same locked-card treatment as Growth.jsx's Pro+ sections, instead
+  // of every fetch 403ing and surfacing as a generic "failed to load" toast.
+  const canAccessHeatmap = ['creator', 'pro', 'agency'].includes(user?.plan)
 
   const [heatmap, setHeatmap] = useState(null)
   const [bestSlots, setBestSlots] = useState(null)
@@ -24,7 +31,10 @@ export const Heatmap = () => {
   const [timeTab, setTimeTab] = useState('best') // 'best' | 'avoid' — mobile-only toggle, both shown side-by-side on desktop
 
   const fetchData = async () => {
-    if (!channelId) return
+    if (!channelId || !canAccessHeatmap) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     try {
       const [hm, bs, lt] = await Promise.all([
@@ -44,10 +54,10 @@ export const Heatmap = () => {
 
   useEffect(() => {
     fetchData()
-  }, [channelId])
+  }, [channelId, canAccessHeatmap])
 
   const handleRebuild = async () => {
-    if (!channelId) return
+    if (!channelId || !canAccessHeatmap) return
     setRebuilding(true)
     try {
       await analyticsApi.rebuildHeatmap(channelId)
@@ -65,6 +75,31 @@ export const Heatmap = () => {
       <div className="text-center py-20 text-gray-500">
         <Flame size={40} className="mx-auto mb-4 opacity-30" />
         <p>Connect a YouTube channel to view time intelligence</p>
+      </div>
+    )
+  }
+
+  if (!canAccessHeatmap) {
+    return (
+      <div className="space-y-6">
+        <p className="text-gray-500 text-sm">
+          Audience activity analysis for {activeChannel.channelName}
+        </p>
+        <Card>
+          <CardHeader
+            title="7×24 Audience Activity Heatmap"
+            subtitle="Creator+ feature"
+            icon={Flame}
+            iconColor="gray"
+          />
+          <div className="text-center py-10">
+            <Flame size={32} className="mx-auto mb-3 text-gray-700" />
+            <p className="text-sm text-gray-500 mb-3">
+              See exactly when your audience is online, down to the hour
+            </p>
+            <Badge variant="cyan">Upgrade to Creator to unlock</Badge>
+          </div>
+        </Card>
       </div>
     )
   }
