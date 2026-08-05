@@ -6,14 +6,15 @@ const User = require('../models/user.model');
 const STREAK_MILESTONES = [3, 7, 14, 30];
 
 // ==================== GET NOTIFICATIONS ====================
-const getNotifications = async (userId, { page = 1, limit = 20 } = {}) => {
+const getNotifications = async (userId, { page = 1, limit = 20, unreadOnly } = {}) => {
   const pageNum = parseInt(page) || 1;
   const limitNum = parseInt(limit) || 20;
   const skip = (pageNum - 1) * limitNum;
+  const filter = unreadOnly === 'true' || unreadOnly === true ? { userId, read: false } : { userId };
 
   const [notifications, total, unreadCount] = await Promise.all([
-    Notification.find({ userId }).sort({ createdAt: -1 }).skip(skip).limit(limitNum).lean(),
-    Notification.countDocuments({ userId }),
+    Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limitNum).lean(),
+    Notification.countDocuments(filter),
     Notification.countDocuments({ userId, read: false }),
   ]);
 

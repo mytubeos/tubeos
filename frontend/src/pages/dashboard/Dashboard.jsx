@@ -32,8 +32,14 @@ export const Dashboard = () => {
 
   useEffect(() => {
     notificationAPI
-      .getAll({ limit: 1 })
-      .then((res) => setLatestNudge(res.data.data?.notifications?.[0] || null))
+      .getAll({ limit: 1, unreadOnly: true })
+      .then((res) => {
+        const nudge = res.data.data?.notifications?.[0] || null
+        setLatestNudge(nudge)
+        // Seeing it here counts as read, so a resolved/stale nudge (e.g. an
+        // old "plan expired" notice) doesn't keep coming back on every visit.
+        if (nudge) notificationAPI.markRead(nudge._id).catch(() => {})
+      })
       .catch(() => {})
   }, [])
 

@@ -4,7 +4,12 @@ import { createRequire } from 'module';
 // See tests/integration/auth.service.test.js for why createRequire is used
 // instead of `import` for local project files under test.
 const require = createRequire(import.meta.url);
-const { createNotification, touchActivity } = require('../../src/services/notification.service.js');
+const {
+  createNotification,
+  touchActivity,
+  getNotifications,
+  markAsRead,
+} = require('../../src/services/notification.service.js');
 const Notification = require('../../src/models/notification.model.js');
 const User = require('../../src/models/user.model.js');
 
@@ -52,6 +57,37 @@ describe('notification.service.createNotification', () => {
 
     const count = await Notification.countDocuments({ userId: user._id });
     expect(count).toBe(2);
+  });
+});
+
+describe('notification.service.getNotifications', () => {
+  it('unreadOnly excludes notifications already marked read', async () => {
+    const user = await createUser();
+    const first = await createNotification(user._id, 'upload_reminder', 'first');
+    await createNotification(user._id, 'growth_win', 'second');
+    await markAsRead(user._id, first._id);
+
+    const { notifications } = await getNotifications(user._id, { limit: 1, unreadOnly: 'true' });
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0].message).toBe('second');
+  });
+
+  it('unreadOnly returns nothing once every notification has been read', async () => {
+    const user = await createUser();
+    const only = await createNotification(user._id, 'upload_reminder', 'only');
+    await markAsRead(user._id, only._id);
+
+    const { notifications } = await getNotifications(user._id, { limit: 1, unreadOnly: 'true' });
+    expect(notifications).toHaveLength(0);
+  });
+
+  it('without unreadOnly still returns already-read notifications (Navbar history list)', async () => {
+    const user = await createUser();
+    const only = await createNotification(user._id, 'upload_reminder', 'only');
+    await markAsRead(user._id, only._id);
+
+    const { notifications } = await getNotifications(user._id, { limit: 1 });
+    expect(notifications).toHaveLength(1);
   });
 });
 
