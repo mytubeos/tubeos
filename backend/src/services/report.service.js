@@ -6,10 +6,14 @@
 const { ChannelAnalytics } = require('../models/analytics.model');
 const Video = require('../models/video.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
+const { Competitor } = require('../models/growth.model');
 
 // ==================== MAIN: GATHER REPORT DATA ====================
 // days=7 → weekly report, days=30 → monthly report
-const gatherReportData = async (userId, channelId, days = 7) => {
+// plan is optional — pass the user's current plan to include the "you vs
+// competitors" comparison for Pro+/Agency (see getCompetitorHistoryGrowth
+// below). Omit/null it to skip the Competitor query entirely.
+const gatherReportData = async (userId, channelId, days = 7, plan = null) => {
   const now = new Date();
   const since = new Date(now - days * 86400000);
   const prevSince = new Date(now - days * 2 * 86400000);
@@ -136,6 +140,32 @@ const gatherReportData = async (userId, channelId, days = 7) => {
     bestTimes = [];
   }
 
+  // "You vs your competitors" — Pro+/Agency only. Re-checks plan here (not
+  // just wherever the caller decided to pass it in) so a downgraded user's
+  // stale Competitor rows never leak into a report they're no longer
+  // entitled to see them in, same double-gate shape as white-label branding.
+  let competitorComparison;
+  if (['pro', 'agency'].includes(plan)) {
+    const competitors = await Competitor.find({
+      userId,
+      trackingChannelId: channelId,
+      isActive: true,
+    })
+      .select('channelName stats history')
+      .lean();
+
+    const compared = competitors
+      .map((c) => {
+        const growth = getCompetitorHistoryGrowth(c.history, c.stats?.totalViews, days);
+        return growth && { name: c.channelName, ...growth };
+      })
+      .filter(Boolean);
+
+    if (compared.length > 0) {
+      competitorComparison = { yourChange: kpis.views.change, competitors: compared };
+    }
+  }
+
   return {
     channel: {
       name: channel.channelName,
@@ -151,13 +181,15 @@ const gatherReportData = async (userId, channelId, days = 7) => {
     bestTimes,
     milestones,
     healthScore,
+    competitorComparison,
     weekRange: days <= 7 ? formatWeekRange() : formatDateRange(days),
     reportType: days <= 7 ? 'weekly' : 'monthly',
   };
 };
 
 // Thin wrapper for monthly — 30-day period, used by monthly cron
-const gatherMonthlyReportData = (userId, channelId) => gatherReportData(userId, channelId, 30);
+const gatherMonthlyReportData = (userId, channelId, plan = null) =>
+  gatherReportData(userId, channelId, 30, plan);
 
 // ==================== INSIGHTS GENERATOR ====================
 const generateInsights = ({ kpis, prev, topVideos, bestDayName, channel }) => {
@@ -327,6 +359,40 @@ const pctChange = (curr = 0, prev = 0) => {
   return parseFloat((((curr - prev) / prev) * 100).toFixed(1));
 };
 
+// Finds the Competitor history[] entry closest to `targetDays` ago and
+// computes % growth vs currentValue — same nearest-date approach as the
+// frontend's getCompetitorGrowth (frontend/src/utils/formatters.js), ported
+// here since email rendering happens server-side. Kept as a separate
+// implementation rather than a shared module — frontend/backend are
+// separate deployables in this repo. Returns null when there isn't enough
+// historical data to say anything meaningful yet (competitor sync is
+// manual-only, so entries are irregularly spaced).
+const getCompetitorHistoryGrowth = (history, currentValue, targetDays = 7) => {
+  if (!Array.isArray(history) || history.length < 2) return null;
+
+  const now = Date.now();
+  const targetTime = now - targetDays * 86400000;
+
+  let closest = null;
+  let closestDiff = Infinity;
+  for (const entry of history) {
+    const diff = Math.abs(new Date(entry.date).getTime() - targetTime);
+    if (diff < closestDiff) {
+      closestDiff = diff;
+      closest = entry;
+    }
+  }
+  if (!closest) return null;
+
+  const actualDays = Math.round((now - new Date(closest.date).getTime()) / 86400000);
+  if (actualDays < 1) return null; // no meaningful time gap yet
+
+  const pastValue = closest.totalViews;
+  if (!pastValue) return null; // avoid a meaningless/divide-by-zero % off a 0 baseline
+
+  return { pct: pctChange(currentValue, pastValue), actualDays };
+};
+
 const buildDailyArray = (rows, since, days = 7) => {
   const map = {};
   rows.forEach((r) => {
@@ -379,4 +445,9 @@ const formatDateRange = (days) => {
 
 const fmtNum = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : `${n}`);
 
-module.exports = { gatherReportData, gatherMonthlyReportData, generateSubjectLine };
+module.exports = {
+  gatherReportData,
+  gatherMonthlyReportData,
+  generateSubjectLine,
+  getCompetitorHistoryGrowth,
+};

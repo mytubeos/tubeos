@@ -283,7 +283,12 @@ const sendWeeklyReports = async () => {
     if (!channelId) continue;
 
     try {
-      const reportData = await gatherReportData(user._id.toString(), channelId.toString(), 7);
+      const reportData = await gatherReportData(
+        user._id.toString(),
+        channelId.toString(),
+        7,
+        user.plan
+      );
       if (!reportData) continue;
 
       await sendWeeklyReportEmail(user, reportData);
@@ -331,7 +336,11 @@ const sendMonthlyReports = async () => {
     if (!channelId) continue;
 
     try {
-      const reportData = await gatherMonthlyReportData(user._id.toString(), channelId.toString());
+      const reportData = await gatherMonthlyReportData(
+        user._id.toString(),
+        channelId.toString(),
+        user.plan
+      );
       if (!reportData) continue;
 
       await sendMonthlyReportEmail(user, reportData);

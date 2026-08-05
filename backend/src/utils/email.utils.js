@@ -396,6 +396,7 @@ const buildWeeklyReportHtml = (user, data, brand = {}) => {
     milestones,
     healthScore,
     weekRange,
+    competitorComparison,
   } = data;
 
   const fmtNum = (n) =>
@@ -535,6 +536,36 @@ const buildWeeklyReportHtml = (user, data, brand = {}) => {
     )
     .join('');
 
+  // Competitor comparison — Pro+/Agency only, omitted entirely (not just
+  // hidden) when there's nothing to show (report.service.js already filters
+  // out competitors with too-sparse history to compute a real number).
+  const competitorRowsHtml = (competitorComparison?.competitors || [])
+    .map(
+      (c) => `
+      <tr style="border-top:1px solid #f3f4f6;">
+        <td style="padding:8px 14px;font-size:12px;color:#374151;">${c.name}</td>
+        <td style="padding:8px 14px;text-align:right;font-size:12px;font-weight:600;color:${clrChg(c.pct)};">
+          ${arrow(c.pct)} ${Math.abs(c.pct).toFixed(1)}%${Math.abs(c.actualDays - 7) > 2 ? ` <span style="color:#9ca3af;font-weight:400;">(~${c.actualDays}d)</span>` : ''}
+        </td>
+      </tr>`
+    )
+    .join('');
+
+  const competitorHtml = competitorComparison
+    ? `
+    <hr style="border:none;border-top:1px solid #f3f4f6;margin:20px 0;">
+    <div style="font-size:11px;font-weight:500;color:#9ca3af;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;">📊 You vs your competitors (views)</div>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:8px;">
+      <tr>
+        <td style="padding:8px 14px;font-size:12px;font-weight:600;color:#111827;">You</td>
+        <td style="padding:8px 14px;text-align:right;font-size:12px;font-weight:600;color:${clrChg(competitorComparison.yourChange)};">
+          ${arrow(competitorComparison.yourChange)} ${Math.abs(competitorComparison.yourChange ?? 0).toFixed(1)}%
+        </td>
+      </tr>
+      ${competitorRowsHtml}
+    </table>`
+    : '';
+
   // Action items
   const actionsHtml = actionItems
     .map(
@@ -617,6 +648,7 @@ const buildWeeklyReportHtml = (user, data, brand = {}) => {
         ${msHtml || '<div style="font-size:12px;color:#9ca3af;">Keep growing!</div>'}
       </td>
     </tr></table>
+    ${competitorHtml}
 
     <hr style="border:none;border-top:1px solid #f3f4f6;margin:20px 0;">
 
