@@ -304,6 +304,26 @@ const updatePreferences = async (req, res) => {
   }
 };
 
+// PATCH /api/v1/auth/branding — Agency plan only (requirePlan on the route)
+const updateBranding = async (req, res) => {
+  try {
+    const User = require('../models/user.model');
+    const allowed = ['enabled', 'companyName', 'primaryColor'];
+    const updates = {};
+    allowed.forEach((key) => {
+      if (req.body[key] !== undefined) updates[`branding.${key}`] = req.body[key];
+    });
+    if (Object.keys(updates).length === 0)
+      return errorResponse(res, 400, 'No valid branding fields provided');
+    const user = await User.findByIdAndUpdate(req.user.id, { $set: updates }, { new: true }).select(
+      'branding'
+    );
+    return successResponse(res, 200, 'Branding updated', { branding: user.branding });
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
 module.exports = {
   register,
   verifyEmail,
@@ -318,4 +338,5 @@ module.exports = {
   logout,
   logoutAll,
   updatePreferences,
+  updateBranding,
 };

@@ -190,6 +190,18 @@ const userSchema = new mongoose.Schema(
       },
     },
 
+    // ==================== WHITE-LABEL BRANDING (Agency plan) ====================
+    // Lets reports (PDF/CSV export + weekly/monthly email) carry the agency's
+    // own name/color instead of Vezrin's. Enforced at both write time
+    // (PATCH /auth/branding is requirePlan('agency')) and render time
+    // (export.service.js's getReportBrand re-checks user.plan === 'agency'),
+    // so a later downgrade can't leave a stale white-labeled report going out.
+    branding: {
+      enabled: { type: Boolean, default: false },
+      companyName: { type: String, trim: true, maxlength: 60, default: '' },
+      primaryColor: { type: String, trim: true, default: '' },
+    },
+
     // ==================== GAMIFICATION (Chingari streak) ====================
     gamification: {
       currentStreak: { type: Number, default: 0 },

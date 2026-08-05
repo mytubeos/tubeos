@@ -1,7 +1,7 @@
 // src/pages/settings/Settings.jsx
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { User, Lock, Bell, CreditCard, Check, Loader2, Tag, X } from 'lucide-react'
+import { User, Lock, Bell, CreditCard, Check, Loader2, Tag, X, Palette } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import authApi from '../../api/auth.api'
 import paymentAPI from '../../api/payment.api'
@@ -9,7 +9,7 @@ import { Card, CardHeader } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/Modal'
-import { PlanBadge } from '../../components/ui/Badge'
+import { Badge, PlanBadge } from '../../components/ui/Badge'
 import { PLANS } from '../../utils/constants'
 import { formatNumber, formatDate, isSubscriptionExpired } from '../../utils/formatters'
 import { useRazorpay } from '../../hooks/useRazorpay'
@@ -97,6 +97,14 @@ export const Settings = () => {
     chingariEnabled: user?.preferences?.chingariEnabled ?? true,
   })
   const [savingNotifications, setSavingNotifications] = useState(false)
+
+  // White-label branding state (Agency plan) — seeded from the user doc
+  const [branding, setBranding] = useState({
+    enabled: user?.branding?.enabled ?? false,
+    companyName: user?.branding?.companyName || '',
+    primaryColor: user?.branding?.primaryColor || '',
+  })
+  const [savingBranding, setSavingBranding] = useState(false)
 
   // Billing history + downgrade state
   const [billingHistory, setBillingHistory] = useState([])
@@ -186,6 +194,23 @@ export const Settings = () => {
       toast.error(err.response?.data?.message || 'Failed to save preferences')
     } finally {
       setSavingNotifications(false)
+    }
+  }
+
+  const handleSaveBranding = async () => {
+    setSavingBranding(true)
+    try {
+      const res = await authApi.updateBranding({
+        enabled: branding.enabled,
+        companyName: branding.companyName,
+        primaryColor: branding.primaryColor,
+      })
+      updateUser({ branding: res.data.data?.branding })
+      toast.success('Branding saved!')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save branding')
+    } finally {
+      setSavingBranding(false)
     }
   }
 
@@ -364,6 +389,73 @@ export const Settings = () => {
               >
                 Switch to Free plan
               </button>
+            )}
+          </Card>
+
+          {/* White-label reports */}
+          <Card>
+            <CardHeader
+              title="White-Label Reports"
+              subtitle={plan === 'agency' ? 'Your brand on every export & email' : 'Agency feature'}
+              icon={Palette}
+              iconColor={plan === 'agency' ? 'brand' : 'gray'}
+            />
+            {plan !== 'agency' ? (
+              <div className="text-center py-8">
+                <Palette size={32} className="mx-auto mb-3 text-gray-700" />
+                <p className="text-sm text-gray-500 mb-3">
+                  Send analytics reports and CSV/PDF exports under your own company name and color
+                  instead of Vezrin's.
+                </p>
+                <Badge variant="cyan">Upgrade to Agency to unlock</Badge>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-300">Enable white-labeling</p>
+                    <p className="text-xs text-gray-600">
+                      Replaces "Vezrin" branding on your reports and report emails
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setBranding((p) => ({ ...p, enabled: !p.enabled }))}
+                    className={`w-10 h-6 rounded-full transition-all relative shrink-0
+                                ${branding.enabled ? 'bg-brand' : 'bg-white/10'}`}
+                  >
+                    <span
+                      className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all
+                                      ${branding.enabled ? 'left-5' : 'left-1'}`}
+                    />
+                  </button>
+                </div>
+                <Input
+                  label="Company Name"
+                  placeholder="Your Agency Name"
+                  maxLength={60}
+                  value={branding.companyName}
+                  onChange={(e) => setBranding((p) => ({ ...p, companyName: e.target.value }))}
+                />
+                <div>
+                  <label className="text-sm font-medium text-gray-300 mb-1.5 block">
+                    Brand Color
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={branding.primaryColor || '#00A0FD'}
+                      onChange={(e) => setBranding((p) => ({ ...p, primaryColor: e.target.value }))}
+                      className="w-10 h-10 rounded-lg border border-white/10 bg-transparent cursor-pointer"
+                    />
+                    <span className="text-xs text-gray-600">
+                      Used in place of Vezrin's blue on report headers
+                    </span>
+                  </div>
+                </div>
+                <Button onClick={handleSaveBranding} loading={savingBranding} size="sm">
+                  Save Branding
+                </Button>
+              </div>
             )}
           </Card>
 

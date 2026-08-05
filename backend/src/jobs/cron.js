@@ -272,7 +272,7 @@ const sendWeeklyReports = async () => {
     'preferences.reportFrequency': { $in: ['weekly', null, undefined] },
     youtubeChannels: { $exists: true, $not: { $size: 0 } },
   })
-    .select('name email preferences youtubeChannels')
+    .select('name email plan branding preferences youtubeChannels')
     .lean();
 
   logger.info(`[cron] weekly-report: sending to ${users.length} user(s)`);
@@ -320,7 +320,7 @@ const sendMonthlyReports = async () => {
     'preferences.reportFrequency': 'monthly',
     youtubeChannels: { $exists: true, $not: { $size: 0 } },
   })
-    .select('name email preferences youtubeChannels')
+    .select('name email plan branding preferences youtubeChannels')
     .lean();
 
   logger.info(`[cron] monthly-report: sending to ${users.length} user(s)`);

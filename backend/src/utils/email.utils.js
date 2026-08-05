@@ -275,14 +275,15 @@ const sendWeeklyReportEmail = async (user, reportData) => {
   if (!user?.email || !reportData) return;
 
   const { generateSubjectLine } = require('../services/report.service');
-  const { buildReportPdf } = require('../services/export.service');
+  const { buildReportPdf, getReportBrand } = require('../services/export.service');
+  const brand = getReportBrand(user);
   const subject = generateSubjectLine(user.name, reportData.kpis, reportData.weekRange);
-  const html = buildWeeklyReportHtml(user, reportData);
+  const html = buildWeeklyReportHtml(user, reportData, brand);
 
   // Build PDF attachment (best-effort — email still sends if PDF fails)
   let attachment;
   try {
-    const pdfBuf = await buildReportPdf(reportData, user);
+    const pdfBuf = await buildReportPdf(reportData, user, brand);
     const date = new Date().toISOString().slice(0, 10);
     attachment = [{ content: pdfBuf.toString('base64'), name: `vezrin-weekly-report-${date}.pdf` }];
   } catch (pdfErr) {
@@ -295,7 +296,7 @@ const sendWeeklyReportEmail = async (user, reportData) => {
     await axios.post(
       BREVO_API_URL,
       {
-        sender: { email: EMAIL_FROM, name: 'Vezrin Reports' },
+        sender: { email: EMAIL_FROM, name: brand.companyName || 'Vezrin Reports' },
         to: [{ email: user.email, name: user.name }],
         subject,
         htmlContent: html,
@@ -322,7 +323,8 @@ const sendMonthlyReportEmail = async (user, reportData) => {
   }
   if (!user?.email || !reportData) return;
 
-  const { buildReportPdf } = require('../services/export.service');
+  const { buildReportPdf, getReportBrand } = require('../services/export.service');
+  const brand = getReportBrand(user);
   const kpis = reportData.kpis;
   const firstName = user.name?.split(' ')[0] || 'Creator';
   const views = kpis?.views?.value || 0;
@@ -332,17 +334,21 @@ const sendMonthlyReportEmail = async (user, reportData) => {
       ? `${firstName}, you gained ${subs} subscribers in ${reportData.weekRange}! 🎉`
       : views > 0
         ? `Your monthly report: ${views >= 1000 ? `${(views / 1000).toFixed(1)}K` : views} views this month 📊`
-        : `Your monthly Vezrin report — ${reportData.weekRange}`;
+        : `Your monthly ${brand.companyName || 'Vezrin'} report — ${reportData.weekRange}`;
 
   // Reuse the weekly HTML builder (same data shape — title says "Monthly" via reportType)
-  const html = buildWeeklyReportHtml(user, {
-    ...reportData,
-    weekRange: `Monthly · ${reportData.weekRange}`,
-  });
+  const html = buildWeeklyReportHtml(
+    user,
+    {
+      ...reportData,
+      weekRange: `Monthly · ${reportData.weekRange}`,
+    },
+    brand
+  );
 
   let attachment;
   try {
-    const pdfBuf = await buildReportPdf(reportData, user);
+    const pdfBuf = await buildReportPdf(reportData, user, brand);
     const date = new Date().toISOString().slice(0, 10);
     attachment = [
       { content: pdfBuf.toString('base64'), name: `vezrin-monthly-report-${date}.pdf` },
@@ -357,7 +363,7 @@ const sendMonthlyReportEmail = async (user, reportData) => {
     await axios.post(
       BREVO_API_URL,
       {
-        sender: { email: EMAIL_FROM, name: 'Vezrin Reports' },
+        sender: { email: EMAIL_FROM, name: brand.companyName || 'Vezrin Reports' },
         to: [{ email: user.email, name: user.name }],
         subject,
         htmlContent: html,
@@ -377,7 +383,7 @@ const sendMonthlyReportEmail = async (user, reportData) => {
 };
 
 // ==================== HTML BUILDER ====================
-const buildWeeklyReportHtml = (user, data) => {
+const buildWeeklyReportHtml = (user, data, brand = {}) => {
   const firstName = user.name?.split(' ')[0] || 'Creator';
   const {
     channel,
@@ -554,9 +560,9 @@ const buildWeeklyReportHtml = (user, data) => {
 <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
 
   <!-- HEADER -->
-  <tr><td style="background:#04263D;border-radius:12px 12px 0 0;padding:28px 32px 24px;">
+  <tr><td style="background:${brand.color || '#04263D'};border-radius:12px 12px 0 0;padding:28px 32px 24px;">
     <table width="100%"><tr>
-      <td><span style="color:#fff;font-size:18px;font-weight:600;">⚡ Vezrin</span></td>
+      <td><span style="color:#fff;font-size:18px;font-weight:600;">${brand.companyName || '⚡ Vezrin'}</span></td>
       <td style="text-align:right;"><span style="font-size:11px;color:rgba(255,255,255,.4);">Week of ${weekRange}</span></td>
     </tr></table>
     <div style="margin-top:14px;">
@@ -640,7 +646,7 @@ const buildWeeklyReportHtml = (user, data) => {
         <a href="${process.env.CLIENT_URL || 'https://vezrin.com'}/settings" style="font-size:11px;color:#9ca3af;text-decoration:none;margin-left:12px;">Unsubscribe</a>
       </td>
     </tr></table>
-    <div style="margin-top:10px;font-size:11px;color:#d1d5db;text-align:center;">© 2025 Vezrin · AI-Powered YouTube Management</div>
+    <div style="margin-top:10px;font-size:11px;color:#d1d5db;text-align:center;">© 2025 ${brand.companyName || 'Vezrin · AI-Powered YouTube Management'}</div>
   </td></tr>
 
 </table>

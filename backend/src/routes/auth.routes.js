@@ -2,7 +2,7 @@
 // FIXED: Complete auth routes with OTP verification, forgot password, reset password
 const express = require('express');
 const authController = require('../controllers/auth.controller');
-const { protect } = require('../middlewares/auth.middleware');
+const { protect, requirePlan } = require('../middlewares/auth.middleware');
 const { authLimiter } = require('../middlewares/rateLimiter.middleware');
 
 const router = express.Router();
@@ -49,5 +49,8 @@ router.post('/logout-all', protect, authController.logoutAll);
 
 // PATCH /api/v1/auth/preferences — Update email/notification preferences
 router.patch('/preferences', protect, authController.updatePreferences);
+
+// PATCH /api/v1/auth/branding — White-label report branding (Agency plan only)
+router.patch('/branding', protect, requirePlan('agency'), authController.updateBranding);
 
 module.exports = router;

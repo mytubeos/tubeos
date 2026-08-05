@@ -227,8 +227,14 @@ const exportAnalytics = async (req, res) => {
       period
     );
 
+    // req.user is deliberately minimal ({id, email, plan}) — fetch the
+    // branding fields separately rather than growing that shared object.
+    const User = require('../models/user.model');
+    const user = await User.findById(req.user.id).select('plan branding').lean();
+    const brand = exportService.getReportBrand(user);
+
     if (format === 'pdf') {
-      const buf = await exportService.buildPdf(rows, channelName, period);
+      const buf = await exportService.buildPdf(rows, channelName, period, brand);
       const filename = `vezrin-analytics-${period}-${exportService.fmtDate(new Date())}.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -236,7 +242,7 @@ const exportAnalytics = async (req, res) => {
     }
 
     // default: CSV
-    const csv = exportService.buildCsv(rows, channelName, period);
+    const csv = exportService.buildCsv(rows, channelName, period, brand);
     const filename = `vezrin-analytics-${period}-${exportService.fmtDate(new Date())}.csv`;
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
