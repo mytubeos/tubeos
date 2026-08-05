@@ -3,21 +3,37 @@ import { useState, useEffect } from 'react'
 import { Zap, Clock } from 'lucide-react'
 import { scheduleApi } from '../../api/schedule.api'
 import { useChannelStore } from '../../store/channelStore'
+import { useAuthStore } from '../../store/authStore'
 
 export const BestTimeWidget = ({ onSelectTime }) => {
   const { activeChannel } = useChannelStore()
+  const { user } = useAuthStore()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
+  // /schedule/best-time/:channelId is requirePlan('creator') server-side —
+  // without this check, a Free-plan user's fetch just 403s, gets silently
+  // swallowed below, and the widget claimed "sync analytics" was the fix
+  // when the real reason was the plan tier.
+  const canAccess = ['creator', 'pro', 'agency'].includes(user?.plan)
 
   useEffect(() => {
-    if (!activeChannel?._id) return
+    if (!activeChannel?._id || !canAccess) return
     setLoading(true)
     scheduleApi
       .getBestTime(activeChannel._id)
       .then((res) => setData(res.data.data))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [activeChannel?._id])
+  }, [activeChannel?._id, canAccess])
+
+  if (!canAccess)
+    return (
+      <div className="glass p-4 rounded-xl text-center">
+        <Clock size={20} className="mx-auto mb-2 text-gray-600" />
+        <p className="text-xs text-gray-500">Creator+ feature</p>
+        <p className="text-2xs text-gray-600 mt-1">Upgrade to unlock AI time recommendations</p>
+      </div>
+    )
 
   if (loading) return <div className="shimmer h-32 rounded-xl" />
 

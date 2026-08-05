@@ -1,24 +1,29 @@
 // src/pages/scheduler/ScheduleForm.jsx
 import { useState, useEffect } from 'react'
-import { Search } from 'lucide-react'
+import { Search, Zap } from 'lucide-react'
 import { videoApi } from '../../api/video.api'
 import { scheduleApi } from '../../api/schedule.api'
 import { useChannelStore } from '../../store/channelStore'
+import { useAuthStore } from '../../store/authStore'
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { BestTimeWidget } from '../../components/features/BestTimeWidget'
-import { StatusBadge } from '../../components/ui/Badge'
-import { toDatetimeLocalValue } from '../../utils/formatters'
+import { Badge, StatusBadge } from '../../components/ui/Badge'
+import { formatDate, toDatetimeLocalValue } from '../../utils/formatters'
 import toast from 'react-hot-toast'
 
 export const ScheduleForm = ({ prefilledDate, prefilledTime, onSuccess, onCancel }) => {
   const { activeChannel } = useChannelStore()
+  const { user } = useAuthStore()
+  // Mirrors BestTimeWidget's own gate — /schedule/best-time is requirePlan('creator').
+  const canAutoPost = ['creator', 'pro', 'agency'].includes(user?.plan)
 
   const [videos, setVideos] = useState([])
   const [selectedVideo, setSelectedVideo] = useState(null)
   const [scheduledAt, setScheduledAt] = useState('')
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [autoPosting, setAutoPosting] = useState(false)
   const [search, setSearch] = useState('')
 
   // Pre-fill datetime
@@ -79,6 +84,40 @@ export const ScheduleForm = ({ prefilledDate, prefilledTime, onSuccess, onCancel
       toast.error(err.response?.data?.message || 'Failed to schedule')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  // One-click alternative to the manual flow above — skips picking a date
+  // entirely and books the top AI-recommended slot directly, instead of
+  // just pre-filling it and still requiring a separate "Schedule Video" click.
+  const handleAutoPost = async () => {
+    if (!selectedVideo) {
+      toast.error('Please select a video')
+      return
+    }
+
+    setAutoPosting(true)
+    try {
+      const res = await scheduleApi.getBestTime(activeChannel._id)
+      const data = res.data.data
+      const slots = data?.recommendation?.nextOptimalSlots || data?.nextOptimalSlots || []
+      const bestSlot = slots[0]
+      if (!bestSlot) {
+        toast.error('No recommendation yet — sync analytics first')
+        return
+      }
+
+      await scheduleApi.create({
+        videoId: selectedVideo._id,
+        scheduledAt: bestSlot.datetime,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      })
+      toast.success(`Auto-posting at ${formatDate(bestSlot.datetime, 'datetime')}!`)
+      onSuccess?.()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Auto-post failed')
+    } finally {
+      setAutoPosting(false)
     }
   }
 
@@ -165,18 +204,39 @@ export const ScheduleForm = ({ prefilledDate, prefilledTime, onSuccess, onCancel
       />
 
       {/* Actions */}
-      <div className="flex items-center gap-3 pt-2">
-        <Button variant="ghost" onClick={onCancel} fullWidth>
-          Cancel
-        </Button>
-        <Button
-          onClick={handleSubmit}
-          loading={submitting}
-          disabled={!selectedVideo || !scheduledAt}
-          fullWidth
-        >
-          Schedule Video
-        </Button>
+      <div className="space-y-2 pt-2">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" onClick={onCancel} fullWidth>
+            Cancel
+          </Button>
+          <Button
+            variant="success"
+            icon={Zap}
+            onClick={handleAutoPost}
+            loading={autoPosting}
+            disabled={!selectedVideo || !canAutoPost}
+            fullWidth
+          >
+            Auto-post
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            loading={submitting}
+            disabled={!selectedVideo || !scheduledAt}
+            fullWidth
+          >
+            Schedule Video
+          </Button>
+        </div>
+        {!canAutoPost && (
+          <p className="text-2xs text-gray-600 text-center">
+            Auto-post requires the{' '}
+            <Badge variant="cyan" size="xs">
+              Creator
+            </Badge>{' '}
+            plan or higher
+          </p>
+        )}
       </div>
     </div>
   )
