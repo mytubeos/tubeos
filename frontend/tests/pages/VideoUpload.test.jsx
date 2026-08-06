@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 const mockNavigate = vi.fn()
 vi.mock('react-router-dom', async () => {
@@ -25,7 +26,7 @@ vi.mock('../../src/api/ai.api', () => ({
 }))
 
 vi.mock('../../src/store/channelStore', () => ({
-  useChannelStore: () => ({ activeChannel: null }),
+  useChannelStore: () => ({ activeChannel: { _id: 'chan1' } }),
 }))
 
 let mockUser
@@ -33,6 +34,13 @@ vi.mock('../../src/store/authStore', () => ({
   useAuthStore: () => ({ user: mockUser }),
 }))
 
+// Covered by its own dedicated test file — stub it out here so VideoUpload's
+// own tests don't need to satisfy its internal dependencies too.
+vi.mock('../../src/components/features/ThumbnailGeneratorModal', () => ({
+  ThumbnailGeneratorModal: () => null,
+}))
+
+import { videoApi } from '../../src/api/video.api'
 import { VideoUpload } from '../../src/pages/videos/VideoUpload'
 
 describe('VideoUpload upfront usage-limit warning', () => {
@@ -75,5 +83,44 @@ describe('VideoUpload upfront usage-limit warning', () => {
     render(<VideoUpload />)
 
     expect(screen.queryByText(/uploads this month/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('VideoUpload — Save as Draft attaches a picked thumbnail', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUser = { plan: 'creator', usage: {} }
+    videoApi.createDraft.mockResolvedValue({ data: { data: { _id: 'draft1' } } })
+    videoApi.uploadThumbnail.mockResolvedValue({ data: {} })
+  })
+
+  it('uploads the thumbnail when saving as a draft, not just on full upload', async () => {
+    // Regression test: saveDraft() used to silently drop any picked
+    // thumbnail (manual or AI-generated) since only handleUpload() called
+    // uploadThumbnail — see VideoUpload.jsx's saveDraft().
+    const user = userEvent.setup()
+    render(<VideoUpload />)
+
+    await user.type(screen.getByPlaceholderText(/your video title/i), 'My Video')
+    const thumbFile = new File(['fake-bytes'], 'thumb.jpg', { type: 'image/jpeg' })
+    await user.upload(screen.getByLabelText(/upload thumbnail/i), thumbFile)
+
+    await user.click(screen.getByRole('button', { name: /save as draft/i }))
+
+    await waitFor(() => expect(videoApi.uploadThumbnail).toHaveBeenCalledTimes(1))
+    const [videoId, formData] = videoApi.uploadThumbnail.mock.calls[0]
+    expect(videoId).toBe('draft1')
+    expect(formData.get('thumbnail')).toBe(thumbFile)
+  })
+
+  it('saves the draft fine when no thumbnail was picked at all', async () => {
+    const user = userEvent.setup()
+    render(<VideoUpload />)
+
+    await user.type(screen.getByPlaceholderText(/your video title/i), 'My Video')
+    await user.click(screen.getByRole('button', { name: /save as draft/i }))
+
+    await waitFor(() => expect(videoApi.createDraft).toHaveBeenCalledTimes(1))
+    expect(videoApi.uploadThumbnail).not.toHaveBeenCalled()
   })
 })

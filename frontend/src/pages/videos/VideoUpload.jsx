@@ -9,6 +9,7 @@ import { useAuthStore } from '../../store/authStore'
 import { Textarea, Select } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { BestTimeWidget } from '../../components/features/BestTimeWidget'
+import { ThumbnailGeneratorModal } from '../../components/features/ThumbnailGeneratorModal'
 import { VIDEO_CATEGORIES, PLANS } from '../../utils/constants'
 import { formatFileSize, toDatetimeLocalValue } from '../../utils/formatters'
 import toast from 'react-hot-toast'
@@ -56,6 +57,7 @@ export const VideoUpload = () => {
   const [savingDraft, setSavingDraft] = useState(false)
   const [generatingAI, setGeneratingAI] = useState({ title: false, tags: false, desc: false })
   const [errors, setErrors] = useState({})
+  const [showThumbGenerator, setShowThumbGenerator] = useState(false)
 
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }))
 
@@ -171,12 +173,13 @@ export const VideoUpload = () => {
         isShort: form.isShort,
       })
 
+      const videoId = draftRes.data.data?._id
+
       // If a file was selected, stage it too — a draft with no file
       // attached can never actually be scheduled later (nothing to upload
       // when its time comes), so this is what makes "Schedule Video" on the
       // Scheduler page possible for this draft.
       if (file) {
-        const videoId = draftRes.data.data?._id
         const stageData = new FormData()
         stageData.append('video', file)
         try {
@@ -188,6 +191,19 @@ export const VideoUpload = () => {
           )
           navigate('/videos')
           return
+        }
+      }
+
+      // A picked thumbnail (manual or AI-generated) was previously dropped
+      // silently here — only handleUpload() saved it. Best-effort: a
+      // failure here shouldn't block the draft itself from being saved.
+      if (thumbnail) {
+        const thumbData = new FormData()
+        thumbData.append('thumbnail', thumbnail)
+        try {
+          await videoApi.uploadThumbnail(videoId, thumbData)
+        } catch {
+          toast.error('Draft saved, but the thumbnail failed to attach — try re-adding it.')
         }
       }
 
@@ -445,7 +461,16 @@ export const VideoUpload = () => {
 
           {/* Thumbnail */}
           <div>
-            <label className="text-sm font-medium text-gray-300 mb-2 block">Custom Thumbnail</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-gray-300">Custom Thumbnail</label>
+              <button
+                onClick={() => setShowThumbGenerator(true)}
+                className="flex items-center gap-1.5 text-xs text-brand hover:text-brand-light transition-colors"
+              >
+                <Sparkles size={12} />
+                Generate with AI
+              </button>
+            </div>
             <div
               onClick={() => thumbRef.current?.click()}
               className="flex items-center gap-4 p-3 glass rounded-xl cursor-pointer
@@ -455,6 +480,7 @@ export const VideoUpload = () => {
                 ref={thumbRef}
                 type="file"
                 accept="image/*"
+                aria-label="Upload thumbnail"
                 className="hidden"
                 onChange={handleThumbnail}
               />
@@ -574,6 +600,16 @@ export const VideoUpload = () => {
           </p>
         </div>
       </div>
+
+      <ThumbnailGeneratorModal
+        isOpen={showThumbGenerator}
+        onClose={() => setShowThumbGenerator(false)}
+        defaultTitle={form.title}
+        onCropped={(croppedFile) => {
+          setThumbnail(croppedFile)
+          setThumbnailPreview(URL.createObjectURL(croppedFile))
+        }}
+      />
     </div>
   )
 }
