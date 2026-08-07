@@ -1,5 +1,5 @@
 // src/pages/Landing.jsx
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, Navigate } from 'react-router-dom'
 import {
   BarChart3,
   Calendar,
@@ -11,6 +11,7 @@ import {
   Clock,
 } from 'lucide-react'
 import { Button } from '../components/ui/Button'
+import { useAuthStore } from '../store/authStore'
 
 const FEATURES = [
   {
@@ -112,6 +113,11 @@ const PLANS = [
 
 export const Landing = () => {
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuthStore()
+
+  // Already-logged-in users get no value from the marketing page — send them
+  // straight to the dashboard instead of showing Landing on every visit.
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />
 
   return (
     <div className="min-h-screen bg-base-900 overflow-x-hidden">

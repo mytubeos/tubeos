@@ -31,6 +31,20 @@ api.interceptors.request.use(
 let isRefreshing = false
 let failedQueue = []
 
+// Session is tracked in two independent places: the raw tokens here in
+// localStorage, and a separately-persisted Zustand blob (authStore.js,
+// key 'tubeos-auth') holding isAuthenticated/user. Wiping only the tokens
+// (as this file used to) left that blob stale-true, which could bounce a
+// user between /login and /dashboard in a loop until a real login() call
+// re-synced both. Dynamic import avoids a circular axios.js<->authStore.js
+// import; setState (not the logout() action) skips an unnecessary/riskier
+// network call — we're already mid-auth-failure, tokens are already gone.
+const clearPersistedAuth = () => {
+  import('../store/authStore').then((m) =>
+    m.useAuthStore.setState({ user: null, isAuthenticated: false })
+  )
+}
+
 const processQueue = (error, token = null) => {
   failedQueue.forEach(({ resolve, reject }) => {
     if (error) reject(error)
@@ -84,6 +98,7 @@ api.interceptors.response.use(
           processQueue(refreshError, null)
           localStorage.removeItem('accessToken')
           localStorage.removeItem('refreshToken')
+          clearPersistedAuth()
           window.location.href = '/login'
           return Promise.reject(refreshError)
         } finally {
@@ -93,6 +108,7 @@ api.interceptors.response.use(
 
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
+      clearPersistedAuth()
       window.location.href = '/login'
     }
 
