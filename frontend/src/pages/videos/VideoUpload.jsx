@@ -10,6 +10,7 @@ import { Textarea, Select } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { BestTimeWidget } from '../../components/features/BestTimeWidget'
 import { ThumbnailGeneratorModal } from '../../components/features/ThumbnailGeneratorModal'
+import { SEOAnalysisPanel } from '../../components/features/SEOAnalysisPanel'
 import { VIDEO_CATEGORIES, PLANS } from '../../utils/constants'
 import { formatFileSize, toDatetimeLocalValue } from '../../utils/formatters'
 import toast from 'react-hot-toast'
@@ -575,6 +576,9 @@ export const VideoUpload = () => {
               toast.success('Best time auto-filled!')
             }}
           />
+
+          {/* SEO analysis */}
+          <SEOAnalysisPanel title={form.title} description={form.description} tags={form.tags} />
 
           {/* Action buttons */}
           <div className="space-y-2">

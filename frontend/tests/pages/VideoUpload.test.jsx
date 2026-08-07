@@ -22,6 +22,7 @@ vi.mock('../../src/api/ai.api', () => ({
     generateTitles: vi.fn(),
     generateTags: vi.fn(),
     generateDescription: vi.fn(),
+    analyzeSEO: vi.fn(),
   },
 }))
 
