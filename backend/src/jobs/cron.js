@@ -404,7 +404,7 @@ const generateNudges = async () => {
           await createNotification(
             userId,
             'upload_reminder',
-            'Aaj kuch upload nahi hua abhi tak — Content Ideas tool se 2 min mein topic nikaal lo 👀',
+            "Haven't uploaded anything today yet — grab a topic in 2 min with the Content Ideas tool 👀",
             'nudge'
           );
         }
@@ -417,7 +417,7 @@ const generateNudges = async () => {
           await createNotification(
             userId,
             'comment_backlog',
-            `${backlogCount} comments reply ka wait kar rahe hain — AI se 2 min mein nipta do 💬`,
+            `${backlogCount} comments are waiting for a reply — clear them in 2 min with AI 💬`,
             'nudge'
           );
         }

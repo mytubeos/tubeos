@@ -28,7 +28,27 @@ export const Dashboard = () => {
   const [upcoming, setUpcoming] = useState([])
   const [bestTime, setBestTime] = useState(null)
   const [latestNudge, setLatestNudge] = useState(null)
+  const [nudgeDismissed, setNudgeDismissed] = useState(false)
+  const [nudgeDragX, setNudgeDragX] = useState(0)
+  const nudgeDragStartX = useRef(null)
   const autoSyncDone = useRef(false)
+
+  const handleNudgeDragStart = (clientX) => {
+    nudgeDragStartX.current = clientX
+  }
+  const handleNudgeDragMove = (clientX) => {
+    if (nudgeDragStartX.current === null) return
+    setNudgeDragX(clientX - nudgeDragStartX.current)
+  }
+  const handleNudgeDragEnd = () => {
+    if (nudgeDragStartX.current === null) return
+    nudgeDragStartX.current = null
+    if (Math.abs(nudgeDragX) > 80) {
+      setNudgeDismissed(true)
+    } else {
+      setNudgeDragX(0)
+    }
+  }
 
   useEffect(() => {
     notificationAPI
@@ -295,27 +315,44 @@ export const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Chingari widget */}
-      <Card>
-        <div className="flex items-center gap-4">
-          <Chingari mood={latestNudge?.mood || 'idle'} size={56} className="shrink-0" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm text-gray-200 leading-relaxed">
-              {latestNudge?.message || 'Sab kuch on track hai — badhiya kaam chal raha hai! 🎉'}
-            </p>
-            <div className="flex items-baseline gap-1.5 mt-2">
-              <span className="font-display font-bold text-white text-lg">
-                {user?.gamification?.currentStreak || 0}
-              </span>
-              <span className="text-2xs text-gray-500">
-                din ka active streak
-                {user?.gamification?.longestStreak > 0 &&
-                  ` · best: ${user.gamification.longestStreak}`}
-              </span>
+      {/* Chingari widget — swipe (or drag) sideways to dismiss */}
+      {!nudgeDismissed && (
+        <Card
+          onTouchStart={(e) => handleNudgeDragStart(e.touches[0].clientX)}
+          onTouchMove={(e) => handleNudgeDragMove(e.touches[0].clientX)}
+          onTouchEnd={handleNudgeDragEnd}
+          onMouseDown={(e) => handleNudgeDragStart(e.clientX)}
+          onMouseMove={(e) => nudgeDragStartX.current !== null && handleNudgeDragMove(e.clientX)}
+          onMouseUp={handleNudgeDragEnd}
+          onMouseLeave={() => nudgeDragStartX.current !== null && handleNudgeDragEnd()}
+          style={{
+            transform: `translateX(${nudgeDragX}px)`,
+            opacity: 1 - Math.min(Math.abs(nudgeDragX) / 200, 0.7),
+            transition: nudgeDragStartX.current === null ? 'transform 0.2s, opacity 0.2s' : 'none',
+            touchAction: 'pan-y',
+            cursor: 'grab',
+          }}
+        >
+          <div className="flex items-center gap-4">
+            <Chingari mood={latestNudge?.mood || 'idle'} size={56} className="shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm text-gray-200 leading-relaxed">
+                {latestNudge?.message || "Everything's on track — great work! 🎉"}
+              </p>
+              <div className="flex items-baseline gap-1.5 mt-2">
+                <span className="font-display font-bold text-white text-lg">
+                  {user?.gamification?.currentStreak || 0}
+                </span>
+                <span className="text-2xs text-gray-500">
+                  day active streak
+                  {user?.gamification?.longestStreak > 0 &&
+                    ` · best: ${user.gamification.longestStreak}`}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      )}
     </div>
   )
 }

@@ -592,7 +592,7 @@ export const Settings = () => {
                             disabled={stripeLoadingPlan === key}
                             className="w-full text-2xs text-gray-600 hover:text-gray-400 transition-colors py-0.5 disabled:opacity-50"
                           >
-                            {stripeLoadingPlan === key ? 'Redirecting...' : 'Card fail ho rahi?'}
+                            {stripeLoadingPlan === key ? 'Redirecting...' : 'Trouble paying?'}
                           </button>
                         </>
                       )}

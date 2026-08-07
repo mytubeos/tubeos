@@ -117,7 +117,7 @@ describe('useStripeCheckout — return-from-Stripe verification', () => {
 
     renderHook(() => useStripeCheckout())
 
-    await waitFor(() => expect(toast).toHaveBeenCalledWith('Payment cancel kar diya.'))
+    await waitFor(() => expect(toast).toHaveBeenCalledWith('Payment cancelled.'))
     expect(paymentAPI.verifyStripeSession).not.toHaveBeenCalled()
   })
 

@@ -147,7 +147,7 @@ export const Pricing = () => {
       return
     }
     if (user?.plan === plan) {
-      toast('Aap already is plan pe ho.')
+      toast("You're already on this plan.")
       return
     }
     startCheckout(plan, couponCode)
@@ -159,7 +159,7 @@ export const Pricing = () => {
       return
     }
     if (user?.plan === plan) {
-      toast('Aap already is plan pe ho.')
+      toast("You're already on this plan.")
       return
     }
     startStripeCheckout(plan, couponCode)
@@ -325,7 +325,7 @@ export const Pricing = () => {
                     >
                       {stripeLoadingPlan === plan
                         ? 'Redirecting...'
-                        : 'Card fail ho rahi? Alternate checkout try karo'}
+                        : 'Trouble paying? Try another way'}
                     </button>
                   </>
                 )}
@@ -491,7 +491,7 @@ export const Pricing = () => {
                             disabled={stripeLoadingPlan === plan}
                             className="w-full text-2xs text-gray-600 hover:text-gray-400 transition-colors py-0.5 disabled:opacity-50"
                           >
-                            {stripeLoadingPlan === plan ? 'Redirecting...' : 'Card fail ho rahi?'}
+                            {stripeLoadingPlan === plan ? 'Redirecting...' : 'Trouble paying?'}
                           </button>
                         </>
                       )}

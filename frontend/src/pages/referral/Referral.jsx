@@ -167,7 +167,7 @@ export const Referral = () => {
   }
 
   const shareOnWhatsApp = () => {
-    const text = `Vezrin use karo apna YouTube channel grow karne ke liye! Use code: ${referralCode} for 10% off 🎉\n${referralLink}`
+    const text = `I'm using Vezrin to grow my YouTube channel with AI. Use my code ${referralCode} for 10% off! 🎉\n${referralLink}`
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
   }
 

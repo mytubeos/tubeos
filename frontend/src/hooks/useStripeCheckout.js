@@ -23,7 +23,7 @@ export const useStripeCheckout = ({ onSuccess } = {}) => {
       window.location.href = res.data.data.url
       // Do NOT clear loadingPlan here — this tab is navigating away to Stripe.
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Kuch galat ho gaya')
+      toast.error(err.response?.data?.message || 'Something went wrong')
       setLoadingPlan(null)
     }
   }
@@ -33,7 +33,7 @@ export const useStripeCheckout = ({ onSuccess } = {}) => {
     const cancelled = searchParams.get('stripe_cancelled')
 
     if (cancelled) {
-      toast('Payment cancel kar diya.')
+      toast('Payment cancelled.')
       setSearchParams(
         (p) => {
           p.delete('stripe_cancelled')
@@ -52,11 +52,11 @@ export const useStripeCheckout = ({ onSuccess } = {}) => {
       .then((res) => {
         const { plan } = res.data.data
         updateUser({ plan })
-        toast.success('Plan activate ho gaya!')
+        toast.success('Plan activated!')
         if (onSuccess) onSuccess(plan)
       })
       .catch(() => {
-        toast.error('Payment verify nahi hua. Support se contact karo.')
+        toast.error('Payment verification failed. Please contact support.')
       })
       .finally(() => {
         setVerifying(false)

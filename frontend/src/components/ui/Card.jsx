@@ -1,5 +1,5 @@
 // src/components/ui/Card.jsx
-export const Card = ({ children, className = '', hover = false, glow = null }) => {
+export const Card = ({ children, className = '', hover = false, glow = null, ...rest }) => {
   const glowColors = {
     brand: 'hover:shadow-brand hover:border-brand/30',
     cyan: 'hover:shadow-cyan hover:border-cyan/30',
@@ -12,6 +12,7 @@ export const Card = ({ children, className = '', hover = false, glow = null }) =
       className={`glass p-4 sm:p-5 transition-all duration-300
                      ${hover ? `cursor-pointer ${glowColors[glow] || 'hover:border-white/15 hover:bg-white/[0.06]'}` : ''}
                      ${className}`}
+      {...rest}
     >
       {children}
     </div>

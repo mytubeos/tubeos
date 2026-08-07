@@ -106,7 +106,7 @@ const touchActivity = async (userId) => {
     await createNotification(
       userId,
       'streak_milestone',
-      `${newStreak} din ka streak! Lagataar consistency dikha rahe ho 🔥`,
+      `${newStreak}-day streak! You're showing real consistency 🔥`,
       newStreak >= 30 ? 'hype' : 'celebrate'
     );
   }

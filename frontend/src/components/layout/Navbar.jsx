@@ -220,7 +220,7 @@ export const Navbar = ({ title, onMenuClick }) => {
                   {notifications.length === 0 ? (
                     <div className="py-10 text-center">
                       <Chingari mood="idle" size={40} className="mx-auto mb-2" />
-                      <p className="text-xs text-gray-500">Sab clear hai, kuch naya nahi hai</p>
+                      <p className="text-xs text-gray-500">All clear, nothing new</p>
                     </div>
                   ) : (
                     notifications.map((n) => (

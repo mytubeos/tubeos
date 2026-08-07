@@ -155,6 +155,6 @@ describe('Navbar — notification bell', () => {
 
     await openBell(user)
 
-    expect(await screen.findByText('Sab clear hai, kuch naya nahi hai')).toBeInTheDocument()
+    expect(await screen.findByText('All clear, nothing new')).toBeInTheDocument()
   })
 })

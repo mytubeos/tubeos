@@ -253,7 +253,7 @@ const uploadVideo = async (userId, videoId, fileRef, mimeType) => {
         await createNotification(
           userId,
           'welcome',
-          'Pehla video upload ho gaya! Ye Vezrin ka sabse important step tha — badhai ho 🎉',
+          'First video uploaded! That was the most important step on Vezrin — congrats 🎉',
           'celebrate'
         );
       }

@@ -27,7 +27,7 @@ export const useRazorpay = ({ onSuccess } = {}) => {
 
       const loaded = await loadRazorpayScript()
       if (!loaded) {
-        toast.error('Payment gateway load nahi hua. Internet check karo.')
+        toast.error('Payment gateway failed to load. Check your internet connection.')
         return
       }
 
@@ -53,10 +53,10 @@ export const useRazorpay = ({ onSuccess } = {}) => {
               couponCode: couponCode || null,
             })
             updateUser({ plan })
-            toast.success(`${label} activate ho gaya!`)
+            toast.success(`${label} activated!`)
             if (onSuccess) onSuccess(plan)
           } catch {
-            toast.error('Payment verify nahi hua. Support se contact karo.')
+            toast.error('Payment verification failed. Please contact support.')
           }
         },
         modal: { ondismiss: () => setLoadingPlan(null) },
@@ -64,7 +64,7 @@ export const useRazorpay = ({ onSuccess } = {}) => {
 
       const rzp = new window.Razorpay(options)
       rzp.on('payment.failed', () => {
-        toast.error('Payment fail ho gayi. Dobara try karo.')
+        toast.error('Payment failed. Please try again.')
         setLoadingPlan(null)
       })
       rzp.open()
@@ -72,7 +72,7 @@ export const useRazorpay = ({ onSuccess } = {}) => {
       // ondismiss, payment.failed, or the handler's success/error path.
       return
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Kuch galat ho gaya')
+      toast.error(err.response?.data?.message || 'Something went wrong')
     } finally {
       setLoadingPlan(null)
     }
