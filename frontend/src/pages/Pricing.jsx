@@ -16,7 +16,6 @@ const FEATURES_TABLE = [
       { name: 'Day-wise performance', free: false, creator: true, pro: true, agency: true },
       { name: 'Per video breakdown', free: false, creator: true, pro: true, agency: true },
       { name: 'Traffic sources', free: false, creator: true, pro: true, agency: true },
-      { name: 'Real-time traffic', free: false, creator: false, pro: true, agency: true },
     ],
   },
   {
