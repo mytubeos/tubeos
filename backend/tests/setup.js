@@ -13,6 +13,9 @@ process.env.YOUTUBE_REDIRECT_URI = 'http://localhost:8080/api/v1/youtube/callbac
 process.env.RAZORPAY_KEY_ID = 'rzp_test_key_id';
 process.env.RAZORPAY_KEY_SECRET = 'test_razorpay_key_secret';
 process.env.RAZORPAY_WEBHOOK_SECRET = 'test_razorpay_webhook_secret';
+process.env.STRIPE_SECRET_KEY = 'sk_test_stripe_secret_key';
+process.env.STRIPE_PUBLISHABLE_KEY = 'pk_test_stripe_publishable_key';
+process.env.STRIPE_WEBHOOK_SECRET = 'test_stripe_webhook_secret';
 
 import { beforeAll, afterEach } from 'vitest';
 import mongoose from 'mongoose';

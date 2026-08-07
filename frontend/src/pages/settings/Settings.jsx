@@ -13,6 +13,7 @@ import { Badge, PlanBadge } from '../../components/ui/Badge'
 import { PLANS } from '../../utils/constants'
 import { formatNumber, formatDate, isSubscriptionExpired } from '../../utils/formatters'
 import { useRazorpay } from '../../hooks/useRazorpay'
+import { useStripeCheckout } from '../../hooks/useStripeCheckout'
 import toast from 'react-hot-toast'
 
 const TABS = [
@@ -58,6 +59,9 @@ export const Settings = () => {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('profile')
   const { startCheckout, loadingPlan } = useRazorpay({
+    onSuccess: () => navigate('/dashboard'),
+  })
+  const { startStripeCheckout, loadingPlan: stripeLoadingPlan } = useStripeCheckout({
     onSuccess: () => navigate('/dashboard'),
   })
 
@@ -582,6 +586,13 @@ export const Settings = () => {
                                        hover:text-gray-400 transition-colors py-1 mt-1.5"
                           >
                             <Tag size={10} /> Have a coupon?
+                          </button>
+                          <button
+                            onClick={() => startStripeCheckout(key)}
+                            disabled={stripeLoadingPlan === key}
+                            className="w-full text-2xs text-gray-600 hover:text-gray-400 transition-colors py-0.5 disabled:opacity-50"
+                          >
+                            {stripeLoadingPlan === key ? 'Redirecting...' : 'Card fail ho rahi?'}
                           </button>
                         </>
                       )}

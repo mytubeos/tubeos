@@ -79,6 +79,15 @@ const config = {
     webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET,
   },
 
+  // Alternate checkout processor — used only when a user hits the "pay another
+  // way" fallback (Razorpay international-card declines etc). Fully optional:
+  // stripe.service.js no-ops with a clean error if secretKey is unset.
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY,
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  },
+
   youtube: {
     clientId: process.env.YOUTUBE_CLIENT_ID,
     clientSecret: process.env.YOUTUBE_CLIENT_SECRET,

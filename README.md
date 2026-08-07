@@ -173,7 +173,7 @@ tubeos3.0/
 │       │   ├── ai.routes.js         # 14 endpoints
 │       │   ├── analytics.routes.js  # 18 endpoints
 │       │   ├── admin.routes.js      # 9 endpoints (admin-only)
-│       │   ├── payment.routes.js    # 4 endpoints (Razorpay order/verify/webhook/coupon)
+│       │   ├── payment.routes.js    # 9 endpoints (Razorpay + Stripe fallback checkout)
 │       │   ├── referral.routes.js   # 5 endpoints
 │       │   ├── schedule.routes.js   # 9 endpoints
 │       │   ├── video.routes.js      # 8 endpoints
@@ -356,6 +356,11 @@ Sab routes ka base URL: `/api/v1`
 | `POST` | `/create-order` | Private | Razorpay order create karo (plan + optional coupon) |
 | `POST` | `/verify` | Private | Payment signature verify + plan activate |
 | `POST` | `/validate-coupon` | Private | Coupon code validate karo checkout se pehle |
+| `GET` | `/history` | Private | Paginated payment history (both gateways) |
+| `POST` | `/downgrade` | Private | Switch to Free immediately, no refund |
+| `POST` | `/stripe/webhook` | Public (signature-verified) | Stripe webhook — checkout.session.completed |
+| `POST` | `/stripe/create-checkout-session` | Private | Stripe fallback checkout — same ₹ amount as Razorpay, used only when a card doesn't work on Razorpay |
+| `POST` | `/stripe/verify-session` | Private | Client-confirm path after redirect back from Stripe |
 
 ### 🎁 Referral — `/api/v1/referral/`
 
@@ -614,7 +619,7 @@ All the critical/high/medium issues that used to be tracked here (video file per
 **Backend:** Node.js 18+ · Express.js · MongoDB + Mongoose · Redis (ioredis) · JWT · bcryptjs · Multer · Winston (logging) · Sentry (error tracking)  
 **Frontend:** React 18 · Vite · Tailwind CSS · Zustand · Axios · Recharts · React Router DOM · Sentry  
 **AI:** Anthropic Claude (Opus/Sonnet/Haiku) · Google Gemini · Groq (Llama 3.3, free-tier bulk replies)  
-**Infra:** Render (backend) · Vercel (frontend) · MongoDB Atlas · Upstash Redis · Google Cloud Storage (video staging) · Cloudinary (thumbnails) · Brevo (email, HTTP API) · Razorpay (payments)
+**Infra:** Render (backend) · Vercel (frontend) · MongoDB Atlas · Upstash Redis · Google Cloud Storage (video staging) · Cloudinary (thumbnails) · Brevo (email, HTTP API) · Razorpay (payments) · Stripe (fallback checkout, optional)
 
 > **Note on BullMQ:** it's a listed dependency and the queue definitions still exist in code, but it's currently **disabled/stubbed** — Upstash's free Redis tier blocks the Lua scripts (`evalsha`) BullMQ needs. Real scheduling today runs on an in-process cron (`jobs/cron.js`). See [Job Scheduling](#-job-scheduling) and Phase 3D in the Roadmap.
 

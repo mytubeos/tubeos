@@ -32,16 +32,43 @@ const paymentHistorySchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    // Which processor this payment actually went through — Stripe is only ever
+    // used as a fallback when a user's card doesn't work on Razorpay.
+    gateway: {
+      type: String,
+      enum: ['razorpay', 'stripe'],
+      default: 'razorpay',
+    },
     razorpayOrderId: {
       type: String,
       default: null,
     },
     // Unique — both the client-verify path and the webhook path can fire for the
-    // same payment; this is the de-dupe key (see recordPaymentHistory in payment.service.js)
+    // same payment; this is the de-dupe key (see recordPaymentHistory in payment.service.js).
+    // sparse so Stripe-gateway rows (which never set this) don't collide with
+    // each other under the unique constraint. Deliberately NO `default: null`
+    // here — Mongoose applies a `default` to every document, which would give
+    // every Stripe-gateway row a literal `null` and defeat the sparse index
+    // (sparse only excludes documents where the field is genuinely absent, not
+    // ones explicitly set to null — caught by a real test failure, see
+    // payment.service.test.js). NOTE: the existing index in prod was created
+    // non-sparse before this field existed, so it needs a one-time manual
+    // rebuild (drop + let autoIndex recreate) before Stripe payments can be
+    // recorded more than once; see the Stripe integration notes.
     razorpayPaymentId: {
       type: String,
-      required: true,
       unique: true,
+      sparse: true,
+    },
+    // Same de-dupe role as razorpayPaymentId above, for the Stripe path.
+    stripeSessionId: {
+      type: String,
+      default: null,
+    },
+    stripePaymentIntentId: {
+      type: String,
+      unique: true,
+      sparse: true,
     },
   },
   { timestamps: true }

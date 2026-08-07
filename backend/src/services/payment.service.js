@@ -319,4 +319,5 @@ module.exports = {
   handleWebhook,
   getPaymentHistory,
   downgradeToFree,
+  PLAN_PRICES,
 };

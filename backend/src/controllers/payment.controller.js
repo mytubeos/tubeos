@@ -1,5 +1,6 @@
 // src/controllers/payment.controller.js
 const paymentService = require('../services/payment.service');
+const stripeService = require('../services/stripe.service');
 const { validateCoupon } = require('../services/coupon.service');
 const { successResponse, errorResponse } = require('../utils/response.utils');
 
@@ -87,6 +88,48 @@ const downgradeToFree = async (req, res) => {
   }
 };
 
+// POST /api/v1/payment/stripe/create-checkout-session
+const createStripeCheckoutSession = async (req, res) => {
+  try {
+    const { plan, couponCode } = req.body;
+    if (!plan) return errorResponse(res, 400, 'Plan is required');
+
+    const session = await stripeService.createCheckoutSession(
+      req.user.id,
+      plan,
+      couponCode || null
+    );
+    return successResponse(res, 200, 'Checkout session created', session);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
+// POST /api/v1/payment/stripe/verify-session
+const verifyStripeSession = async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    if (!sessionId) return errorResponse(res, 400, 'sessionId is required');
+
+    const result = await stripeService.verifySession(req.user.id, sessionId);
+    if (!result) return errorResponse(res, 400, 'Could not activate plan from this session');
+    return successResponse(res, 200, 'Payment verified. Plan activated!', result);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
+// POST /api/v1/payment/stripe/webhook  (no auth — raw body needed)
+const stripeWebhook = async (req, res) => {
+  try {
+    const signature = req.headers['stripe-signature'];
+    await stripeService.handleWebhook(req.rawBody, signature);
+    return res.status(200).json({ received: true });
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+};
+
 module.exports = {
   createOrder,
   verifyPayment,
@@ -94,4 +137,7 @@ module.exports = {
   webhook,
   getPaymentHistory,
   downgradeToFree,
+  createStripeCheckoutSession,
+  verifyStripeSession,
+  stripeWebhook,
 };

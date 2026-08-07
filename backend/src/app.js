@@ -65,10 +65,19 @@ app.set('trust proxy', 1);
 // ==================== BODY PARSING ====================
 // Capture raw body for:
 //  - Razorpay webhook signature verification (JSON)
+//  - Stripe webhook signature verification (JSON) — stripe.service.js verifies
+//    directly against req.rawBody via the Stripe SDK, so req.body is left
+//    unparsed for this route (unlike Razorpay's, which also fills req.body
+//    below for convenience)
 //  - YouTube PubSubHubbub notifications (Atom XML)
+const RAW_BODY_URLS = [
+  '/api/v1/payment/webhook',
+  '/api/v1/payment/stripe/webhook',
+  '/api/v1/webhooks/youtube',
+];
 app.use((req, res, next) => {
   const url = req.originalUrl;
-  if (url === '/api/v1/payment/webhook' || url === '/api/v1/webhooks/youtube') {
+  if (RAW_BODY_URLS.includes(url)) {
     let data = '';
     req.setEncoding('utf8');
     req.on('data', (chunk) => {

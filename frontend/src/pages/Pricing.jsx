@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button'
 import paymentAPI from '../api/payment.api'
 import { useAuthStore } from '../store/authStore'
 import { useRazorpay } from '../hooks/useRazorpay'
+import { useStripeCheckout } from '../hooks/useStripeCheckout'
 
 const FEATURES_TABLE = [
   {
@@ -100,6 +101,9 @@ export const Pricing = () => {
   const { startCheckout, loadingPlan } = useRazorpay({
     onSuccess: () => navigate('/dashboard'),
   })
+  const { startStripeCheckout, loadingPlan: stripeLoadingPlan } = useStripeCheckout({
+    onSuccess: () => navigate('/dashboard'),
+  })
   const [couponState, setCouponState] = useState({
     activePlan: null, // which plan's coupon box is open
     code: '',
@@ -147,6 +151,18 @@ export const Pricing = () => {
       return
     }
     startCheckout(plan, couponCode)
+  }
+
+  const handleStripeClick = (plan, couponCode = null) => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { redirectTo: '/pricing', selectedPlan: plan } })
+      return
+    }
+    if (user?.plan === plan) {
+      toast('Aap already is plan pe ho.')
+      return
+    }
+    startStripeCheckout(plan, couponCode)
   }
 
   return (
@@ -301,6 +317,15 @@ export const Pricing = () => {
                                  hover:text-gray-400 transition-colors py-1.5"
                     >
                       <Tag size={11} /> Have a coupon?
+                    </button>
+                    <button
+                      onClick={() => handleStripeClick(plan)}
+                      disabled={stripeLoadingPlan === plan}
+                      className="w-full text-2xs text-gray-600 hover:text-gray-400 transition-colors py-0.5 disabled:opacity-50"
+                    >
+                      {stripeLoadingPlan === plan
+                        ? 'Redirecting...'
+                        : 'Card fail ho rahi? Alternate checkout try karo'}
                     </button>
                   </>
                 )}
@@ -460,6 +485,13 @@ export const Pricing = () => {
                                      hover:text-gray-400 transition-colors py-0.5"
                           >
                             <Tag size={10} /> Have a coupon?
+                          </button>
+                          <button
+                            onClick={() => handleStripeClick(plan)}
+                            disabled={stripeLoadingPlan === plan}
+                            className="w-full text-2xs text-gray-600 hover:text-gray-400 transition-colors py-0.5 disabled:opacity-50"
+                          >
+                            {stripeLoadingPlan === plan ? 'Redirecting...' : 'Card fail ho rahi?'}
                           </button>
                         </>
                       )}
