@@ -17,10 +17,12 @@ import {
   Zap,
   X,
   ShieldCheck,
+  Clapperboard,
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useAuthStore } from '../../store/authStore'
 import { useChannelStore } from '../../store/channelStore'
-import { PlanBadge } from '../ui/Badge'
+import { PlanBadge, Badge } from '../ui/Badge'
 import { getInitials, formatNumber } from '../../utils/formatters'
 
 const NAV_GROUPS = [
@@ -46,6 +48,7 @@ const NAV_GROUPS = [
       { path: '/ai', label: 'AI Tools', icon: Sparkles },
       { path: '/ai/shorts', label: 'Script Studio', icon: Zap },
       { path: '/growth', label: 'Growth', icon: TrendingUp },
+      { label: 'Edit by AI', icon: Clapperboard, comingSoon: true },
     ],
   },
   {
@@ -138,33 +141,56 @@ export const Sidebar = ({ collapsed = false, open = false, onClose }) => {
                 </p>
               )}
               <div className="space-y-0.5">
-                {group.items.map(({ path, label, icon: Icon }) => (
-                  <NavLink
-                    key={path}
-                    to={path}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium
+                {group.items.map(({ path, label, icon: Icon, comingSoon }) =>
+                  comingSoon ? (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() =>
+                        toast('Edit by AI is coming soon — full AI-powered video & Shorts editing.')
+                      }
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium w-full
+                                 transition-all duration-150 cursor-pointer
+                                 text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                    >
+                      <Icon size={17} />
+                      {!collapsed && (
+                        <>
+                          <span className="flex-1 text-left">{label}</span>
+                          <Badge variant="cyan" size="xs">
+                            Soon
+                          </Badge>
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <NavLink
+                      key={path}
+                      to={path}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium
                      transition-all duration-150 cursor-pointer
                      ${
                        isActive
                          ? 'bg-brand/15 text-brand border border-brand/20'
                          : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
                      }`
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <Icon size={17} className={isActive ? 'text-brand' : ''} />
-                        {!collapsed && (
-                          <>
-                            <span className="flex-1">{label}</span>
-                            {isActive && <ChevronRight size={14} className="text-brand/60" />}
-                          </>
-                        )}
-                      </>
-                    )}
-                  </NavLink>
-                ))}
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <Icon size={17} className={isActive ? 'text-brand' : ''} />
+                          {!collapsed && (
+                            <>
+                              <span className="flex-1">{label}</span>
+                              {isActive && <ChevronRight size={14} className="text-brand/60" />}
+                            </>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  )
+                )}
               </div>
             </div>
           ))}
