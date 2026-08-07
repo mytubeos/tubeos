@@ -71,7 +71,6 @@ const FEATURES_TABLE = [
       { name: 'Shorts analytics', free: false, creator: true, pro: true, agency: true },
       { name: 'Shorts script', free: false, creator: true, pro: true, agency: true },
       { name: 'Long video → Shorts', free: false, creator: false, pro: true, agency: true },
-      { name: 'Live stream intelligence', free: false, creator: false, pro: true, agency: true },
     ],
   },
   {
@@ -79,8 +78,6 @@ const FEATURES_TABLE = [
     features: [
       { name: 'Channels', free: '1', creator: '1', pro: '3', agency: '25' },
       { name: 'Video uploads/month', free: '0', creator: '5', pro: '20', agency: '∞' },
-      { name: 'Team seats', free: '1', creator: '1', pro: '3', agency: '10' },
-      { name: 'API access', free: false, creator: false, pro: 'Basic', agency: 'Full' },
     ],
   },
 ]
