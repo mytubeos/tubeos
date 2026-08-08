@@ -15,11 +15,11 @@ export const useStripeCheckout = ({ onSuccess } = {}) => {
   const { updateUser } = useAuthStore()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const startStripeCheckout = async (plan, couponCode = null) => {
+  const startStripeCheckout = async (plan, currency = 'INR', couponCode = null) => {
     if (loadingPlan) return
     setLoadingPlan(plan)
     try {
-      const res = await paymentAPI.createStripeCheckout(plan, couponCode)
+      const res = await paymentAPI.createStripeCheckout(plan, currency, couponCode)
       window.location.href = res.data.data.url
       // Do NOT clear loadingPlan here — this tab is navigating away to Stripe.
     } catch (err) {

@@ -1,14 +1,16 @@
 // src/pages/Pricing.jsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, X, Zap, ArrowLeft, Loader2, Tag } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Button } from '../components/ui/Button'
 import paymentAPI from '../api/payment.api'
+import pricingAPI from '../api/pricing.api'
 import { useAuthStore } from '../store/authStore'
 import { useRazorpay } from '../hooks/useRazorpay'
 import { useStripeCheckout } from '../hooks/useStripeCheckout'
 import { PLANS as PLAN_NAMES } from '../utils/constants'
+import { detectCurrency, formatPrice } from '../utils/currency'
 
 const FEATURES_TABLE = [
   {
@@ -89,16 +91,14 @@ const CellValue = ({ value }) => {
   return <span className="text-sm text-gray-300 font-medium">{value}</span>
 }
 
-const PLAN_PRICES = {
-  free: { price: '₹0', note: 'Free forever' },
-  creator: { price: '₹199', note: '→ ₹399/mo' },
-  pro: { price: '₹499', note: '→ ₹899/mo' },
-  agency: { price: '₹2999', note: '→ ₹5999/mo' },
-}
-
 export const Pricing = () => {
   const navigate = useNavigate()
   const { user, isAuthenticated } = useAuthStore()
+  // Detected once on mount — not expected to change mid-visit, and re-running
+  // it on every render would be pointless (Intl.DateTimeFormat is a pure
+  // function of the browser's own timezone setting).
+  const [currency] = useState(() => detectCurrency())
+  const [pricesByPlan, setPricesByPlan] = useState({})
   const { startCheckout, loadingPlan } = useRazorpay({
     onSuccess: () => navigate('/dashboard'),
   })
@@ -112,8 +112,34 @@ export const Pricing = () => {
     result: null, // { originalPrice, discountedPrice, discountValue, discountType }
   })
 
+  useEffect(() => {
+    pricingAPI
+      .getPrices()
+      .then((res) => {
+        const byPlan = {}
+        for (const { plan, prices } of res.data.data || []) {
+          byPlan[plan] = prices
+        }
+        setPricesByPlan(byPlan)
+      })
+      .catch(() => {})
+  }, [])
+
   const plans = ['free', 'creator', 'pro', 'agency']
   const planColors = { free: 'gray', creator: 'brand', pro: 'cyan', agency: 'rose' }
+
+  // Free has no PlanPrice row (it's always 0); everything else comes from
+  // the admin-editable pricing fetched above, for the visitor's detected
+  // currency.
+  const getPlanDisplay = (plan) => {
+    if (plan === 'free') return { price: formatPrice(0, currency), note: 'Free forever' }
+    const p = pricesByPlan[plan]?.[currency]
+    if (!p) return { price: '—', note: '' }
+    return {
+      price: formatPrice(p.amount, currency),
+      note: p.regularAmount ? `→ ${formatPrice(p.regularAmount, currency)}/mo` : '',
+    }
+  }
 
   const openCouponBox = (plan) => {
     if (!isAuthenticated) {
@@ -138,7 +164,11 @@ export const Pricing = () => {
     }
   }
 
-  const handlePlanClick = (plan, couponCode = null) => {
+  // INR routes through Razorpay (today's primary gateway); EUR/USD route
+  // straight to Stripe, since Razorpay isn't wired for those currencies on
+  // this merchant account — Stripe stops being a "fallback" and becomes the
+  // only processor for that plan+currency.
+  const handleUpgradeClick = (plan, couponCode = null) => {
     if (plan === 'free') {
       navigate('/signup')
       return
@@ -151,10 +181,17 @@ export const Pricing = () => {
       toast("You're already on this plan.")
       return
     }
-    startCheckout(plan, couponCode)
+    if (currency === 'INR') {
+      startCheckout(plan, couponCode)
+    } else {
+      startStripeCheckout(plan, currency, couponCode)
+    }
   }
 
-  const handleStripeClick = (plan, couponCode = null) => {
+  // Only meaningful for INR — Stripe is a fallback FROM Razorpay there, but
+  // for EUR/USD it's already the primary (only) button, nothing to fall
+  // back to.
+  const handleStripeFallbackClick = (plan) => {
     if (!isAuthenticated) {
       navigate('/login', { state: { redirectTo: '/pricing', selectedPlan: plan } })
       return
@@ -163,7 +200,7 @@ export const Pricing = () => {
       toast("You're already on this plan.")
       return
     }
-    startStripeCheckout(plan, couponCode)
+    startStripeCheckout(plan, 'INR')
   }
 
   return (
@@ -217,11 +254,11 @@ export const Pricing = () => {
                     {PLAN_NAMES[plan]?.name || plan}
                   </p>
                   <p className={`text-2xl font-display font-bold text-${planColors[plan]}`}>
-                    {PLAN_PRICES[plan].price}
+                    {getPlanDisplay(plan).price}
                     <span className="text-sm text-gray-500 font-normal">/mo</span>
                   </p>
                 </div>
-                <p className="text-xs text-gray-600 mb-4">{PLAN_PRICES[plan].note}</p>
+                <p className="text-xs text-gray-600 mb-4">{getPlanDisplay(plan).note}</p>
 
                 {user?.plan === plan ? (
                   <div className="w-full py-2 text-sm text-center text-emerald font-semibold">
@@ -286,13 +323,13 @@ export const Pricing = () => {
                       size="sm"
                       variant={plan === 'creator' ? 'brand' : 'ghost'}
                       className="w-full"
-                      disabled={loadingPlan === plan}
+                      disabled={loadingPlan === plan || stripeLoadingPlan === plan}
                       onClick={() => {
                         closeCouponBox()
-                        handlePlanClick(plan, couponState.code || null)
+                        handleUpgradeClick(plan, couponState.code || null)
                       }}
                     >
-                      {loadingPlan === plan ? (
+                      {loadingPlan === plan || stripeLoadingPlan === plan ? (
                         <Loader2 size={16} className="animate-spin mx-auto" />
                       ) : (
                         'Upgrade'
@@ -305,31 +342,35 @@ export const Pricing = () => {
                       size="sm"
                       variant={plan === 'creator' ? 'brand' : 'ghost'}
                       className="w-full"
-                      disabled={loadingPlan === plan}
-                      onClick={() => handlePlanClick(plan)}
+                      disabled={loadingPlan === plan || stripeLoadingPlan === plan}
+                      onClick={() => handleUpgradeClick(plan)}
                     >
-                      {loadingPlan === plan ? (
+                      {loadingPlan === plan || stripeLoadingPlan === plan ? (
                         <Loader2 size={16} className="animate-spin mx-auto" />
                       ) : (
                         'Upgrade'
                       )}
                     </Button>
-                    <button
-                      onClick={() => openCouponBox(plan)}
-                      className="flex items-center justify-center gap-1 w-full text-xs text-gray-600
+                    {currency === 'INR' && (
+                      <>
+                        <button
+                          onClick={() => openCouponBox(plan)}
+                          className="flex items-center justify-center gap-1 w-full text-xs text-gray-600
                                  hover:text-gray-400 transition-colors py-1.5"
-                    >
-                      <Tag size={11} /> Have a coupon?
-                    </button>
-                    <button
-                      onClick={() => handleStripeClick(plan)}
-                      disabled={stripeLoadingPlan === plan}
-                      className="w-full text-2xs text-gray-600 hover:text-gray-400 transition-colors py-0.5 disabled:opacity-50"
-                    >
-                      {stripeLoadingPlan === plan
-                        ? 'Redirecting...'
-                        : 'Trouble paying? Try another way'}
-                    </button>
+                        >
+                          <Tag size={11} /> Have a coupon?
+                        </button>
+                        <button
+                          onClick={() => handleStripeFallbackClick(plan)}
+                          disabled={stripeLoadingPlan === plan}
+                          className="w-full text-2xs text-gray-600 hover:text-gray-400 transition-colors py-0.5 disabled:opacity-50"
+                        >
+                          {stripeLoadingPlan === plan
+                            ? 'Redirecting...'
+                            : 'Trouble paying? Try another way'}
+                        </button>
+                      </>
+                    )}
                   </>
                 )}
 
@@ -385,10 +426,10 @@ export const Pricing = () => {
                     {PLAN_NAMES[plan]?.name || plan}
                   </p>
                   <p className={`text-2xl font-display font-bold text-${planColors[plan]}`}>
-                    {PLAN_PRICES[plan].price}
+                    {getPlanDisplay(plan).price}
                     <span className="text-sm text-gray-500 font-normal">/mo</span>
                   </p>
-                  <p className="text-2xs text-gray-600 mt-0.5">{PLAN_PRICES[plan].note}</p>
+                  <p className="text-2xs text-gray-600 mt-0.5">{getPlanDisplay(plan).note}</p>
 
                   {user?.plan === plan ? (
                     <div className="mt-3 w-full py-1.5 text-xs text-center text-emerald font-semibold">
@@ -456,13 +497,13 @@ export const Pricing = () => {
                             size="xs"
                             variant={plan === 'creator' ? 'brand' : 'ghost'}
                             className="w-full"
-                            disabled={loadingPlan === plan}
+                            disabled={loadingPlan === plan || stripeLoadingPlan === plan}
                             onClick={() => {
                               closeCouponBox()
-                              handlePlanClick(plan, couponState.code || null)
+                              handleUpgradeClick(plan, couponState.code || null)
                             }}
                           >
-                            {loadingPlan === plan ? (
+                            {loadingPlan === plan || stripeLoadingPlan === plan ? (
                               <Loader2 size={14} className="animate-spin mx-auto" />
                             ) : (
                               'Upgrade'
@@ -475,29 +516,33 @@ export const Pricing = () => {
                             size="xs"
                             variant={plan === 'creator' ? 'brand' : 'ghost'}
                             className="w-full"
-                            disabled={loadingPlan === plan}
-                            onClick={() => handlePlanClick(plan)}
+                            disabled={loadingPlan === plan || stripeLoadingPlan === plan}
+                            onClick={() => handleUpgradeClick(plan)}
                           >
-                            {loadingPlan === plan ? (
+                            {loadingPlan === plan || stripeLoadingPlan === plan ? (
                               <Loader2 size={14} className="animate-spin mx-auto" />
                             ) : (
                               'Upgrade'
                             )}
                           </Button>
-                          <button
-                            onClick={() => openCouponBox(plan)}
-                            className="flex items-center justify-center gap-1 w-full text-2xs text-gray-600
+                          {currency === 'INR' && (
+                            <>
+                              <button
+                                onClick={() => openCouponBox(plan)}
+                                className="flex items-center justify-center gap-1 w-full text-2xs text-gray-600
                                      hover:text-gray-400 transition-colors py-0.5"
-                          >
-                            <Tag size={10} /> Have a coupon?
-                          </button>
-                          <button
-                            onClick={() => handleStripeClick(plan)}
-                            disabled={stripeLoadingPlan === plan}
-                            className="w-full text-2xs text-gray-600 hover:text-gray-400 transition-colors py-0.5 disabled:opacity-50"
-                          >
-                            {stripeLoadingPlan === plan ? 'Redirecting...' : 'Trouble paying?'}
-                          </button>
+                              >
+                                <Tag size={10} /> Have a coupon?
+                              </button>
+                              <button
+                                onClick={() => handleStripeFallbackClick(plan)}
+                                disabled={stripeLoadingPlan === plan}
+                                className="w-full text-2xs text-gray-600 hover:text-gray-400 transition-colors py-0.5 disabled:opacity-50"
+                              >
+                                {stripeLoadingPlan === plan ? 'Redirecting...' : 'Trouble paying?'}
+                              </button>
+                            </>
+                          )}
                         </>
                       )}
                     </div>

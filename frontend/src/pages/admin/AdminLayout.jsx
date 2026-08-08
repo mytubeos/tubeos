@@ -1,6 +1,16 @@
 // src/pages/admin/AdminLayout.jsx
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Zap, Tag, LayoutDashboard, LogOut, ShieldCheck, Users, Menu, X } from 'lucide-react'
+import {
+  Zap,
+  Tag,
+  LayoutDashboard,
+  LogOut,
+  ShieldCheck,
+  Users,
+  Menu,
+  X,
+  IndianRupee,
+} from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { useState, useEffect } from 'react'
 
@@ -8,6 +18,7 @@ const NAV = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/users', label: 'Users', icon: Users },
   { to: '/admin/coupons', label: 'Coupons', icon: Tag },
+  { to: '/admin/pricing', label: 'Pricing', icon: IndianRupee },
 ]
 
 const SidebarContent = ({ onClose, onLogout }) => (

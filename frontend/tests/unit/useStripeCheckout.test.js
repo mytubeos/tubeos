@@ -48,11 +48,25 @@ describe('useStripeCheckout.startStripeCheckout', () => {
     const { result } = renderHook(() => useStripeCheckout())
 
     await act(async () => {
-      await result.current.startStripeCheckout('pro', 'SAVE20')
+      await result.current.startStripeCheckout('pro', 'EUR', 'SAVE20')
     })
 
-    expect(paymentAPI.createStripeCheckout).toHaveBeenCalledWith('pro', 'SAVE20')
+    expect(paymentAPI.createStripeCheckout).toHaveBeenCalledWith('pro', 'EUR', 'SAVE20')
     expect(window.location.href).toBe('https://checkout.stripe.com/pay/cs_1')
+  })
+
+  it('defaults to INR when no currency is passed', async () => {
+    paymentAPI.createStripeCheckout.mockResolvedValueOnce({
+      data: { data: { sessionId: 'cs_2', url: 'https://checkout.stripe.com/pay/cs_2' } },
+    })
+
+    const { result } = renderHook(() => useStripeCheckout())
+
+    await act(async () => {
+      await result.current.startStripeCheckout('pro')
+    })
+
+    expect(paymentAPI.createStripeCheckout).toHaveBeenCalledWith('pro', 'INR', null)
   })
 
   it('ignores a second call while one is already loading', async () => {

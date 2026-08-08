@@ -12,6 +12,7 @@ import { AdminLayout } from './pages/admin/AdminLayout'
 import { AdminDashboard } from './pages/admin/AdminDashboard'
 import { AdminCoupons } from './pages/admin/AdminCoupons'
 import { AdminUsers } from './pages/admin/AdminUsers'
+import { AdminPricing } from './pages/admin/AdminPricing'
 
 // Auth Pages
 import { Login } from './pages/auth/Login'
@@ -119,6 +120,7 @@ export default function App() {
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/coupons" element={<AdminCoupons />} />
+        <Route path="/admin/pricing" element={<AdminPricing />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

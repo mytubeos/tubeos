@@ -5,6 +5,7 @@ import { User, Lock, Bell, CreditCard, Check, Loader2, Tag, X, Palette } from 'l
 import { useAuthStore } from '../../store/authStore'
 import authApi from '../../api/auth.api'
 import paymentAPI from '../../api/payment.api'
+import pricingAPI from '../../api/pricing.api'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
@@ -12,6 +13,7 @@ import { ConfirmModal } from '../../components/ui/Modal'
 import { Badge, PlanBadge } from '../../components/ui/Badge'
 import { PLANS } from '../../utils/constants'
 import { formatNumber, formatDate, isSubscriptionExpired } from '../../utils/formatters'
+import { detectCurrency, formatPrice } from '../../utils/currency'
 import { useRazorpay } from '../../hooks/useRazorpay'
 import { useStripeCheckout } from '../../hooks/useStripeCheckout'
 import toast from 'react-hot-toast'
@@ -64,6 +66,21 @@ export const Settings = () => {
   const { startStripeCheckout, loadingPlan: stripeLoadingPlan } = useStripeCheckout({
     onSuccess: () => navigate('/dashboard'),
   })
+  const [currency] = useState(() => detectCurrency())
+  const [pricesByPlan, setPricesByPlan] = useState({})
+
+  useEffect(() => {
+    pricingAPI
+      .getPrices()
+      .then((res) => {
+        const byPlan = {}
+        for (const { plan, prices } of res.data.data || []) {
+          byPlan[plan] = prices
+        }
+        setPricesByPlan(byPlan)
+      })
+      .catch(() => {})
+  }, [])
 
   // Coupon state for the in-app upgrade cards (keyed by which plan's box is open)
   const [coupon, setCoupon] = useState({ plan: null, code: '', validating: false, result: null })
@@ -489,7 +506,9 @@ export const Settings = () => {
                         )}
                       </div>
                       <p className="text-2xl font-display font-bold text-white mb-1">
-                        ₹{config.price.inr}
+                        {pricesByPlan[key]?.[currency]
+                          ? formatPrice(pricesByPlan[key][currency].amount, currency)
+                          : '—'}
                         <span className="text-sm text-gray-500 font-normal">/mo</span>
                       </p>
                       <div className="space-y-1.5 mt-3">
@@ -554,10 +573,15 @@ export const Settings = () => {
                             size="sm"
                             fullWidth
                             variant={key === 'pro' ? 'brand' : 'ghost'}
-                            disabled={loadingPlan === key}
-                            onClick={() => startCheckout(key, coupon.code.trim() || null)}
+                            disabled={loadingPlan === key || stripeLoadingPlan === key}
+                            onClick={() => {
+                              const code = coupon.code.trim() || null
+                              currency === 'INR'
+                                ? startCheckout(key, code)
+                                : startStripeCheckout(key, currency, code)
+                            }}
                           >
-                            {loadingPlan === key ? (
+                            {loadingPlan === key || stripeLoadingPlan === key ? (
                               <Loader2 size={14} className="animate-spin mx-auto" />
                             ) : (
                               'Upgrade'
@@ -571,29 +595,37 @@ export const Settings = () => {
                             fullWidth
                             className="mt-4"
                             variant={key === 'pro' ? 'brand' : 'ghost'}
-                            disabled={loadingPlan === key}
-                            onClick={() => startCheckout(key)}
+                            disabled={loadingPlan === key || stripeLoadingPlan === key}
+                            onClick={() =>
+                              currency === 'INR'
+                                ? startCheckout(key)
+                                : startStripeCheckout(key, currency)
+                            }
                           >
-                            {loadingPlan === key ? (
+                            {loadingPlan === key || stripeLoadingPlan === key ? (
                               <Loader2 size={14} className="animate-spin mx-auto" />
                             ) : (
                               'Upgrade'
                             )}
                           </Button>
-                          <button
-                            onClick={() => openCoupon(key)}
-                            className="flex items-center justify-center gap-1 w-full text-2xs text-gray-600
+                          {currency === 'INR' && (
+                            <>
+                              <button
+                                onClick={() => openCoupon(key)}
+                                className="flex items-center justify-center gap-1 w-full text-2xs text-gray-600
                                        hover:text-gray-400 transition-colors py-1 mt-1.5"
-                          >
-                            <Tag size={10} /> Have a coupon?
-                          </button>
-                          <button
-                            onClick={() => startStripeCheckout(key)}
-                            disabled={stripeLoadingPlan === key}
-                            className="w-full text-2xs text-gray-600 hover:text-gray-400 transition-colors py-0.5 disabled:opacity-50"
-                          >
-                            {stripeLoadingPlan === key ? 'Redirecting...' : 'Trouble paying?'}
-                          </button>
+                              >
+                                <Tag size={10} /> Have a coupon?
+                              </button>
+                              <button
+                                onClick={() => startStripeCheckout(key, 'INR')}
+                                disabled={stripeLoadingPlan === key}
+                                className="w-full text-2xs text-gray-600 hover:text-gray-400 transition-colors py-0.5 disabled:opacity-50"
+                              >
+                                {stripeLoadingPlan === key ? 'Redirecting...' : 'Trouble paying?'}
+                              </button>
+                            </>
+                          )}
                         </>
                       )}
                     </div>

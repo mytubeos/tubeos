@@ -15,6 +15,10 @@ const adminAPI = {
   createCoupon: (data) => api.post('/admin/coupons', data),
   updateCoupon: (id, data) => api.patch(`/admin/coupons/${id}`, data),
   deleteCoupon: (id) => api.delete(`/admin/coupons/${id}`),
+
+  // Plan pricing (INR/EUR/USD)
+  getPricing: () => api.get('/admin/pricing'),
+  updatePricing: (plan, data) => api.put(`/admin/pricing/${plan}`, data),
 }
 
 export default adminAPI

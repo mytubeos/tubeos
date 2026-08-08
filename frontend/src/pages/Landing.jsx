@@ -1,4 +1,5 @@
 // src/pages/Landing.jsx
+import { useState, useEffect } from 'react'
 import { useNavigate, Link, Navigate } from 'react-router-dom'
 import {
   BarChart3,
@@ -12,6 +13,8 @@ import {
 } from 'lucide-react'
 import { Button } from '../components/ui/Button'
 import { useAuthStore } from '../store/authStore'
+import pricingAPI from '../api/pricing.api'
+import { detectCurrency, formatPrice } from '../utils/currency'
 
 const FEATURES = [
   {
@@ -52,18 +55,21 @@ const FEATURES = [
   },
 ]
 
+// Prices come from the admin-editable pricing API (see getPriceDisplay in
+// the component below) — this array is just the static, currency-agnostic
+// copy (name/features/cta) per plan.
 const PLANS = [
   {
+    key: 'free',
     name: 'Free',
-    price: '₹0',
     period: '',
     features: ['1 channel', 'Basic analytics', 'Manual scheduling', 'View comments'],
     cta: 'Get Started Free',
     highlighted: false,
   },
   {
+    key: 'creator',
     name: 'Creator',
-    price: '₹199',
     period: '/month',
     badge: 'Most Popular',
     features: [
@@ -77,11 +83,10 @@ const PLANS = [
     ],
     cta: 'Start Creator Plan',
     highlighted: true,
-    note: '₹399/mo after founders offer ends',
   },
   {
+    key: 'pro',
     name: 'Pro',
-    price: '₹499',
     period: '/month',
     features: [
       '3 channels',
@@ -93,11 +98,10 @@ const PLANS = [
     ],
     cta: 'Start Pro Plan',
     highlighted: false,
-    note: '₹899/mo after founders offer ends',
   },
   {
+    key: 'agency',
     name: 'Max',
-    price: '₹2,999',
     period: '/month',
     features: [
       '25 channels',
@@ -114,6 +118,33 @@ const PLANS = [
 export const Landing = () => {
   const navigate = useNavigate()
   const { isAuthenticated } = useAuthStore()
+  const [currency] = useState(() => detectCurrency())
+  const [pricesByPlan, setPricesByPlan] = useState({})
+
+  useEffect(() => {
+    pricingAPI
+      .getPrices()
+      .then((res) => {
+        const byPlan = {}
+        for (const { plan, prices } of res.data.data || []) {
+          byPlan[plan] = prices
+        }
+        setPricesByPlan(byPlan)
+      })
+      .catch(() => {})
+  }, [])
+
+  const getPriceDisplay = (key) => {
+    if (key === 'free') return { price: formatPrice(0, currency), note: '' }
+    const p = pricesByPlan[key]?.[currency]
+    if (!p) return { price: '—', note: '' }
+    return {
+      price: formatPrice(p.amount, currency),
+      note: p.regularAmount
+        ? `${formatPrice(p.regularAmount, currency)}/mo after founders offer ends`
+        : '',
+    }
+  }
 
   // Already-logged-in users get no value from the marketing page — send them
   // straight to the dashboard instead of showing Landing on every visit.
@@ -159,8 +190,11 @@ export const Landing = () => {
           >
             <span className="w-2 h-2 rounded-full bg-emerald animate-pulse" />
             <span className="text-sm text-gray-300">
-              Founders offer: <span className="text-brand font-semibold">₹199/mo</span> locked
-              forever
+              Founders offer:{' '}
+              <span className="text-brand font-semibold">
+                {getPriceDisplay('creator').price}/mo
+              </span>{' '}
+              locked forever
             </span>
             <span className="text-xs text-gray-500">88 spots left</span>
           </div>
@@ -300,11 +334,13 @@ export const Landing = () => {
                       className={`font-display font-bold text-4xl
                                      ${plan.comingSoon ? 'text-gray-500' : 'text-white'}`}
                     >
-                      {plan.price}
+                      {getPriceDisplay(plan.key).price}
                     </span>
                     <span className="text-gray-500 text-sm mb-1">{plan.period}</span>
                   </div>
-                  {plan.note && <p className="text-2xs text-gray-600 mt-1">{plan.note}</p>}
+                  {getPriceDisplay(plan.key).note && (
+                    <p className="text-2xs text-gray-600 mt-1">{getPriceDisplay(plan.key).note}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2.5 mb-6">
