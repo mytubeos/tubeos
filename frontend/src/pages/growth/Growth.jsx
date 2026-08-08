@@ -335,7 +335,7 @@ export const Growth = () => {
           />
           <div className="p-3 bg-brand/5 border border-brand/15 rounded-xl">
             <p className="text-xs text-gray-400">
-              PRO plan allows tracking up to 3 competitors. Agency plan allows unlimited.
+              PRO plan allows tracking up to 3 competitors. Max plan allows unlimited.
             </p>
           </div>
         </div>

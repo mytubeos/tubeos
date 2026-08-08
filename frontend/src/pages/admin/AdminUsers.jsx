@@ -28,7 +28,7 @@ const PLAN_META = {
   free: { color: 'gray', label: 'Free' },
   creator: { color: 'brand', label: 'Creator' },
   pro: { color: 'cyan', label: 'Pro' },
-  agency: { color: 'rose', label: 'Agency' },
+  agency: { color: 'rose', label: 'Max' },
 }
 
 const PLAN_PRICES = { creator: '₹199/mo', pro: '₹499/mo', agency: '₹2999/mo', free: 'Free' }

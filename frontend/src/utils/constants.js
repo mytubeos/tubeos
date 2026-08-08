@@ -32,7 +32,7 @@ export const PLANS = {
     uploads: 20,
   },
   agency: {
-    name: 'Agency',
+    name: 'Max',
     price: { inr: 2999, usd: 99 },
     color: 'rose',
     channels: 25,

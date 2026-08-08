@@ -30,7 +30,7 @@ export const AdminDashboard = () => {
   const planMetrics = [
     { label: 'Creator', value: userStats?.creator ?? '—', icon: CheckCircle, iconColor: 'brand' },
     { label: 'Pro', value: userStats?.pro ?? '—', icon: CheckCircle, iconColor: 'cyan' },
-    { label: 'Agency', value: userStats?.agency ?? '—', icon: CheckCircle, iconColor: 'rose' },
+    { label: 'Max', value: userStats?.agency ?? '—', icon: CheckCircle, iconColor: 'rose' },
     {
       label: 'Coupon Uses',
       value: couponStats?.totalUses ?? '—',

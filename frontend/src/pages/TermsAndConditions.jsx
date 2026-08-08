@@ -175,7 +175,7 @@ export function TermsAndConditions() {
           <section>
             <h2 className="text-2xl font-bold text-white mb-4">12. Subscription & Payment</h2>
             <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>Vezrin offers different subscription plans (Free, Creator, Pro, Agency)</li>
+              <li>Vezrin offers different subscription plans (Free, Creator, Pro, Max)</li>
               <li>Payments are processed securely through Razorpay</li>
               <li>Subscriptions renew automatically unless cancelled</li>
               <li>You can cancel your subscription anytime from your account settings</li>

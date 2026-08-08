@@ -8,6 +8,7 @@ import paymentAPI from '../api/payment.api'
 import { useAuthStore } from '../store/authStore'
 import { useRazorpay } from '../hooks/useRazorpay'
 import { useStripeCheckout } from '../hooks/useStripeCheckout'
+import { PLANS as PLAN_NAMES } from '../utils/constants'
 
 const FEATURES_TABLE = [
   {
@@ -212,7 +213,9 @@ export const Pricing = () => {
                 className={`rounded-2xl p-5 ${plan === 'creator' ? 'bg-brand/10 border border-brand/30' : 'glass'}`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <p className="font-display font-bold text-white capitalize text-lg">{plan}</p>
+                  <p className="font-display font-bold text-white text-lg">
+                    {PLAN_NAMES[plan]?.name || plan}
+                  </p>
                   <p className={`text-2xl font-display font-bold text-${planColors[plan]}`}>
                     {PLAN_PRICES[plan].price}
                     <span className="text-sm text-gray-500 font-normal">/mo</span>
@@ -378,7 +381,9 @@ export const Pricing = () => {
                   className={`p-4 rounded-xl text-center
                             ${plan === 'creator' ? 'bg-brand/10 border border-brand/30' : 'glass'}`}
                 >
-                  <p className="font-display font-bold text-white capitalize mb-1">{plan}</p>
+                  <p className="font-display font-bold text-white mb-1">
+                    {PLAN_NAMES[plan]?.name || plan}
+                  </p>
                   <p className={`text-2xl font-display font-bold text-${planColors[plan]}`}>
                     {PLAN_PRICES[plan].price}
                     <span className="text-sm text-gray-500 font-normal">/mo</span>

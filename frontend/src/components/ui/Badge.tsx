@@ -41,7 +41,7 @@ export const PlanBadge = ({ plan }) => {
     free: { label: 'Free', variant: 'gray' },
     creator: { label: 'Creator', variant: 'brand' },
     pro: { label: 'Pro', variant: 'cyan' },
-    agency: { label: 'Agency', variant: 'rose' },
+    agency: { label: 'Max', variant: 'rose' },
   }
   const { label, variant } = config[plan] || config.free
 

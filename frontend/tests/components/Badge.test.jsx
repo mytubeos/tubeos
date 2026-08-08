@@ -17,7 +17,7 @@ describe('PlanBadge', () => {
 
   it('renders the correct label for a known plan', () => {
     render(<PlanBadge plan="agency" />)
-    expect(screen.getByText('Agency')).toBeInTheDocument()
+    expect(screen.getByText('Max')).toBeInTheDocument()
   })
 })
 

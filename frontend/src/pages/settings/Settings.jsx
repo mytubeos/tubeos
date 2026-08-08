@@ -323,8 +323,8 @@ export const Settings = () => {
             <div className="flex items-center justify-between p-4 glass rounded-xl mb-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="font-display font-bold text-white text-xl capitalize">
-                    {plan} Plan
+                  <p className="font-display font-bold text-white text-xl">
+                    {PLANS[plan]?.name || plan} Plan
                   </p>
                   <PlanBadge plan={plan} />
                 </div>
@@ -400,7 +400,7 @@ export const Settings = () => {
           <Card>
             <CardHeader
               title="White-Label Reports"
-              subtitle={plan === 'agency' ? 'Your brand on every export & email' : 'Agency feature'}
+              subtitle={plan === 'agency' ? 'Your brand on every export & email' : 'Max feature'}
               icon={Palette}
               iconColor={plan === 'agency' ? 'brand' : 'gray'}
             />
@@ -411,7 +411,7 @@ export const Settings = () => {
                   Send analytics reports and CSV/PDF exports under your own company name and color
                   instead of Vezrin's.
                 </p>
-                <Badge variant="cyan">Upgrade to Agency to unlock</Badge>
+                <Badge variant="cyan">Upgrade to Max to unlock</Badge>
               </div>
             ) : (
               <div className="space-y-4">
@@ -481,7 +481,7 @@ export const Settings = () => {
                                   }`}
                     >
                       <div className="flex items-center justify-between mb-3">
-                        <p className="font-display font-bold text-white capitalize">{key}</p>
+                        <p className="font-display font-bold text-white">{config.name}</p>
                         {key === 'pro' && (
                           <span className="text-2xs text-brand bg-brand/15 px-2 py-0.5 rounded-full">
                             Popular
@@ -621,7 +621,9 @@ export const Settings = () => {
                     className="flex items-center justify-between p-3 glass rounded-xl"
                   >
                     <div>
-                      <p className="text-sm font-medium text-white capitalize">{h.plan} Plan</p>
+                      <p className="text-sm font-medium text-white">
+                        {PLANS[h.plan]?.name || h.plan} Plan
+                      </p>
                       <p className="text-2xs text-gray-500">{formatDate(h.createdAt, 'medium')}</p>
                     </div>
                     <p className="text-sm font-semibold text-white">

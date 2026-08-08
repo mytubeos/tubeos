@@ -96,7 +96,7 @@ const PLANS = [
     note: '₹899/mo after founders offer ends',
   },
   {
-    name: 'Agency',
+    name: 'Max',
     price: '₹2,999',
     period: '/month',
     features: [
@@ -106,7 +106,7 @@ const PLANS = [
       'Priority support',
       'Unlimited uploads',
     ],
-    cta: 'Start Agency Plan',
+    cta: 'Start Max Plan',
     highlighted: false,
   },
 ]

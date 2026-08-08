@@ -41,7 +41,7 @@ describe('Settings — White-Label Reports card', () => {
     })
   })
 
-  it('shows a locked upgrade card below Agency plan', async () => {
+  it('shows a locked upgrade card below Max plan', async () => {
     mockUser = { plan: 'pro', usage: {} }
     const user = userEvent.setup()
     render(
@@ -52,8 +52,8 @@ describe('Settings — White-Label Reports card', () => {
 
     await openPlanTab(user)
 
-    expect(await screen.findByText(/agency feature/i)).toBeInTheDocument()
-    expect(screen.getByText(/upgrade to agency to unlock/i)).toBeInTheDocument()
+    expect(await screen.findByText(/max feature/i)).toBeInTheDocument()
+    expect(screen.getByText(/upgrade to max to unlock/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /save branding/i })).not.toBeInTheDocument()
   })
 

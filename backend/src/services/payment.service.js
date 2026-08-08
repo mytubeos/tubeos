@@ -16,7 +16,7 @@ const logger = require('../config/logger');
 const PLAN_PRICES = {
   creator: { amount: 19900, label: 'Creator Plan' }, // paise (₹199)
   pro: { amount: 49900, label: 'Pro Plan' }, // ₹499
-  agency: { amount: 299900, label: 'Agency Plan' }, // ₹2999
+  agency: { amount: 299900, label: 'Max Plan' }, // ₹2999
 };
 
 const getRazorpayInstance = () => {
