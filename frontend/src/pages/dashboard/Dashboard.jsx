@@ -31,6 +31,11 @@ export const Dashboard = () => {
   const [nudgeDismissed, setNudgeDismissed] = useState(false)
   const [nudgeDragX, setNudgeDragX] = useState(0)
   const nudgeDragStartX = useRef(null)
+  // Mirrors nudgeDragX synchronously — handleNudgeDragEnd needs the value
+  // from the instant mouseup/touchend fires, not whatever nudgeDragX was
+  // closed over at the last completed render (mousemove -> mouseup can fire
+  // faster than React re-renders in between, especially for a fast flick).
+  const nudgeDragXRef = useRef(0)
   const autoSyncDone = useRef(false)
 
   const handleNudgeDragStart = (clientX) => {
@@ -38,14 +43,17 @@ export const Dashboard = () => {
   }
   const handleNudgeDragMove = (clientX) => {
     if (nudgeDragStartX.current === null) return
-    setNudgeDragX(clientX - nudgeDragStartX.current)
+    const delta = clientX - nudgeDragStartX.current
+    nudgeDragXRef.current = delta
+    setNudgeDragX(delta)
   }
   const handleNudgeDragEnd = () => {
     if (nudgeDragStartX.current === null) return
     nudgeDragStartX.current = null
-    if (Math.abs(nudgeDragX) > 80) {
+    if (Math.abs(nudgeDragXRef.current) > 80) {
       setNudgeDismissed(true)
     } else {
+      nudgeDragXRef.current = 0
       setNudgeDragX(0)
     }
   }
