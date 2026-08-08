@@ -9,9 +9,13 @@ import { useEffect } from 'react'
 // own canvas usage is mocked separately below).
 vi.mock('react-easy-crop', () => {
   const MockCropper = ({ onCropComplete }) => {
+    // Mount-only on purpose: the real prop is a fresh inline arrow function
+    // on every parent render, so depending on it here would re-fire this
+    // effect (and its setState) forever — an infinite render loop that
+    // hangs the test process instead of failing it.
     useEffect(() => {
       onCropComplete?.({}, { x: 0, y: 0, width: 100, height: 56 })
-    }, [onCropComplete])
+    }, [])
     return <div data-testid="mock-cropper" />
   }
   return { default: MockCropper }
