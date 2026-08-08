@@ -1,10 +1,11 @@
 // @ts-check
 // src/services/stripe.service.js
 //
-// Alternate checkout processor, used only as a fallback when a user's card
-// doesn't work on Razorpay (limited/unreliable international-card support).
-// Charges the exact same INR amount as Razorpay — no separate USD pricing.
-// Mirrors payment.service.js's shape (same PLAN_PRICES, same activation
+// Alternate checkout processor. For INR it's a fallback when a user's card
+// doesn't work on Razorpay (limited/unreliable international-card support);
+// for EUR/USD it's the only processor, since Razorpay isn't wired for those
+// currencies on this merchant account. Prices come from pricing.service.js
+// (admin-editable). Mirrors payment.service.js's shape (same activation
 // fields on User) but is otherwise independent — see the note in
 // payment-history.model.js for why the two gateways don't share activation
 // code.
@@ -16,25 +17,32 @@ const User = /** @type {any} */ (require('../models/user.model'));
 const PaymentHistory = /** @type {any} */ (require('../models/payment-history.model'));
 const { validateCoupon, redeemCoupon } = require('./coupon.service');
 const { recordEarningFromPayment } = require('./referral.service');
-const { PLAN_PRICES } = require('./payment.service');
+const pricingService = require('./pricing.service');
+const { PLAN_LABELS } = pricingService;
 const logger = require('../config/logger');
 
 /** @typedef {'creator' | 'pro' | 'agency'} PlanName */
+/** @typedef {'INR' | 'EUR' | 'USD'} Currency */
 
 const getStripeInstance = () => {
   if (!config.stripe.secretKey) return null;
   return new Stripe(config.stripe.secretKey);
 };
 
-// Create a Stripe Checkout Session — optional coupon support, same amount math
-// as payment.service.js's createOrder.
+// Create a Stripe Checkout Session — optional coupon support.
+// Coupons are INR-priced (coupon.service.js's validateCoupon always prices
+// against the INR row), so a coupon on a EUR/USD checkout only makes sense
+// as a percentage discount — applying a fixed-rupee discountedPrice to a
+// EUR/USD amount would be meaningless. Percent discounts apply the same
+// percentage to whatever currency's list price this session actually uses.
 /**
  * @param {string} userId
  * @param {PlanName} plan
+ * @param {Currency} currency
  * @param {string|null} [couponCode]
  * @returns {Promise<{sessionId: string, url: string}>}
  */
-const createCheckoutSession = async (userId, plan, couponCode = null) => {
+const createCheckoutSession = async (userId, plan, currency = 'INR', couponCode = null) => {
   const stripe = getStripeInstance();
   if (!stripe) {
     const err = new Error(
@@ -44,8 +52,13 @@ const createCheckoutSession = async (userId, plan, couponCode = null) => {
     throw err;
   }
 
-  if (!PLAN_PRICES[plan]) {
+  if (!pricingService.PLANS.includes(plan)) {
     const err = new Error('Invalid plan selected');
+    err.statusCode = 400;
+    throw err;
+  }
+  if (!pricingService.CURRENCIES.includes(currency)) {
+    const err = new Error('Invalid currency');
     err.statusCode = 400;
     throw err;
   }
@@ -57,16 +70,23 @@ const createCheckoutSession = async (userId, plan, couponCode = null) => {
     throw err;
   }
 
-  let finalAmountPaise = PLAN_PRICES[plan].amount;
+  const { amount: listAmount } = await pricingService.getPrice(plan, currency);
+  let finalAmount = listAmount;
   let couponApplied = null;
 
   if (couponCode) {
     const couponResult = await validateCoupon(couponCode, plan);
-    finalAmountPaise = Math.max(100, couponResult.discountedPrice * 100);
+    if (currency === 'INR') {
+      finalAmount = Math.max(100, couponResult.discountedPrice * 100);
+    } else if (couponResult.discountType === 'percent') {
+      finalAmount = Math.max(1, Math.round(listAmount * (1 - couponResult.discountValue / 100)));
+    }
+    // Fixed-amount coupons on non-INR checkouts: skip the discount rather
+    // than apply a rupee figure to a different currency — list price stands.
     couponApplied = couponCode.toUpperCase().trim();
   }
 
-  const { label } = PLAN_PRICES[plan];
+  const label = PLAN_LABELS[plan];
   const clientUrl = config.cors.clientUrl;
 
   const session = await stripe.checkout.sessions.create({
@@ -76,9 +96,9 @@ const createCheckoutSession = async (userId, plan, couponCode = null) => {
     line_items: [
       {
         price_data: {
-          currency: 'inr',
+          currency: currency.toLowerCase(),
           product_data: { name: `Vezrin ${label}` },
-          unit_amount: finalAmountPaise,
+          unit_amount: finalAmount,
         },
         quantity: 1,
       },
@@ -104,7 +124,10 @@ const createCheckoutSession = async (userId, plan, couponCode = null) => {
  */
 const activatePlanFromSession = async (session) => {
   const { userId, plan, couponCode } = session.metadata || {};
-  if (!userId || !plan || !PLAN_PRICES[plan]) return null;
+  if (!userId || !plan || !pricingService.PLANS.includes(plan)) return null;
+
+  const currency = (session.currency || 'inr').toUpperCase();
+  const { amount: listAmount } = await pricingService.getPrice(plan, currency);
 
   if (couponCode) {
     try {
@@ -126,15 +149,22 @@ const activatePlanFromSession = async (session) => {
     { new: true }
   );
 
-  try {
-    await recordEarningFromPayment({
-      referredUserId: userId,
-      paidAmountPaise: PLAN_PRICES[plan].amount,
-      plan,
-      razorpayPaymentId: session.payment_intent,
-    });
-  } catch (err) {
-    logger.error('[stripe] referral credit failed (non-fatal)', { error: err.message });
+  // Referral commissions are wallet-credited in rupees (recordEarningFromPayment's
+  // paidAmountPaise param assumes paise) — the referral system was never built
+  // multi-currency-aware, and there's no exchange-rate source here to convert a
+  // EUR/USD amount correctly. Rather than credit a wrong number, only credit for
+  // INR payments; skip (not fail) the rest.
+  if (currency === 'INR') {
+    try {
+      await recordEarningFromPayment({
+        referredUserId: userId,
+        paidAmountPaise: listAmount,
+        plan,
+        razorpayPaymentId: session.payment_intent,
+      });
+    } catch (err) {
+      logger.error('[stripe] referral credit failed (non-fatal)', { error: err.message });
+    }
   }
 
   try {
@@ -142,7 +172,8 @@ const activatePlanFromSession = async (session) => {
       user: userId,
       plan,
       amount: session.amount_total,
-      originalAmount: PLAN_PRICES[plan].amount,
+      originalAmount: listAmount,
+      currency,
       couponCode: couponCode || null,
       gateway: 'stripe',
       stripeSessionId: session.id,

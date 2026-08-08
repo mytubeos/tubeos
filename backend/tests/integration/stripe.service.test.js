@@ -5,7 +5,7 @@ import { createRequire } from 'module';
 // instead of `import` for local project files under test.
 const require = createRequire(import.meta.url);
 const stripeService = require('../../src/services/stripe.service.js');
-const paymentService = require('../../src/services/payment.service.js');
+const pricingService = require('../../src/services/pricing.service.js');
 const User = require('../../src/models/user.model.js');
 const Coupon = require('../../src/models/coupon.model.js');
 const Referral = require('../../src/models/referral.model.js');
@@ -186,11 +186,26 @@ describe('stripe.service.activatePlanFromSession', () => {
   });
 });
 
-describe('stripe.service and payment.service share the same PLAN_PRICES', () => {
-  it('exports the identical object, not a second hardcoded copy', () => {
-    // Guards against a future price change being made in one place and
-    // silently missed in the other.
-    expect(paymentService.PLAN_PRICES).toBeTruthy();
-    expect(paymentService.PLAN_PRICES.pro.amount).toBe(49900);
+describe('stripe.service reads prices from pricing.service, not a hardcoded copy', () => {
+  it('activatePlanFromSession records the current admin-set price for the session currency, not a stale constant', async () => {
+    // Guards against a future price change being made in pricing.service.js
+    // and stripe.service.js silently drifting out of sync with it.
+    const user = await createTestUser();
+    await pricingService.setPrices('pro', { EUR: { amount: 1234, regularAmount: null } });
+
+    const session = {
+      id: 'cs_eur_price_test',
+      payment_intent: 'pi_eur_price_test',
+      payment_status: 'paid',
+      currency: 'eur',
+      amount_total: 1234,
+      metadata: { userId: user._id.toString(), plan: 'pro', couponCode: '' },
+    };
+
+    await stripeService.activatePlanFromSession(session);
+
+    const entry = await PaymentHistory.findOne({ stripePaymentIntentId: 'pi_eur_price_test' });
+    expect(entry.originalAmount).toBe(1234);
+    expect(entry.currency).toBe('EUR');
   });
 });

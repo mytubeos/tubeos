@@ -1,5 +1,6 @@
 // src/controllers/admin.controller.js
 const couponService = require('../services/coupon.service');
+const pricingService = require('../services/pricing.service');
 const User = require('../models/user.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
 const { successResponse, errorResponse, paginatedResponse } = require('../utils/response.utils');
@@ -205,6 +206,26 @@ const deleteCoupon = async (req, res) => {
   }
 };
 
+// GET /api/v1/admin/pricing
+const getPricing = async (req, res) => {
+  try {
+    const prices = await pricingService.getAllPrices();
+    return successResponse(res, 200, 'Pricing fetched', prices);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
+// PUT /api/v1/admin/pricing/:plan
+const updatePricing = async (req, res) => {
+  try {
+    const result = await pricingService.setPrices(req.params.plan, req.body, req.user.id);
+    return successResponse(res, 200, 'Pricing updated', result);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
 module.exports = {
   getUserStats,
   listUsers,
@@ -216,4 +237,6 @@ module.exports = {
   createCoupon,
   updateCoupon,
   deleteCoupon,
+  getPricing,
+  updatePricing,
 };

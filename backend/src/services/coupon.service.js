@@ -1,7 +1,6 @@
 // src/services/coupon.service.js
 const Coupon = require('../models/coupon.model');
-
-const PLAN_PRICES_INR = { creator: 199, pro: 499, agency: 2999 };
+const { getPrice } = require('./pricing.service');
 
 // Validate a coupon code for a given plan (public API — never reveals type)
 const validateCoupon = async (code, plan) => {
@@ -37,7 +36,10 @@ const validateCoupon = async (code, plan) => {
     throw err;
   }
 
-  const originalPrice = PLAN_PRICES_INR[plan];
+  // pricing.service.js stores paise; coupon discountValue (fixed type) is
+  // authored in rupees, so this whole function works in rupees throughout.
+  const { amount: originalPricePaise } = await getPrice(plan, 'INR');
+  const originalPrice = originalPricePaise / 100;
   let discountedPrice;
 
   if (coupon.discountType === 'percent') {

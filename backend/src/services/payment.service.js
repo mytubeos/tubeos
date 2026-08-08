@@ -11,13 +11,9 @@ const User = /** @type {any} */ (require('../models/user.model'));
 const PaymentHistory = /** @type {any} */ (require('../models/payment-history.model'));
 const { validateCoupon, redeemCoupon } = require('./coupon.service');
 const { recordEarningFromPayment } = require('./referral.service');
+const pricingService = require('./pricing.service');
+const { PLAN_LABELS } = pricingService;
 const logger = require('../config/logger');
-
-const PLAN_PRICES = {
-  creator: { amount: 19900, label: 'Creator Plan' }, // paise (₹199)
-  pro: { amount: 49900, label: 'Pro Plan' }, // ₹499
-  agency: { amount: 299900, label: 'Max Plan' }, // ₹2999
-};
 
 const getRazorpayInstance = () => {
   if (!config.razorpay.keyId || !config.razorpay.keySecret) {
@@ -71,7 +67,7 @@ const recordPaymentHistory = async ({
  * @returns {Promise<{orderId: string, amount: number, currency: string, plan: PlanName, label: string, keyId: string, userName: string, userEmail: string, couponApplied: string|null, originalAmount: number}>}
  */
 const createOrder = async (userId, plan, couponCode = null) => {
-  if (!PLAN_PRICES[plan]) {
+  if (!pricingService.PLANS.includes(plan)) {
     const err = new Error('Invalid plan selected');
     err.statusCode = 400;
     throw err;
@@ -84,7 +80,8 @@ const createOrder = async (userId, plan, couponCode = null) => {
     throw err;
   }
 
-  let finalAmountPaise = PLAN_PRICES[plan].amount;
+  const { amount: listAmountPaise } = await pricingService.getPrice(plan, 'INR');
+  let finalAmountPaise = listAmountPaise;
   let couponApplied = null;
 
   if (couponCode) {
@@ -95,7 +92,7 @@ const createOrder = async (userId, plan, couponCode = null) => {
   }
 
   const razorpay = getRazorpayInstance();
-  const { label } = PLAN_PRICES[plan];
+  const label = PLAN_LABELS[plan];
 
   const order = await razorpay.orders.create({
     amount: finalAmountPaise,
@@ -119,7 +116,7 @@ const createOrder = async (userId, plan, couponCode = null) => {
     userName: user.name,
     userEmail: user.email,
     couponApplied,
-    originalAmount: PLAN_PRICES[plan].amount,
+    originalAmount: listAmountPaise,
   };
 };
 
@@ -145,18 +142,20 @@ const verifyPayment = async (
     throw err;
   }
 
-  if (!PLAN_PRICES[plan]) {
+  if (!pricingService.PLANS.includes(plan)) {
     const err = new Error('Invalid plan');
     err.statusCode = 400;
     throw err;
   }
+
+  const { amount: listAmountPaise } = await pricingService.getPrice(plan, 'INR');
 
   // Recompute the discounted amount for the history record BEFORE redeeming the
   // coupon below — redeeming first would bump usedCount and could make an
   // at-the-cap coupon look invalid on this re-check. Falls back to list price if
   // the coupon can't be re-validated for any reason (history is best-effort; the
   // plan activation below doesn't depend on this).
-  let chargedAmountPaise = PLAN_PRICES[plan].amount;
+  let chargedAmountPaise = listAmountPaise;
   if (couponCode) {
     try {
       const couponResult = await validateCoupon(couponCode, plan);
@@ -192,7 +191,7 @@ const verifyPayment = async (
   try {
     await recordEarningFromPayment({
       referredUserId: userId,
-      paidAmountPaise: PLAN_PRICES[plan].amount,
+      paidAmountPaise: listAmountPaise,
       plan,
       razorpayPaymentId,
     });
@@ -204,7 +203,7 @@ const verifyPayment = async (
     userId,
     plan,
     amount: chargedAmountPaise,
-    originalAmount: PLAN_PRICES[plan].amount,
+    originalAmount: listAmountPaise,
     couponCode,
     razorpayOrderId,
     razorpayPaymentId,
@@ -242,7 +241,8 @@ const handleWebhook = async (rawBody, signature) => {
   if (event.event === 'payment.captured') {
     const notes = event.payload.payment.entity.notes || {};
     const { userId, plan, couponCode } = notes;
-    if (userId && plan && PLAN_PRICES[plan]) {
+    if (userId && plan && pricingService.PLANS.includes(plan)) {
+      const { amount: listAmountPaise } = await pricingService.getPrice(plan, 'INR');
       if (couponCode) await redeemCoupon(couponCode);
       const now = new Date();
       const expiresAt = new Date(now);
@@ -257,7 +257,7 @@ const handleWebhook = async (rawBody, signature) => {
       try {
         await recordEarningFromPayment({
           referredUserId: userId,
-          paidAmountPaise: PLAN_PRICES[plan].amount,
+          paidAmountPaise: listAmountPaise,
           plan,
           razorpayPaymentId: event.payload.payment.entity.id,
         });
@@ -270,7 +270,7 @@ const handleWebhook = async (rawBody, signature) => {
         userId,
         plan,
         amount: event.payload.payment.entity.amount,
-        originalAmount: PLAN_PRICES[plan].amount,
+        originalAmount: listAmountPaise,
         couponCode,
         razorpayOrderId: event.payload.payment.entity.order_id,
         razorpayPaymentId: event.payload.payment.entity.id,
@@ -319,5 +319,4 @@ module.exports = {
   handleWebhook,
   getPaymentHistory,
   downgradeToFree,
-  PLAN_PRICES,
 };

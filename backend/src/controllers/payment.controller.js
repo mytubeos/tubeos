@@ -91,12 +91,13 @@ const downgradeToFree = async (req, res) => {
 // POST /api/v1/payment/stripe/create-checkout-session
 const createStripeCheckoutSession = async (req, res) => {
   try {
-    const { plan, couponCode } = req.body;
+    const { plan, currency, couponCode } = req.body;
     if (!plan) return errorResponse(res, 400, 'Plan is required');
 
     const session = await stripeService.createCheckoutSession(
       req.user.id,
       plan,
+      currency || 'INR',
       couponCode || null
     );
     return successResponse(res, 200, 'Checkout session created', session);

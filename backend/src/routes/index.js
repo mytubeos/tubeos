@@ -16,6 +16,7 @@ const adminRoutes = require('./admin.routes');
 const referralRoutes = require('./referral.routes');
 const webhookRoutes = require('./webhook.routes');
 const notificationRoutes = require('./notification.routes');
+const pricingRoutes = require('./pricing.routes');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -45,5 +46,6 @@ router.use('/admin', adminRoutes);
 router.use('/referral', referralRoutes);
 router.use('/webhooks', webhookRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/pricing', pricingRoutes);
 
 module.exports = router;
