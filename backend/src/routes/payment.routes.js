@@ -12,11 +12,14 @@ const {
   createStripeCheckoutSession,
   verifyStripeSession,
   stripeWebhook,
+  createDodoCheckoutSession,
+  dodoWebhook,
 } = require('../controllers/payment.controller');
 
 // Webhooks — no auth, raw body captured in app.js
 router.post('/webhook', webhook);
 router.post('/stripe/webhook', stripeWebhook);
+router.post('/dodo/webhook', dodoWebhook);
 
 // Protected routes
 router.post('/create-order', protect, createOrder);
@@ -28,5 +31,8 @@ router.post('/downgrade', protect, downgradeToFree);
 // Stripe — alternate checkout, used only as a Razorpay-decline fallback
 router.post('/stripe/create-checkout-session', protect, createStripeCheckoutSession);
 router.post('/stripe/verify-session', protect, verifyStripeSession);
+
+// Dodo — primary USD checkout (Merchant of Record)
+router.post('/dodo/create-checkout-session', protect, createDodoCheckoutSession);
 
 module.exports = router;

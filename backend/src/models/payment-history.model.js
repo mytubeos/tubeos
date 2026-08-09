@@ -32,11 +32,12 @@ const paymentHistorySchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    // Which processor this payment actually went through — Stripe is only ever
-    // used as a fallback when a user's card doesn't work on Razorpay.
+    // Which processor this payment actually went through. Dodo is the primary
+    // USD checkout; Razorpay/Stripe remain for existing INR subscribers until
+    // they migrate.
     gateway: {
       type: String,
-      enum: ['razorpay', 'stripe'],
+      enum: ['razorpay', 'stripe', 'dodo'],
       default: 'razorpay',
     },
     razorpayOrderId: {
@@ -66,6 +67,15 @@ const paymentHistorySchema = new mongoose.Schema(
       default: null,
     },
     stripePaymentIntentId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    // Same de-dupe role again, for the Dodo path. No `default: null` on
+    // purpose — see the razorpayPaymentId comment above, an explicit null
+    // on every row would defeat `sparse` and let a second null-valued
+    // document collide with the first under the unique index.
+    dodoPaymentId: {
       type: String,
       unique: true,
       sparse: true,

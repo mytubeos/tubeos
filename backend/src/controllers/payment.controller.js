@@ -1,6 +1,7 @@
 // src/controllers/payment.controller.js
 const paymentService = require('../services/payment.service');
 const stripeService = require('../services/stripe.service');
+const dodoService = require('../services/dodo.service');
 const { validateCoupon } = require('../services/coupon.service');
 const { successResponse, errorResponse } = require('../utils/response.utils');
 
@@ -131,6 +132,29 @@ const stripeWebhook = async (req, res) => {
   }
 };
 
+// POST /api/v1/payment/dodo/create-checkout-session
+const createDodoCheckoutSession = async (req, res) => {
+  try {
+    const { plan, couponCode } = req.body;
+    if (!plan) return errorResponse(res, 400, 'Plan is required');
+
+    const session = await dodoService.createCheckoutSession(req.user.id, plan, couponCode || null);
+    return successResponse(res, 200, 'Checkout session created', session);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
+// POST /api/v1/payment/dodo/webhook  (no auth — raw body needed)
+const dodoWebhook = async (req, res) => {
+  try {
+    await dodoService.handleWebhook(req.rawBody, req.headers);
+    return res.status(200).json({ received: true });
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+};
+
 module.exports = {
   createOrder,
   verifyPayment,
@@ -141,4 +165,6 @@ module.exports = {
   createStripeCheckoutSession,
   verifyStripeSession,
   stripeWebhook,
+  createDodoCheckoutSession,
+  dodoWebhook,
 };

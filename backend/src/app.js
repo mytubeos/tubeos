@@ -69,10 +69,13 @@ app.set('trust proxy', 1);
 //    directly against req.rawBody via the Stripe SDK, so req.body is left
 //    unparsed for this route (unlike Razorpay's, which also fills req.body
 //    below for convenience)
+//  - Dodo webhook signature verification (JSON) — same as Stripe's, raw
+//    string only, req.body left unparsed
 //  - YouTube PubSubHubbub notifications (Atom XML)
 const RAW_BODY_URLS = [
   '/api/v1/payment/webhook',
   '/api/v1/payment/stripe/webhook',
+  '/api/v1/payment/dodo/webhook',
   '/api/v1/webhooks/youtube',
 ];
 app.use((req, res, next) => {

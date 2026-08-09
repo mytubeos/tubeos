@@ -88,6 +88,28 @@ const config = {
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   },
 
+  // Primary checkout processor — Merchant of Record, USD-only. Chosen over a
+  // direct Stripe account because Stripe is invite-only for new India-based
+  // businesses; Dodo signs up from India today and additionally handles
+  // per-country sales-tax/VAT compliance on our behalf. Fully optional:
+  // dodo.service.js no-ops with a clean error if apiKey is unset.
+  dodo: {
+    apiKey: process.env.DODO_PAYMENTS_API_KEY,
+    webhookSecret: process.env.DODO_WEBHOOK_SECRET,
+    // 'live' talks to dodopayments.com; anything else uses their sandbox
+    // (test.dodopayments.com) so local/staging never touches real cards.
+    mode: process.env.DODO_MODE === 'live' ? 'live' : 'test',
+    // One Dodo "product" per plan, created in their dashboard as a one-time
+    // Pay-What-You-Want product — the actual charge amount is overridden per
+    // checkout from pricing.service.js (admin-editable), these IDs just
+    // anchor which product line-item Dodo attributes the sale to.
+    productIds: {
+      creator: process.env.DODO_PRODUCT_ID_CREATOR,
+      pro: process.env.DODO_PRODUCT_ID_PRO,
+      agency: process.env.DODO_PRODUCT_ID_MAX,
+    },
+  },
+
   youtube: {
     clientId: process.env.YOUTUBE_CLIENT_ID,
     clientSecret: process.env.YOUTUBE_CLIENT_SECRET,

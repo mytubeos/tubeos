@@ -10,6 +10,8 @@ const paymentAPI = {
   createStripeCheckout: (plan, currency = 'INR', couponCode = null) =>
     api.post('/payment/stripe/create-checkout-session', { plan, currency, couponCode }),
   verifyStripeSession: (sessionId) => api.post('/payment/stripe/verify-session', { sessionId }),
+  createDodoCheckout: (plan, couponCode = null) =>
+    api.post('/payment/dodo/create-checkout-session', { plan, couponCode }),
 }
 
 export default paymentAPI

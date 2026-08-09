@@ -14,7 +14,7 @@ import {
 import { Button } from '../components/ui/Button'
 import { useAuthStore } from '../store/authStore'
 import pricingAPI from '../api/pricing.api'
-import { detectCurrency, formatPrice } from '../utils/currency'
+import { formatPrice } from '../utils/currency'
 
 const FEATURES = [
   {
@@ -118,7 +118,6 @@ const PLANS = [
 export const Landing = () => {
   const navigate = useNavigate()
   const { isAuthenticated } = useAuthStore()
-  const [currency] = useState(() => detectCurrency())
   const [pricesByPlan, setPricesByPlan] = useState({})
 
   useEffect(() => {
@@ -135,13 +134,13 @@ export const Landing = () => {
   }, [])
 
   const getPriceDisplay = (key) => {
-    if (key === 'free') return { price: formatPrice(0, currency), note: '' }
-    const p = pricesByPlan[key]?.[currency]
+    if (key === 'free') return { price: formatPrice(0, 'USD'), note: '' }
+    const p = pricesByPlan[key]?.USD
     if (!p) return { price: '—', note: '' }
     return {
-      price: formatPrice(p.amount, currency),
+      price: formatPrice(p.amount, 'USD'),
       note: p.regularAmount
-        ? `${formatPrice(p.regularAmount, currency)}/mo after founders offer ends`
+        ? `${formatPrice(p.regularAmount, 'USD')}/mo after founders offer ends`
         : '',
     }
   }

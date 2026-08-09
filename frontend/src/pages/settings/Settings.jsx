@@ -13,9 +13,8 @@ import { ConfirmModal } from '../../components/ui/Modal'
 import { Badge, PlanBadge } from '../../components/ui/Badge'
 import { PLANS } from '../../utils/constants'
 import { formatNumber, formatDate, isSubscriptionExpired } from '../../utils/formatters'
-import { detectCurrency, formatPrice } from '../../utils/currency'
-import { useRazorpay } from '../../hooks/useRazorpay'
-import { useStripeCheckout } from '../../hooks/useStripeCheckout'
+import { formatPrice } from '../../utils/currency'
+import { useDodoCheckout } from '../../hooks/useDodoCheckout'
 import toast from 'react-hot-toast'
 
 const TABS = [
@@ -60,13 +59,9 @@ export const Settings = () => {
   const { user, updateUser } = useAuthStore()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('profile')
-  const { startCheckout, loadingPlan } = useRazorpay({
+  const { startDodoCheckout, loadingPlan, verifying } = useDodoCheckout({
     onSuccess: () => navigate('/dashboard'),
   })
-  const { startStripeCheckout, loadingPlan: stripeLoadingPlan } = useStripeCheckout({
-    onSuccess: () => navigate('/dashboard'),
-  })
-  const [currency] = useState(() => detectCurrency())
   const [pricesByPlan, setPricesByPlan] = useState({})
 
   useEffect(() => {
@@ -245,6 +240,15 @@ export const Settings = () => {
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
+      {verifying && (
+        <div className="flex items-center justify-center gap-2 px-4 py-3 glass rounded-xl border border-brand/20">
+          <Loader2 size={16} className="animate-spin text-brand" />
+          <span className="text-sm text-gray-300">
+            Confirming your payment — this takes a few seconds…
+          </span>
+        </div>
+      )}
+
       {/* Tab nav */}
       <div className="flex items-center glass rounded-xl p-1 overflow-x-auto no-scrollbar">
         {TABS.map(({ key, label, icon: Icon }) => (
@@ -352,12 +356,20 @@ export const Settings = () => {
                     currentPlanPayment.amount !== currentPlanPayment.originalAmount ? (
                     <>
                       <span className="line-through text-gray-600 mr-1.5">
-                        ₹{Math.round(currentPlanPayment.originalAmount / 100)}
+                        {formatPrice(
+                          currentPlanPayment.originalAmount,
+                          currentPlanPayment.currency || 'USD'
+                        )}
                       </span>
-                      ₹{Math.round(currentPlanPayment.amount / 100)}/month
+                      {formatPrice(currentPlanPayment.amount, currentPlanPayment.currency || 'USD')}
+                      /month
                     </>
+                  ) : currentPlanPayment ? (
+                    `${formatPrice(currentPlanPayment.amount, currentPlanPayment.currency || 'USD')}/month`
+                  ) : pricesByPlan[plan]?.USD ? (
+                    `${formatPrice(pricesByPlan[plan].USD.amount, 'USD')}/month`
                   ) : (
-                    `₹${currentPlanPayment ? Math.round(currentPlanPayment.amount / 100) : planConfig?.price?.inr}/month`
+                    ''
                   )}
                 </p>
                 {plan !== 'free' &&
@@ -506,8 +518,8 @@ export const Settings = () => {
                         )}
                       </div>
                       <p className="text-2xl font-display font-bold text-white mb-1">
-                        {pricesByPlan[key]?.[currency]
-                          ? formatPrice(pricesByPlan[key][currency].amount, currency)
+                        {pricesByPlan[key]?.USD
+                          ? formatPrice(pricesByPlan[key].USD.amount, 'USD')
                           : '—'}
                         <span className="text-sm text-gray-500 font-normal">/mo</span>
                       </p>
@@ -560,28 +572,32 @@ export const Settings = () => {
                             </button>
                           </div>
 
-                          {coupon.result && (
-                            <div className="flex items-center gap-1.5 px-2 py-1.5 bg-emerald/10 border border-emerald/20 rounded-lg">
-                              <Check size={11} className="text-emerald shrink-0" />
-                              <span className="text-2xs text-emerald">
-                                ₹{coupon.result.originalPrice} → ₹{coupon.result.discountedPrice}
-                              </span>
-                            </div>
-                          )}
+                          {coupon.result &&
+                            (coupon.result.discountType === 'percent' ? (
+                              <div className="flex items-center gap-1.5 px-2 py-1.5 bg-emerald/10 border border-emerald/20 rounded-lg">
+                                <Check size={11} className="text-emerald shrink-0" />
+                                <span className="text-2xs text-emerald">
+                                  {coupon.result.discountValue}% off applied
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 px-2 py-1.5 bg-amber/10 border border-amber/20 rounded-lg">
+                                <X size={11} className="text-amber shrink-0" />
+                                <span className="text-2xs text-amber">Not valid for USD</span>
+                              </div>
+                            ))}
 
                           <Button
                             size="sm"
                             fullWidth
                             variant={key === 'pro' ? 'brand' : 'ghost'}
-                            disabled={loadingPlan === key || stripeLoadingPlan === key}
+                            disabled={loadingPlan === key}
                             onClick={() => {
                               const code = coupon.code.trim() || null
-                              currency === 'INR'
-                                ? startCheckout(key, code)
-                                : startStripeCheckout(key, currency, code)
+                              startDodoCheckout(key, code)
                             }}
                           >
-                            {loadingPlan === key || stripeLoadingPlan === key ? (
+                            {loadingPlan === key ? (
                               <Loader2 size={14} className="animate-spin mx-auto" />
                             ) : (
                               'Upgrade'
@@ -595,37 +611,22 @@ export const Settings = () => {
                             fullWidth
                             className="mt-4"
                             variant={key === 'pro' ? 'brand' : 'ghost'}
-                            disabled={loadingPlan === key || stripeLoadingPlan === key}
-                            onClick={() =>
-                              currency === 'INR'
-                                ? startCheckout(key)
-                                : startStripeCheckout(key, currency)
-                            }
+                            disabled={loadingPlan === key}
+                            onClick={() => startDodoCheckout(key)}
                           >
-                            {loadingPlan === key || stripeLoadingPlan === key ? (
+                            {loadingPlan === key ? (
                               <Loader2 size={14} className="animate-spin mx-auto" />
                             ) : (
                               'Upgrade'
                             )}
                           </Button>
-                          {currency === 'INR' && (
-                            <>
-                              <button
-                                onClick={() => openCoupon(key)}
-                                className="flex items-center justify-center gap-1 w-full text-2xs text-gray-600
-                                       hover:text-gray-400 transition-colors py-1 mt-1.5"
-                              >
-                                <Tag size={10} /> Have a coupon?
-                              </button>
-                              <button
-                                onClick={() => startStripeCheckout(key, 'INR')}
-                                disabled={stripeLoadingPlan === key}
-                                className="w-full text-2xs text-gray-600 hover:text-gray-400 transition-colors py-0.5 disabled:opacity-50"
-                              >
-                                {stripeLoadingPlan === key ? 'Redirecting...' : 'Trouble paying?'}
-                              </button>
-                            </>
-                          )}
+                          <button
+                            onClick={() => openCoupon(key)}
+                            className="flex items-center justify-center gap-1 w-full text-2xs text-gray-600
+                                   hover:text-gray-400 transition-colors py-1 mt-1.5"
+                          >
+                            <Tag size={10} /> Have a coupon?
+                          </button>
                         </>
                       )}
                     </div>
@@ -659,7 +660,7 @@ export const Settings = () => {
                       <p className="text-2xs text-gray-500">{formatDate(h.createdAt, 'medium')}</p>
                     </div>
                     <p className="text-sm font-semibold text-white">
-                      ₹{Math.round(h.amount / 100)}
+                      {formatPrice(h.amount, h.currency || 'USD')}
                     </p>
                   </div>
                 ))}
