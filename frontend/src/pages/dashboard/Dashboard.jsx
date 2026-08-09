@@ -15,7 +15,7 @@ import { scheduleApi } from '../../api/schedule.api'
 import notificationAPI from '../../api/notification.api'
 import { formatDate, formatNumber } from '../../utils/formatters'
 import { PERIODS } from '../../utils/constants'
-import { StatusBadge } from '../../components/ui/Badge'
+import { StatusBadge, Badge } from '../../components/ui/Badge'
 import { Chingari } from '../../components/features/Chingari'
 import toast from 'react-hot-toast'
 
@@ -27,6 +27,7 @@ export const Dashboard = () => {
   const [syncing, setSyncing] = useState(false)
   const [upcoming, setUpcoming] = useState([])
   const [bestTime, setBestTime] = useState(null)
+  const canAccessBestTime = ['creator', 'pro', 'agency'].includes(user?.plan)
   const [latestNudge, setLatestNudge] = useState(null)
   const [nudgeDismissed, setNudgeDismissed] = useState(false)
   const [nudgeDragX, setNudgeDragX] = useState(0)
@@ -81,14 +82,15 @@ export const Dashboard = () => {
       .catch(() => {})
   }, [])
 
-  // Fetch best time
+  // Fetch best time — skipped entirely on Free plan, since the endpoint is
+  // gated to Creator+ and would always 403 (see canAccessBestTime).
   useEffect(() => {
-    if (!activeChannel?._id) return
+    if (!activeChannel?._id || !canAccessBestTime) return
     scheduleApi
       .getBestTime(activeChannel._id)
       .then((res) => setBestTime(res.data.data))
       .catch(() => {})
-  }, [activeChannel?._id])
+  }, [activeChannel?._id, canAccessBestTime])
 
   // Auto-sync on load if data is stale (>30 min or never synced)
   useEffect(() => {
@@ -256,6 +258,12 @@ export const Dashboard = () => {
               <Button variant="ghost" size="sm" fullWidth onClick={() => navigate('/heatmap')}>
                 View Full Heatmap
               </Button>
+            </div>
+          ) : !canAccessBestTime ? (
+            <div className="text-center py-8 text-gray-500">
+              <Clock size={28} className="mx-auto mb-3 opacity-30" />
+              <p className="text-sm mb-3">Best-time recommendations need Creator plan or higher</p>
+              <Badge variant="cyan">Upgrade to Creator to unlock</Badge>
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">

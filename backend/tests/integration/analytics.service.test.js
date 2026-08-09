@@ -477,3 +477,81 @@ describe('analytics.service.getOverview — views.delta always defined, unlike c
     expect(result.metrics.views.delta).toBe(-15);
   });
 });
+
+describe('analytics.service.getOverview — video-performance fallback only fires when NO analytics data exists at all', () => {
+  // Regression test for a real bug: the fallback used to check
+  // `!curr.totalViews` (this period's own sum), so a narrow period (7d/30d)
+  // whose date window happened to miss a channel's real-but-sparse
+  // ChannelAnalytics rows would silently substitute an entirely different,
+  // unbounded lifetime Video.performance.views total — while a wider period
+  // (90d/365d) that DID catch those same rows used the real, smaller,
+  // period-scoped sum. Net effect: the wider period showed FEWER views than
+  // the narrower one for the identical channel, which is impossible for a
+  // true superset window. Fixed by gating the fallback on whether the
+  // channel has ANY ChannelAnalytics row ever, independent of the selected
+  // period.
+  it('does NOT fall back to the lifetime video total when real (but out-of-window) analytics data exists — a real zero period stays zero', async () => {
+    const { user, channel } = await createFixtures();
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+
+    // Real ChannelAnalytics row exists, but 45 days ago — outside a 7d or
+    // 30d window, inside a 90d window.
+    await ChannelAnalytics.create({
+      userId: channel.userId,
+      channelId: channel._id,
+      date: new Date(now - 45 * day),
+      metrics: { views: 5000, likes: 100 },
+    });
+
+    // A published, synced video with a much larger LIFETIME view count —
+    // this is what the old buggy fallback would have surfaced instead.
+    await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      youtubeVideoId: 'yt_lifetime_1',
+      title: 'Old video',
+      status: 'published',
+      performance: { views: 50000, likes: 1000, comments: 10, lastSyncedAt: new Date() },
+    });
+
+    const narrow = await analyticsService.getOverview(
+      channel.userId.toString(),
+      channel._id.toString(),
+      '7d'
+    );
+    expect(narrow.metrics.views.value).toBe(0);
+
+    const wide = await analyticsService.getOverview(
+      channel.userId.toString(),
+      channel._id.toString(),
+      '90d'
+    );
+    expect(wide.metrics.views.value).toBe(5000);
+
+    // The core invariant that was violated: a wider window must never show
+    // fewer views than a narrower one for the same channel.
+    expect(wide.metrics.views.value).toBeGreaterThanOrEqual(narrow.metrics.views.value);
+  });
+
+  it('still falls back to the lifetime video total when the channel has no ChannelAnalytics data at all (real basic-mode case)', async () => {
+    const { user, channel } = await createFixtures();
+
+    await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      youtubeVideoId: 'yt_basic_1',
+      title: 'Basic-mode video',
+      status: 'published',
+      performance: { views: 5000, likes: 200, comments: 5, lastSyncedAt: new Date() },
+    });
+
+    const result = await analyticsService.getOverview(
+      channel.userId.toString(),
+      channel._id.toString(),
+      '30d'
+    );
+
+    expect(result.metrics.views.value).toBe(5000);
+  });
+});

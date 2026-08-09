@@ -340,8 +340,6 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
             'metrics.likes': record.likes || 0,
             'metrics.comments': record.comments || 0,
             'metrics.shares': record.shares || 0,
-            'metrics.impressions': record.impressions || 0,
-            'metrics.impressionsCtr': record.impressionsCtr || 0,
             ...(revenueAvailable
               ? { 'metrics.estimatedRevenue': record.estimatedRevenue || 0 }
               : {}),
@@ -358,6 +356,11 @@ const syncChannelAnalytics = async (channelId, userId, days = 30) => {
 
   // Also fetch traffic sources
   await syncTrafficSources(channel, accessToken, startDate, endDate, userId);
+
+  // Also fetch impressions/CTR — isolated + gracefully-degrading like traffic
+  // sources above, since these metrics were only added to the API in 2026
+  // and older/edge-case tokens or channels may not support them.
+  await syncImpressionsCtr(channel, accessToken, startDate, endDate);
 
   // Import/update all channel videos with latest stats
   await syncChannelVideos(channel, accessToken, userId);
@@ -416,6 +419,53 @@ const syncTrafficSources = async (channel, accessToken, startDate, endDate, user
     );
   } catch (err) {
     logger.error('Traffic sources sync failed', { error: err.message });
+  }
+};
+
+// ==================== SYNC IMPRESSIONS / CTR ====================
+// Kept as its own request (not merged into BASE_METRICS above) because these
+// are the real YouTube Analytics API metric names — the previous version of
+// this code requested 'impressions'/'impressionsCtr', which are not valid
+// metric names at all (the actual per-video-thumbnail metrics are named
+// below), so CTR was always silently written as 0. Isolated + best-effort
+// like syncTrafficSources: if this specific request 400s/403s for a channel
+// or token that doesn't support it, the rest of the sync must not break.
+const syncImpressionsCtr = async (channel, accessToken, startDate, endDate) => {
+  try {
+    const url = new URL('https://youtubeanalytics.googleapis.com/v2/reports');
+    url.searchParams.set('ids', 'channel==MINE');
+    url.searchParams.set('startDate', startDate);
+    url.searchParams.set('endDate', endDate);
+    url.searchParams.set('metrics', 'videoThumbnailImpressions,videoThumbnailImpressionsClickRate');
+    url.searchParams.set('dimensions', 'day');
+    url.searchParams.set('sort', 'day');
+
+    const response = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!response.ok) return;
+
+    const data = await response.json();
+    const rows = data.rows || [];
+    if (rows.length === 0) return;
+
+    const bulkOps = rows.map(([day, impressions, ctr]) => ({
+      updateOne: {
+        filter: { channelId: channel._id, date: new Date(day) },
+        update: {
+          $set: {
+            'metrics.impressions': impressions || 0,
+            'metrics.impressionsCtr': ctr || 0,
+          },
+        },
+        upsert: true,
+      },
+    }));
+
+    await ChannelAnalytics.bulkWrite(bulkOps);
+  } catch (err) {
+    logger.error('Impressions/CTR sync failed', { error: err.message });
   }
 };
 
@@ -629,11 +679,24 @@ const getOverview = async (userId, channelId, period = '30d') => {
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   const prevStartDate = new Date(startDate.getTime() - days * 24 * 60 * 60 * 1000);
 
+  const channelObjectId = require('mongoose').Types.ObjectId.createFromHexString(channelId);
+
+  // Whether this channel has EVER synced any real ChannelAnalytics row, not
+  // scoped to the selected period — the video-performance fallback below is
+  // for channels with no real analytics access at all (basic mode). Gating
+  // it on "did this specific period's query return rows" instead used to
+  // make a wide period (90d/365d) legitimately return a real-but-incomplete
+  // period sum while a narrower period (7d/30d) whose window happened to
+  // miss the same real data silently substituted a completely different,
+  // unbounded lifetime total into the same field — producing a wider period
+  // showing FEWER views than a narrower one for the same channel.
+  const hasAnyAnalyticsData = await ChannelAnalytics.exists({ channelId: channelObjectId });
+
   const [current, previous] = await Promise.all([
     ChannelAnalytics.aggregate([
       {
         $match: {
-          channelId: require('mongoose').Types.ObjectId.createFromHexString(channelId),
+          channelId: channelObjectId,
           date: { $gte: startDate, $lte: endDate },
         },
       },
@@ -656,7 +719,7 @@ const getOverview = async (userId, channelId, period = '30d') => {
     ChannelAnalytics.aggregate([
       {
         $match: {
-          channelId: require('mongoose').Types.ObjectId.createFromHexString(channelId),
+          channelId: channelObjectId,
           date: { $gte: prevStartDate, $lt: startDate },
         },
       },
@@ -676,14 +739,19 @@ const getOverview = async (userId, channelId, period = '30d') => {
   let curr = current[0] || {};
   const prev = previous[0] || {};
 
-  // Fallback: if no ChannelAnalytics data, sum from Video.performance
-  // This happens when user has no yt-analytics scope and fallback sync hasn't run yet
-  if (!curr.totalViews && !curr.totalLikes) {
+  // Fallback: if this channel has NEVER synced any ChannelAnalytics row at
+  // all (not just "this period's window happened to miss the data"), sum
+  // from Video.performance instead — this is the real "no yt-analytics
+  // scope, fallback sync hasn't run yet" case. Deliberately NOT gated on
+  // `!curr.totalViews` (a real period sum of zero, e.g. a genuinely quiet
+  // week, must stay zero — it must not be silently replaced by an unbounded
+  // lifetime total).
+  if (!hasAnyAnalyticsData) {
     const mongoose = require('mongoose');
     const videoFallback = await Video.aggregate([
       {
         $match: {
-          channelId: mongoose.Types.ObjectId.createFromHexString(channelId),
+          channelId: channelObjectId,
           status: 'published',
           'performance.lastSyncedAt': { $exists: true },
         },
@@ -778,6 +846,7 @@ const getDailyGraph = async (userId, channelId, period = '30d', metric = 'views'
   if (cached) return cached;
 
   const days = parsePeriod(period);
+  const endDate = new Date();
   const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
   const metricField =
@@ -794,7 +863,7 @@ const getDailyGraph = async (userId, channelId, period = '30d', metric = 'views'
 
   const data = await ChannelAnalytics.find({
     channelId: require('mongoose').Types.ObjectId.createFromHexString(channelId),
-    date: { $gte: startDate },
+    date: { $gte: startDate, $lte: endDate },
   })
     .sort({ date: 1 })
     .select(`date ${metricField}`)
