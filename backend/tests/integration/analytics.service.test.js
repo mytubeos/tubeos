@@ -203,7 +203,7 @@ describe('analytics.service.getVideoBreakdown — channel analyticsMode passthro
     );
 
     expect(result.video.channel.analyticsMode).toBe('basic');
-    expect(result.totals.views).toBe(0); // no VideoAnalytics rows exist for this video
+    expect(result.totals.views).toBe(0); // no performance.views set on this video
   });
 
   it('reflects full mode when the channel has real Analytics access', async () => {
@@ -242,6 +242,7 @@ describe("analytics.service.getVideoBreakdown — daily data bounded to the vide
       status: 'published',
       youtubeVideoId: 'yt_recent_1',
       publishedAt,
+      performance: { views: 8, likes: 3 },
     });
 
     await VideoAnalytics.create({
@@ -292,6 +293,7 @@ describe("analytics.service.getVideoBreakdown — daily data bounded to the vide
       status: 'published',
       youtubeVideoId: 'yt_lazy_1',
       publishedAt,
+      performance: { views: 8, likes: 3 },
     });
 
     // Only a stray pre-publish row exists -- the initial bounded query
@@ -373,7 +375,89 @@ describe("analytics.service.getVideoBreakdown — daily data bounded to the vide
 
     expect(result.daily).toHaveLength(1);
     expect(result.daily[0].date).toBe(recentDate.toISOString().split('T')[0]);
-    expect(result.totals.views).toBe(20);
+    // Not asserting result.totals.views here — that now comes from
+    // video.performance.views (Data API lifetime total), unrelated to this
+    // test's actual concern (the daily breakdown's 1-year date cap).
+  });
+});
+
+describe('analytics.service.getVideoBreakdown — views/likes totals use the Data API, not the Analytics API daily sum', () => {
+  // Regression test for a real bug reported by a live user: the exact same
+  // video showed 8 views/4 likes on the Videos list page (sourced from
+  // video.performance, i.e. the YouTube Data API's videos.list statistics —
+  // authoritative, no lag) but only 2 views/2 likes on this video's own
+  // Analytics detail page (previously summed from the YouTube Analytics
+  // API's per-day breakdown, which has YouTube's own well-known 24-48h
+  // reporting lag on recent days — the same gap YouTube Studio itself
+  // warns about). Fixed by sourcing totals.views/likes from
+  // video.performance directly, matching the Videos list page, so the two
+  // pages can never disagree about the same video's lifetime totals again.
+  it('reports the Data API lifetime totals even when they are higher than the incomplete Analytics-API daily sum', async () => {
+    const { user, channel } = await createFixtures({ analyticsMode: 'full' });
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'MP Tribal Museum: 5 Lessons from Our Educational Trip',
+      status: 'published',
+      youtubeVideoId: 'yt_real_totals_1',
+      publishedAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000),
+      // The real, authoritative lifetime totals — same numbers YouTube
+      // itself shows, and what the Videos list page already displays.
+      performance: { views: 8, likes: 4 },
+    });
+
+    // Analytics API's daily breakdown hasn't fully caught up yet — classic
+    // reporting-lag scenario, undercounting against the real total above.
+    await VideoAnalytics.create({
+      userId: user._id,
+      channelId: channel._id,
+      videoId: video._id,
+      youtubeVideoId: video.youtubeVideoId,
+      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      metrics: { views: 2, likes: 2 },
+    });
+
+    const result = await analyticsService.getVideoBreakdown(
+      user._id.toString(),
+      video._id.toString()
+    );
+
+    expect(result.totals.views).toBe(8);
+    expect(result.totals.likes).toBe(4);
+    // The daily breakdown itself is untouched — still genuinely sourced
+    // from the Analytics API, since there's no Data API equivalent for a
+    // day-by-day trend. Only the headline totals changed source.
+    expect(result.daily).toHaveLength(1);
+    expect(result.daily[0].views).toBe(2);
+  });
+
+  it('falls back to 0 (not the Analytics-API sum) when the video has never had a Data API stats sync', async () => {
+    const { user, channel } = await createFixtures({ analyticsMode: 'full' });
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'Never Stats-Synced Video',
+      status: 'published',
+      youtubeVideoId: 'yt_no_perf_1',
+      // No `performance` field at all.
+    });
+
+    await VideoAnalytics.create({
+      userId: user._id,
+      channelId: channel._id,
+      videoId: video._id,
+      youtubeVideoId: video.youtubeVideoId,
+      date: new Date(),
+      metrics: { views: 50, likes: 10 },
+    });
+
+    const result = await analyticsService.getVideoBreakdown(
+      user._id.toString(),
+      video._id.toString()
+    );
+
+    expect(result.totals.views).toBe(0);
+    expect(result.totals.likes).toBe(0);
   });
 });
 

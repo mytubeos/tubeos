@@ -747,7 +747,6 @@ const getOverview = async (userId, channelId, period = '30d') => {
   // week, must stay zero — it must not be silently replaced by an unbounded
   // lifetime total).
   if (!hasAnyAnalyticsData) {
-    const mongoose = require('mongoose');
     const videoFallback = await Video.aggregate([
       {
         $match: {
@@ -1080,7 +1079,11 @@ const getVideoBreakdown = async (userId, videoId) => {
     }
   }
 
-  // Aggregate totals
+  // Aggregate totals from the daily (YouTube Analytics API) breakdown —
+  // used below for watchTime/comments/impressions/revenue, which have no
+  // Data API equivalent. views/likes are overridden right after with the
+  // Data API's lifetime totals instead (see comment below) — kept here only
+  // so the reduce shape stays uniform.
   const totals = dailyData.reduce(
     (acc, d) => ({
       views: acc.views + (d.metrics.views || 0),
@@ -1092,6 +1095,20 @@ const getVideoBreakdown = async (userId, videoId) => {
     }),
     { views: 0, watchTime: 0, likes: 0, comments: 0, impressions: 0, revenue: 0 }
   );
+
+  // Views/likes: use the YouTube Data API's lifetime totals (same source
+  // Videos.jsx's list already reads via video.performance.views/likes),
+  // NOT the Analytics-API daily sum above. The Analytics API has YouTube's
+  // own well-known 24-48h reporting lag on recent days, so summing it
+  // undercounts against the real total — this was surfacing as the same
+  // video showing two different view/like counts on two different Vezrin
+  // pages. This page has no period selector (always effectively lifetime,
+  // capped at 1yr for old videos), so the Data API's lifetime count is the
+  // semantically correct source, not just a convenient patch. watchTime/
+  // impressions/CTR/revenue genuinely have no Data API equivalent and stay
+  // sourced from the daily breakdown.
+  totals.views = video.performance?.views || 0;
+  totals.likes = video.performance?.likes || 0;
 
   const result = {
     video: {
