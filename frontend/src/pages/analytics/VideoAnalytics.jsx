@@ -68,8 +68,15 @@ export const VideoAnalytics = () => {
   // real total shown above, sometimes permanently, with no way to make the
   // two reconcile. Not a sync failure — flagged here so a lower daily sum
   // than the headline total isn't mistaken for one.
+  // Threshold (not "any gap at all"): live-checked and even a well-trafficked
+  // video with a genuinely complete-looking chart had a small, harmless gap
+  // between the two APIs — a near-universal Data-API-vs-Analytics-API
+  // discrepancy, not something worth a banner every single time. Only
+  // surface this when the daily breakdown accounts for under 80% of the
+  // real total, i.e. the chart itself would visibly look incomplete.
   const dailyViewsSum = (daily || []).reduce((sum, d) => sum + (d.views || 0), 0)
-  const hasIncompleteDaily = !hasNoDailyData && dailyViewsSum < totals.views
+  const hasIncompleteDaily =
+    !hasNoDailyData && totals.views > 0 && dailyViewsSum < totals.views * 0.8
 
   const METRICS = [
     { key: 'views', label: 'Views', color: '#00A0FD' },
