@@ -61,22 +61,31 @@ export const VideoAnalytics = () => {
   const isFullAnalytics = video.channel?.analyticsMode === 'full'
 
   // Total Views/Likes above come from YouTube's Data API (real-time,
-  // authoritative). The Daily Performance chart below is a genuinely
-  // different source — YouTube's Analytics API — which only attributes a
-  // view to a specific calendar day once it has enough traffic to process;
-  // low-view videos routinely end up with a day-by-day sum lower than the
-  // real total shown above, sometimes permanently, with no way to make the
-  // two reconcile. Not a sync failure — flagged here so a lower daily sum
-  // than the headline total isn't mistaken for one.
-  // Threshold (not "any gap at all"): live-checked and even a well-trafficked
-  // video with a genuinely complete-looking chart had a small, harmless gap
-  // between the two APIs — a near-universal Data-API-vs-Analytics-API
-  // discrepancy, not something worth a banner every single time. Only
-  // surface this when the daily breakdown accounts for under 80% of the
-  // real total, i.e. the chart itself would visibly look incomplete.
+  // all-time, authoritative). The Daily Performance chart below comes from
+  // a genuinely different source (YouTube's Analytics API) AND is capped to
+  // the trailing 1 year (see the sinceDate comment on the backend) — so its
+  // sum can legitimately fall well short of the real total above, for two
+  // distinct reasons confirmed live on two different real videos:
+  //   - the video is older than a year: most of its views may have happened
+  //     in its first months, outside the visible 1-year window entirely
+  //     (checked live: an 18-month-old 671-view video's in-window daily sum
+  //     was just 11 — nowhere near a rounding gap)
+  //   - the video is recent but low-traffic: YouTube's Analytics API only
+  //     attributes a view to a specific day once it has enough traffic to
+  //     process, so a handful of real views can simply never get a
+  //     day-by-day home (checked live: a 2-week-old 9-view video's daily
+  //     sum was 2)
+  // Threshold (not "any gap at all"): a well-trafficked recent video's daily
+  // sum came in only slightly under its total — ordinary cross-API variance,
+  // not worth a banner. Only surface this when the daily breakdown accounts
+  // for under 80% of the real total, i.e. the chart would visibly look
+  // incomplete, not just slightly off.
   const dailyViewsSum = (daily || []).reduce((sum, d) => sum + (d.views || 0), 0)
   const hasIncompleteDaily =
     !hasNoDailyData && totals.views > 0 && dailyViewsSum < totals.views * 0.8
+  const isOlderThanOneYear =
+    video.publishedAt &&
+    Date.now() - new Date(video.publishedAt).getTime() > 365 * 24 * 60 * 60 * 1000
 
   const METRICS = [
     { key: 'views', label: 'Views', color: '#00A0FD' },
@@ -194,10 +203,20 @@ export const VideoAnalytics = () => {
               Daily chart below may not add up to Total Views
             </p>
             <p className="text-xs text-gray-500 mt-0.5">
-              Total Views above is YouTube's real, live count — always accurate. The day-by-day
-              chart comes from a separate YouTube report that only attributes a view to a specific
-              day once the video gets enough traffic, so lower-view videos often show a daily total
-              lower than the real count above. This is a YouTube limitation, not a sync issue.
+              Total Views above is YouTube's real, all-time count — always accurate.{' '}
+              {isOlderThanOneYear ? (
+                <>
+                  This video is over a year old and the chart below only covers the trailing 12
+                  months, so views from its first months aren't reflected in it.
+                </>
+              ) : (
+                <>
+                  The day-by-day chart comes from a separate YouTube report that only attributes a
+                  view to a specific day once the video gets enough traffic, so lower-view videos
+                  often show a daily total lower than the real count above.
+                </>
+              )}{' '}
+              This is expected, not a sync issue.
             </p>
           </div>
         </div>
