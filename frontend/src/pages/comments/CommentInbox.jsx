@@ -1,5 +1,5 @@
 // src/pages/comments/CommentInbox.jsx
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { MessageCircle, RefreshCw, Search, Sparkles, CheckCheck, ListChecks } from 'lucide-react'
 import { useChannelStore } from '../../store/channelStore'
 import { aiApi } from '../../api/ai.api'
@@ -45,9 +45,14 @@ export const CommentInbox = () => {
   const [bulkGenerating, setBulkGenerating] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
 
-  const fetchComments = async () => {
+  // `silent` skips the `loading` (full shimmer) toggle — used when refreshing
+  // data behind the scenes (e.g. after auto-sync) so it doesn't fight the
+  // mount-time fetch's own loading state and flip the empty-state view back
+  // to a shimmer mid-render. `syncing` already covers the visible "something
+  // is happening" indicator for that case.
+  const fetchComments = async ({ silent = false } = {}) => {
     if (!channelId) return
-    setLoading(true)
+    if (!silent) setLoading(true)
     try {
       const params = { page, limit: 20 }
       if (statusFilter) params.status = statusFilter
@@ -61,7 +66,7 @@ export const CommentInbox = () => {
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load comments')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
@@ -69,7 +74,18 @@ export const CommentInbox = () => {
     fetchComments()
   }, [channelId, statusFilter, sentimentFilter, page])
 
+  // Skip the very first run — the effect above already fetches with the
+  // current (initial) `search` value on mount, so debounce-firing here too
+  // would be a redundant duplicate fetch that also re-toggles `loading`,
+  // competing with the mount fetch and the auto-sync effect below over the
+  // same shimmer/empty-state view. Only real subsequent search input should
+  // debounce-refetch.
+  const isFirstSearchRun = useRef(true)
   useEffect(() => {
+    if (isFirstSearchRun.current) {
+      isFirstSearchRun.current = false
+      return
+    }
     const timer = setTimeout(() => {
       if (channelId) fetchComments()
     }, 400)
@@ -82,7 +98,7 @@ export const CommentInbox = () => {
     try {
       const res = await aiApi.syncComments(channelId)
       toast.success(res.data.message || 'Comments synced!')
-      fetchComments()
+      fetchComments({ silent: true })
     } catch (err) {
       toast.error(err.response?.data?.message || 'Sync failed')
     } finally {
