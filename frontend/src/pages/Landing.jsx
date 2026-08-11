@@ -106,7 +106,7 @@ const PLANS = [
     features: [
       '25 channels',
       'Unlimited AI replies',
-      'White-label dashboard',
+      'White-label reports',
       'Priority support',
       'Unlimited uploads',
     ],
