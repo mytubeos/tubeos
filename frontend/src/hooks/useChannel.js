@@ -19,6 +19,10 @@ export const useChannel = () => {
       if (result.success) {
         toast.success(result.channel ? `"${result.channel}" connected!` : 'YouTube connected!')
         await fetchChannels()
+        // Backend kicks off an analytics sync in the background right after connect
+        // (fire-and-forget) — refetch once more a few seconds later so analyticsMode
+        // flipping to 'full' shows up without the user needing a manual refresh.
+        setTimeout(() => fetchChannels(), 4000)
       } else if (result.error && result.error !== 'popup_closed') {
         const msgs = {
           access_denied: 'You cancelled the YouTube connection.',
@@ -130,8 +134,9 @@ export const useChannel = () => {
         const result = await youtubeApi.connectChannel(authUrl)
 
         if (result.success) {
-          toast.success('Analytics access granted! Sync now for real data.')
+          toast.success('Analytics access granted — syncing your data now.')
           await fetchChannels()
+          setTimeout(() => fetchChannels(), 4000)
         } else if (result.error && result.error !== 'popup_closed') {
           const msgs = {
             access_denied: 'You cancelled. Analytics access not granted.',

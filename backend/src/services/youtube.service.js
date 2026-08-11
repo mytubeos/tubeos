@@ -150,6 +150,25 @@ const handleOAuthCallback = async (code, state) => {
       .catch((err) => logger.error('[youtube] Initial video sync failed', { error: err.message }));
   });
 
+  // 9. Fire-and-forget: attempt a real analytics sync immediately, so channels
+  // whose grant already covers yt-analytics.readonly (the common case — the
+  // connect popup requests the full scope bundle in one grant) get
+  // analyticsMode: 'full' right away instead of waiting on the next cron run
+  // or a manual "Enable Analytics" click. Safe no-op for the rest: a token
+  // without analytics scope 403s and syncChannelAnalytics already falls back
+  // to analyticsMode: 'basic', which is exactly what leaves "Enable Analytics"
+  // visible for them to (re-)grant.
+  setImmediate(() => {
+    require('./analytics.service')
+      .syncChannelAnalytics(channel._id, userId)
+      .catch((err) => logger.error('[youtube] Initial analytics sync failed', { error: err.message }))
+      // syncChannelAnalytics only invalidates the analytics-data cache, not the
+      // channel-list cache the frontend's needsAnalytics flag is read from —
+      // without this, a real analyticsMode: 'full' write could stay masked by
+      // the list cache's 5-minute TTL and still show "Enable Analytics".
+      .finally(() => invalidateChannelCache(userId));
+  });
+
   return {
     channel: sanitizeChannel(channel),
     message: `YouTube channel "${channel.channelName}" connected successfully!`,
