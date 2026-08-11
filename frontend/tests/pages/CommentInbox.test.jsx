@@ -41,6 +41,10 @@ beforeEach(() => {
   aiApi.getInbox.mockResolvedValue({
     data: { data: [commentWithAiReply], meta: { stats: {}, pagination: { total: 1 } } },
   })
+  // CommentInbox now auto-syncs from YouTube once per channel on mount (no more
+  // manual-click-only sync) — give it a resolved shape so that background call
+  // doesn't reject and fire an unrelated "Sync failed" toast in every test.
+  aiApi.syncComments.mockResolvedValue({ data: { message: 'Comments synced!' } })
 })
 
 describe('CommentInbox — Post Reply regression', () => {

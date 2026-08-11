@@ -90,6 +90,15 @@ export const CommentInbox = () => {
     }
   }
 
+  // Auto-sync fresh comments from YouTube once whenever the viewed channel
+  // changes, instead of requiring a manual "Sync Comments" click every visit.
+  // Runs alongside the fetchComments-on-mount effect above (that one only
+  // reads what's already in our DB) — same real network call the button
+  // triggers, just fired automatically on channel switch/first load.
+  useEffect(() => {
+    if (channelId) handleSync()
+  }, [channelId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleGenerateReply = async (commentId, tone = 'friendly') => {
     setGeneratingId(commentId)
     try {
