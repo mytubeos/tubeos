@@ -38,9 +38,43 @@ let connection = null;
  * Start BullMQ queue + worker and register repeatable jobs.
  * Returns true on success, throws on failure (caller decides fallback).
  */
+const REDIS_PROBE_TIMEOUT_MS = 5000;
+
 const startWorkers = async () => {
   const redisUrl = process.env.REDIS_URL;
   if (!redisUrl) throw new Error('REDIS_URL not set');
+
+  // Probe with a short-lived, fast-failing client BEFORE touching the real
+  // BullMQ connection below. The real connection needs maxRetriesPerRequest:
+  // null (required for BullMQ's blocking commands) and a retryStrategy that
+  // always returns a delay (never gives up) -- which also means a command on
+  // that client can never reject on its own if Redis is unreachable, only
+  // hang forever (confirmed: a dead/unresolvable REDIS_URL host hung this
+  // function, and therefore the whole server boot, indefinitely instead of
+  // throwing so server.js's try/catch could fall back to the cron scheduler
+  // like it's designed to). This probe uses the opposite settings --
+  // capped retries, a retryStrategy that gives up, and a hard timeout --
+  // specifically so a dead Redis fails fast here instead.
+  const probe = new IORedis(redisUrl, {
+    maxRetriesPerRequest: 1,
+    enableReadyCheck: false,
+    tls: redisUrl.startsWith('rediss://') ? {} : undefined,
+    retryStrategy: () => null,
+    lazyConnect: true,
+  });
+  try {
+    await Promise.race([
+      probe.connect().then(() => probe.ping()),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Redis probe timed out after ${REDIS_PROBE_TIMEOUT_MS}ms`)),
+          REDIS_PROBE_TIMEOUT_MS
+        )
+      ),
+    ]);
+  } finally {
+    probe.disconnect();
+  }
 
   // BullMQ requires maxRetriesPerRequest: null (blocking commands must not have retry cap)
   connection = new IORedis(redisUrl, {
@@ -50,7 +84,8 @@ const startWorkers = async () => {
     retryStrategy: (times) => Math.min(times * 500, 3000),
   });
 
-  // Test connection and evalsha support before committing
+  // Redis is confirmed reachable via the probe above -- this ping just
+  // confirms the long-lived connection itself came up cleanly.
   await connection.ping();
 
   queue = new Queue(QUEUE_NAME, { connection });
