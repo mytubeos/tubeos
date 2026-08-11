@@ -60,6 +60,17 @@ export const VideoAnalytics = () => {
     Date.now() - new Date(video.publishedAt).getTime() < 2 * 24 * 60 * 60 * 1000
   const isFullAnalytics = video.channel?.analyticsMode === 'full'
 
+  // Total Views/Likes above come from YouTube's Data API (real-time,
+  // authoritative). The Daily Performance chart below is a genuinely
+  // different source — YouTube's Analytics API — which only attributes a
+  // view to a specific calendar day once it has enough traffic to process;
+  // low-view videos routinely end up with a day-by-day sum lower than the
+  // real total shown above, sometimes permanently, with no way to make the
+  // two reconcile. Not a sync failure — flagged here so a lower daily sum
+  // than the headline total isn't mistaken for one.
+  const dailyViewsSum = (daily || []).reduce((sum, d) => sum + (d.views || 0), 0)
+  const hasIncompleteDaily = !hasNoDailyData && dailyViewsSum < totals.views
+
   const METRICS = [
     { key: 'views', label: 'Views', color: '#00A0FD' },
     { key: 'watchTime', label: 'Watch Time', color: '#10B981' },
@@ -164,6 +175,22 @@ export const VideoAnalytics = () => {
             <p className="text-xs text-gray-500 mt-0.5">
               Try clicking Sync on the Dashboard or Analytics page to refresh this video's daily
               breakdown.
+            </p>
+          </div>
+        </div>
+      )}
+      {hasIncompleteDaily && (
+        <div className="flex items-center gap-3 p-4 rounded-xl border border-white/10 bg-white/[0.02]">
+          <BarChart2 size={18} className="text-gray-400 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white">
+              Daily chart below may not add up to Total Views
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Total Views above is YouTube's real, live count — always accurate. The day-by-day
+              chart comes from a separate YouTube report that only attributes a view to a specific
+              day once the video gets enough traffic, so lower-view videos often show a daily total
+              lower than the real count above. This is a YouTube limitation, not a sync issue.
             </p>
           </div>
         </div>
