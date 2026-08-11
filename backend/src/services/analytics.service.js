@@ -1043,10 +1043,19 @@ const getVideoBreakdown = async (userId, videoId) => {
     .sort({ date: 1 })
     .lean();
 
-  // Lazy sync: this video hasn't had its per-day breakdown pulled yet
-  // (e.g. it wasn't in the top-N videos synced by the channel-wide sync).
-  // Fetch it on demand so the page isn't permanently empty.
-  if (dailyData.length === 0 && video.youtubeVideoId) {
+  // Lazy sync: this video's per-day breakdown is missing or stale (e.g. it
+  // wasn't in the top-N videos synced by the channel-wide sync, or it WAS
+  // included once but later fell out of the top-N as other videos overtook
+  // it in views — that earlier partial sync then sits frozen forever,
+  // showing a chart that stops mid-way while Total Views (Data API) keeps
+  // climbing). Re-fetch whenever there's no data at all, or the most recent
+  // row is more than a day old, so the page never gets permanently stuck on
+  // a stale breakdown just because this video isn't "popular enough" for
+  // the regular channel-wide sync to keep covering it.
+  const mostRecentRow = dailyData[dailyData.length - 1];
+  const isStale =
+    dailyData.length === 0 || Date.now() - mostRecentRow.date.getTime() > 24 * 60 * 60 * 1000;
+  if (isStale && video.youtubeVideoId) {
     try {
       const channel = await YoutubeChannel.findOne({
         _id: video.channelId._id || video.channelId,

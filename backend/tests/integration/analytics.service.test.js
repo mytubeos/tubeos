@@ -461,6 +461,102 @@ describe('analytics.service.getVideoBreakdown — views/likes totals use the Dat
   });
 });
 
+describe('analytics.service.getVideoBreakdown — re-syncs a stale daily breakdown, not just an empty one', () => {
+  // Regression test for a real bug reported by a live user: a low-view video
+  // that had fallen out of the channel-wide sync's top-N (syncTopVideoAnalytics
+  // only covers the top 20 by views) got ONE early VideoAnalytics row from
+  // back when it was still in that top-N, then was frozen forever — the old
+  // lazy-sync condition (`dailyData.length === 0`) never re-fired once any
+  // row existed, so the "Daily Performance" chart kept showing a flat line
+  // at 0 for every day after that single stale row while Total Views (now
+  // correctly Data-API-sourced) kept climbing. Confirmed live: a video
+  // published 28 Jul with a real Data API total of 9 views showed a chart
+  // with a single point on 29 Jul (2 views) then a flat 0 line all the way
+  // to today.
+  it('re-fetches when the most recent daily row is more than 24h old', async () => {
+    const { user, channel } = await createFixtures({ analyticsMode: 'full' });
+    const publishedAt = new Date(Date.now() - 12 * 24 * 60 * 60 * 1000);
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'Fell Out Of Top-N Video',
+      status: 'published',
+      youtubeVideoId: 'yt_stale_1',
+      publishedAt,
+      performance: { views: 9, likes: 4 },
+    });
+
+    // One real row from an earlier sync, now 10 days stale — this is
+    // exactly the "frozen after falling out of top-N" shape.
+    await VideoAnalytics.create({
+      userId: user._id,
+      channelId: channel._id,
+      videoId: video._id,
+      youtubeVideoId: video.youtubeVideoId,
+      date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+      metrics: { views: 2, likes: 1 },
+    });
+
+    const freshDay = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const fetchMock = vi.fn(async (url) => {
+      const urlStr = String(url);
+      if (urlStr.includes('youtubeanalytics.googleapis.com')) {
+        return {
+          ok: true,
+          json: async () => ({
+            columnHeaders: [{ name: 'day' }, { name: 'views' }, { name: 'likes' }],
+            rows: [[freshDay, 7, 3]],
+          }),
+        };
+      }
+      throw new Error(`Unexpected fetch URL in test: ${urlStr}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await analyticsService.getVideoBreakdown(
+      user._id.toString(),
+      video._id.toString()
+    );
+
+    // The re-sync ran (fetch was actually called against the Analytics API)
+    // and the new, more recent row is now present in the daily breakdown —
+    // the chart is no longer frozen on the 10-day-old point alone.
+    expect(fetchMock).toHaveBeenCalled();
+    expect(result.daily.some((d) => d.date === freshDay)).toBe(true);
+  });
+
+  it('does not re-fetch when the most recent daily row is less than 24h old', async () => {
+    const { user, channel } = await createFixtures({ analyticsMode: 'full' });
+    const video = await Video.create({
+      userId: user._id,
+      channelId: channel._id,
+      title: 'Recently Synced Video',
+      status: 'published',
+      youtubeVideoId: 'yt_fresh_1',
+      publishedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      performance: { views: 5, likes: 2 },
+    });
+
+    await VideoAnalytics.create({
+      userId: user._id,
+      channelId: channel._id,
+      videoId: video._id,
+      youtubeVideoId: video.youtubeVideoId,
+      date: new Date(), // today — fresh
+      metrics: { views: 5, likes: 2 },
+    });
+
+    const fetchMock = vi.fn(async () => {
+      throw new Error('fetch should not have been called — data is fresh');
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await analyticsService.getVideoBreakdown(user._id.toString(), video._id.toString());
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('analytics.service.invalidateAnalyticsCache — per-video cache busting', () => {
   // Regression test: getVideoBreakdown() caches per-video (analytics:video:ID),
   // but invalidateAnalyticsCache(channelId) -- called every time Sync runs --
