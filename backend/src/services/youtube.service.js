@@ -161,7 +161,9 @@ const handleOAuthCallback = async (code, state) => {
   setImmediate(() => {
     require('./analytics.service')
       .syncChannelAnalytics(channel._id, userId)
-      .catch((err) => logger.error('[youtube] Initial analytics sync failed', { error: err.message }))
+      .catch((err) =>
+        logger.error('[youtube] Initial analytics sync failed', { error: err.message })
+      )
       // syncChannelAnalytics only invalidates the analytics-data cache, not the
       // channel-list cache the frontend's needsAnalytics flag is read from —
       // without this, a real analyticsMode: 'full' write could stay masked by
