@@ -86,10 +86,14 @@ const getModelForPlan = (plan, task = 'default') => {
   const freeModel = process.env.GROQ_API_KEY ? AI_MODELS.groq : AI_MODELS.gemini;
   if (testMode) return freeModel;
 
-  // Free plan stays on the free Gemini tier regardless of task/feature.
-  if (plan === 'free') return AI_MODELS.gemini;
-
   const tier = TASK_TIERS[task] || TASK_TIERS.default;
+
+  // Free plan: text tasks use the free Groq tier (Gemini only if
+  // GROQ_API_KEY isn't set) — Google blocked new API users from
+  // gemini-2.5-flash-lite on 2026-08-12, so Gemini alone can no longer carry
+  // every free-plan task. Vision stays on Gemini regardless of plan since
+  // Groq has no vision support.
+  if (plan === 'free') return tier === 'vision' ? AI_MODELS.gemini : freeModel;
 
   if (tier === 'vision') return AI_MODELS.gemini;
   if (tier === 'bulk') return bulkModel;
