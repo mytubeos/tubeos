@@ -41,13 +41,18 @@ const FEATURES_TABLE = [
   {
     category: 'AI Features',
     features: [
-      { name: 'AI comment replies/mo', free: '0', creator: '500', pro: '1200', agency: '∞' },
+      { name: 'AI comment replies/mo', free: '10', creator: '500', pro: '1200', agency: '∞' },
       { name: 'Bulk AI replies', free: false, creator: false, pro: true, agency: true },
       { name: 'Auto-reply mode', free: false, creator: false, pro: true, agency: true },
-      { name: 'Titles + Descriptions', free: false, creator: '20/mo', pro: '50/mo', agency: '∞' },
-      { name: 'Video Scripts', free: false, creator: '30/mo', pro: '60/mo', agency: '∞' },
-      { name: 'Thumbnail Ideas', free: '5/mo', creator: '50/mo', pro: '100/mo', agency: '∞' },
-      { name: 'Content Niche Ideas', free: false, creator: false, pro: true, agency: true },
+      {
+        name: 'Titles, Tags, Descriptions, SEO & Scripts',
+        free: '20/mo',
+        creator: '500/mo',
+        pro: '2000/mo',
+        agency: '∞',
+      },
+      { name: 'Thumbnail Ideas', free: '5/mo', creator: '5/mo', pro: '15/mo', agency: '50/mo' },
+      { name: 'Content Niche Ideas', free: true, creator: true, pro: true, agency: true },
     ],
   },
   {
