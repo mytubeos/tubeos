@@ -129,7 +129,7 @@ router.post('/content/seo', protect, checkUsageLimit('aiContent'), aiController.
  * @access  Private
  * @query   channelId?, niche?, count?
  */
-router.get('/content/ideas', protect, aiController.getContentIdeas);
+router.get('/content/ideas', protect, checkUsageLimit('aiContent'), aiController.getContentIdeas);
 
 // ==================== SHORTS INTELLIGENCE ====================
 

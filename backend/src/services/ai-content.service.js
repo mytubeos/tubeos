@@ -197,6 +197,7 @@ Return ONLY valid JSON array:
 
   const response = { ideas, niche, generatedAt: new Date() };
   await setCache(cacheKey, response, 60 * 60 * 6); // 6hr cache
+  await User.findByIdAndUpdate(userId, { $inc: { 'usage.aiContentUsed': 1 } });
   return response;
 };
 
