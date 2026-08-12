@@ -59,7 +59,7 @@ const cropToFile = (imageSrc, cropPixels) =>
 
 export const ThumbnailGeneratorModal = ({ isOpen, onClose, defaultTitle = '', onCropped }) => {
   const { user } = useAuthStore()
-  const canGenerate = ['creator', 'pro', 'agency'].includes(user?.plan)
+  const canGenerate = ['free', 'creator', 'pro', 'agency'].includes(user?.plan)
 
   const [title, setTitle] = useState(defaultTitle)
   const [niche, setNiche] = useState('')

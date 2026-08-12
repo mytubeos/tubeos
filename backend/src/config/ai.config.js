@@ -88,12 +88,16 @@ const getModelForPlan = (plan, task = 'default') => {
 
   const tier = TASK_TIERS[task] || TASK_TIERS.default;
 
-  // Free plan: text tasks use the free Groq tier (Gemini only if
-  // GROQ_API_KEY isn't set) — Google blocked new API users from
-  // gemini-2.5-flash-lite on 2026-08-12, so Gemini alone can no longer carry
-  // every free-plan task. Vision stays on Gemini regardless of plan since
-  // Groq has no vision support.
-  if (plan === 'free') return tier === 'vision' ? AI_MODELS.gemini : freeModel;
+  // Free plan: text tasks use DeepSeek Flash (2026-08-12 — small deliberate
+  // cost the founder chose to absorb for a better free-tier experience than
+  // Groq's llama-3.3; ~$0.005-0.007/user/month at the 20-call/mo aiContent
+  // cap, see AI_MODEL_COST_COMPARISON.md). Falls back to the free Groq/Gemini
+  // tier if DEEPSEEK_API_KEY isn't configured. Vision stays on Gemini
+  // regardless of plan since Groq has no vision support.
+  if (plan === 'free') {
+    if (tier === 'vision') return AI_MODELS.gemini;
+    return process.env.DEEPSEEK_API_KEY ? AI_MODELS.deepseekFlash : freeModel;
+  }
 
   if (tier === 'vision') return AI_MODELS.gemini;
   if (tier === 'bulk') return bulkModel;

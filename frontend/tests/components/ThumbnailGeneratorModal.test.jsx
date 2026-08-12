@@ -50,12 +50,12 @@ describe('ThumbnailGeneratorModal', () => {
     })
   })
 
-  it('shows a locked notice below Creator plan, without calling the API', () => {
+  it('shows the generator form for Free plan (thumbnail gen is no longer Creator+-only)', () => {
     mockUser = { plan: 'free' }
     render(<ThumbnailGeneratorModal isOpen onClose={vi.fn()} onCropped={vi.fn()} />)
 
-    expect(screen.getByText(/upgrade to creator to unlock/i)).toBeInTheDocument()
-    expect(screen.queryByLabelText(/video title/i)).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/video title/i)).toBeInTheDocument()
+    expect(screen.queryByText(/upgrade to creator to unlock/i)).not.toBeInTheDocument()
   })
 
   it('requires a title before generating', async () => {

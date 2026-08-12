@@ -46,7 +46,7 @@ const FEATURES_TABLE = [
       { name: 'Auto-reply mode', free: false, creator: false, pro: true, agency: true },
       { name: 'Titles + Descriptions', free: false, creator: '20/mo', pro: '50/mo', agency: '∞' },
       { name: 'Video Scripts', free: false, creator: '30/mo', pro: '60/mo', agency: '∞' },
-      { name: 'Thumbnail Ideas', free: false, creator: '50/mo', pro: '100/mo', agency: '∞' },
+      { name: 'Thumbnail Ideas', free: '5/mo', creator: '50/mo', pro: '100/mo', agency: '∞' },
       { name: 'Content Niche Ideas', free: false, creator: false, pro: true, agency: true },
     ],
   },

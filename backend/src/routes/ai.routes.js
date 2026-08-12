@@ -185,14 +185,13 @@ router.post('/thumbnail/score', protect, requirePlan('creator'), aiController.sc
 
 /**
  * @route   POST /api/v1/ai/thumbnail/generate
- * @desc    AI-generate a YouTube thumbnail image (Gemini image-gen + Cloudinary)
- * @access  Private (Creator+)
+ * @desc    AI-generate a YouTube thumbnail image (Cloudflare Workers AI + Cloudinary)
+ * @access  Private (all plans — Free capped at 5/mo, see PLAN_LIMITS)
  * @body    { title, niche?, style?: 'bold'|'minimal'|'dramatic' }
  */
 router.post(
   '/thumbnail/generate',
   protect,
-  requirePlan('creator'),
   checkUsageLimit('thumbnailGen'),
   aiController.generateThumbnailImage
 );

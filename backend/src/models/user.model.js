@@ -305,9 +305,11 @@ userSchema.methods.incrementLoginCount = async function () {
 // ==================== USAGE LIMITS PER PLAN ====================
 // thumbnailGen kept separate from aiContent — image generation costs far more
 // per call than text generation, so it needs its own (much lower) cap to
-// protect margins even though both are gated behind the same Creator+ plans.
+// protect margins. Free now gets a small taste too (2026-08-12, Cloudflare
+// Workers AI's free daily quota already covers it) — no longer Creator+-only,
+// see ai.routes.js's /thumbnail/generate.
 const PLAN_LIMITS = {
-  free: { uploads: 0, aiReplies: 10, aiContent: 20, bulkReplies: 0, thumbnailGen: 0 },
+  free: { uploads: 0, aiReplies: 10, aiContent: 20, bulkReplies: 0, thumbnailGen: 5 },
   creator: { uploads: 5, aiReplies: 500, aiContent: 500, bulkReplies: 0, thumbnailGen: 5 },
   pro: { uploads: 20, aiReplies: 1200, aiContent: 2000, bulkReplies: 100, thumbnailGen: 15 },
   agency: {
