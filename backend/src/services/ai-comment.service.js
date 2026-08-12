@@ -202,7 +202,7 @@ const generateReply = async (userId, commentId, tone = 'friendly', isBulk = fals
   const user = await User.findById(userId);
 
   // Check usage limit
-  if (!user.hasUsageLeft('aiReplies')) {
+  if (!(await user.hasUsageLeft('aiReplies'))) {
     const err = new Error('Monthly AI reply limit reached. Please upgrade your plan.');
     err.statusCode = 429;
     throw err;
@@ -366,7 +366,7 @@ const getCommentInbox = async (userId, channelId, filters = {}) => {
 const bulkGenerateReplies = async (userId, channelId, commentIds, tone = 'friendly') => {
   const user = await User.findById(userId);
 
-  if (!user.hasUsageLeft('aiReplies')) {
+  if (!(await user.hasUsageLeft('aiReplies'))) {
     const err = new Error('Monthly AI reply limit reached');
     err.statusCode = 429;
     throw err;

@@ -16,6 +16,8 @@ const {
   deleteCoupon,
   getPricing,
   updatePricing,
+  getLimits,
+  updateLimits,
 } = require('../controllers/admin.controller');
 
 router.use(protect, adminProtect);
@@ -37,5 +39,9 @@ router.delete('/coupons/:id', deleteCoupon);
 // Pricing
 router.get('/pricing', getPricing);
 router.put('/pricing/:plan', updatePricing);
+
+// Plan feature limits
+router.get('/limits', getLimits);
+router.put('/limits/:plan', updateLimits);
 
 module.exports = router;

@@ -2,6 +2,7 @@
 // FIXED: User model with proper password hashing, validation, and security
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const planLimitService = require('../services/plan-limit.service');
 
 const userSchema = new mongoose.Schema(
   {
@@ -302,25 +303,6 @@ userSchema.methods.incrementLoginCount = async function () {
   await this.save();
 };
 
-// ==================== USAGE LIMITS PER PLAN ====================
-// thumbnailGen kept separate from aiContent — image generation costs far more
-// per call than text generation, so it needs its own (much lower) cap to
-// protect margins. Free now gets a small taste too (2026-08-12, Cloudflare
-// Workers AI's free daily quota already covers it) — no longer Creator+-only,
-// see ai.routes.js's /thumbnail/generate.
-const PLAN_LIMITS = {
-  free: { uploads: 0, aiReplies: 10, aiContent: 20, bulkReplies: 0, thumbnailGen: 5 },
-  creator: { uploads: 5, aiReplies: 500, aiContent: 500, bulkReplies: 0, thumbnailGen: 5 },
-  pro: { uploads: 20, aiReplies: 1200, aiContent: 2000, bulkReplies: 100, thumbnailGen: 15 },
-  agency: {
-    uploads: Infinity,
-    aiReplies: Infinity,
-    aiContent: Infinity,
-    bulkReplies: Infinity,
-    thumbnailGen: 50,
-  },
-};
-
 // Reset monthly counters if a calendar month has passed since lastResetAt
 userSchema.methods.resetMonthlyUsageIfNeeded = async function () {
   const last = this.usage?.lastResetAt ? new Date(this.usage.lastResetAt) : null;
@@ -343,18 +325,23 @@ userSchema.methods.resetMonthlyUsageIfNeeded = async function () {
 };
 
 // Check whether user has quota left for a given limit type
-//   type: 'uploads' | 'aiReplies' | 'aiContent' | 'bulkReplies'
-userSchema.methods.hasUsageLeft = function (type) {
-  const limit = PLAN_LIMITS[this.plan]?.[type] ?? 0;
-  if (limit === Infinity) return true;
+//   type: 'uploads' | 'aiReplies' | 'aiContent' | 'bulkReplies' | 'thumbnailGen'
+// Async since 2026-08-12 — limits are now admin-editable (plan-limit.service.js
+// reads them from Mongo, Redis-cached) instead of a hardcoded object. Every
+// existing caller was already inside an async function, so this only meant
+// adding `await` at each call site, not restructuring anything.
+userSchema.methods.hasUsageLeft = async function (type) {
+  const limits = await planLimitService.getLimitsForPlan(this.plan);
+  const limit = limits?.[type] ?? 0;
+  if (limit === null) return true; // unlimited
   const usedField = `${type}Used`;
   const used = this.usage?.[usedField] || 0;
   return used < limit;
 };
 
 // Get usage stats for the user's plan
-userSchema.methods.getUsageStats = function () {
-  const limits = PLAN_LIMITS[this.plan] || PLAN_LIMITS.free;
+userSchema.methods.getUsageStats = async function () {
+  const limits = await planLimitService.getLimitsForPlan(this.plan);
   return {
     uploads: { used: this.usage?.uploadsUsed || 0, limit: limits.uploads },
     aiReplies: { used: this.usage?.aiRepliesUsed || 0, limit: limits.aiReplies },
@@ -376,5 +363,4 @@ userSchema.methods.getPublicProfile = function () {
 };
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
-User.PLAN_LIMITS = PLAN_LIMITS;
 module.exports = User;

@@ -185,7 +185,7 @@ const uploadVideo = async (userId, videoId, fileRef, mimeType) => {
 
     // 4. Check user plan upload limit
     const user = await User.findById(userId);
-    if (!user.hasUsageLeft('uploads')) {
+    if (!(await user.hasUsageLeft('uploads'))) {
       const err = new Error(`Monthly upload limit reached. Upgrade your plan for more uploads.`);
       err.statusCode = 429;
       throw err;

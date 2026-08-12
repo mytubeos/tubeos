@@ -19,6 +19,10 @@ const adminAPI = {
   // Plan pricing (INR/EUR/USD)
   getPricing: () => api.get('/admin/pricing'),
   updatePricing: (plan, data) => api.put(`/admin/pricing/${plan}`, data),
+
+  // Plan feature limits (uploads, AI replies/content, bulk replies, thumbnails)
+  getLimits: () => api.get('/admin/limits'),
+  updateLimits: (plan, data) => api.put(`/admin/limits/${plan}`, data),
 }
 
 export default adminAPI

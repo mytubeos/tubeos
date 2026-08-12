@@ -1,6 +1,7 @@
 // src/controllers/admin.controller.js
 const couponService = require('../services/coupon.service');
 const pricingService = require('../services/pricing.service');
+const planLimitService = require('../services/plan-limit.service');
 const User = require('../models/user.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
 const { successResponse, errorResponse, paginatedResponse } = require('../utils/response.utils');
@@ -226,6 +227,26 @@ const updatePricing = async (req, res) => {
   }
 };
 
+// GET /api/v1/admin/limits
+const getLimits = async (req, res) => {
+  try {
+    const limits = await planLimitService.getAllLimits();
+    return successResponse(res, 200, 'Limits fetched', limits);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
+// PUT /api/v1/admin/limits/:plan
+const updateLimits = async (req, res) => {
+  try {
+    const result = await planLimitService.setLimits(req.params.plan, req.body, req.user.id);
+    return successResponse(res, 200, 'Limits updated', result);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
 module.exports = {
   getUserStats,
   listUsers,
@@ -239,4 +260,6 @@ module.exports = {
   deleteCoupon,
   getPricing,
   updatePricing,
+  getLimits,
+  updateLimits,
 };

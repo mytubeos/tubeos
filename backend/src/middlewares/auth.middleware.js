@@ -150,8 +150,8 @@ const checkUsageLimit = (limitType) => {
 
       await user.resetMonthlyUsageIfNeeded();
 
-      if (!user.hasUsageLeft(type)) {
-        const stats = user.getUsageStats();
+      if (!(await user.hasUsageLeft(type))) {
+        const stats = await user.getUsageStats();
         const limit = stats[type]?.limit;
         return errorResponse(
           res,
