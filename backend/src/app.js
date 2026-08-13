@@ -97,8 +97,16 @@ app.use((req, res, next) => {
     next();
   }
 });
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// RAW_BODY_URLS already fully drained req's stream above (and, for the
+// Razorpay route, already set req.body) — express.json()/urlencoded() must
+// not also try to read it, or they hang waiting on 'data'/'end' events that
+// already fired, since a Node stream can't be replayed for a second reader.
+const jsonParser = express.json({ limit: '10mb' });
+app.use((req, res, next) => (RAW_BODY_URLS.includes(req.originalUrl) ? next() : jsonParser(req, res, next)));
+const urlencodedParser = express.urlencoded({ extended: true, limit: '10mb' });
+app.use((req, res, next) =>
+  RAW_BODY_URLS.includes(req.originalUrl) ? next() : urlencodedParser(req, res, next)
+);
 app.use(cookieParser());
 
 // ==================== DATA SANITIZATION ====================
