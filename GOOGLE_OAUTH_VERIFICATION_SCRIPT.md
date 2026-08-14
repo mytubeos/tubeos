@@ -35,10 +35,12 @@ page and a real API call in this codebase — nothing generic/boilerplate.
 Narration is written in English deliberately — Google's reviewers need it in English (captions are
 fine if you'd rather dub afterward than talk live).
 
-**Scene 0 — Intro (0:00–0:20)**
-*Show: Vezrin login → Dashboard shell.*
-> "Hi — this is a walkthrough of Vezrin, a YouTube channel management and analytics platform for
-> creators. I'll show how Vezrin uses each Google permission it requests, one at a time."
+**Scene 0 — Sign in (0:00–0:20)**
+*Show: Vezrin's own sign-in page (not Google's), enter the test account's email/password, land on
+the Dashboard. This is Vezrin's own login, separate from the Google OAuth grant in Scene 1 — fine
+to show on screen since it's a disposable test account, not a real password.*
+> "Hi — this is Vezrin, a YouTube channel management and analytics platform for creators. I'm
+> signing in now, and I'll show how Vezrin uses each Google permission it requests, one at a time."
 
 **Scene 1 — Consent screen (0:20–0:50)**
 *Navigate to `/channels` → click "Connect YouTube Channel."*
