@@ -183,9 +183,29 @@ Drop the last line if there actually is a second GCP project using OAuth somewhe
 explicitly asks, and this repo/session has no visibility into the Cloud Console project list to
 confirm either way.
 
-## 5. Still open (not part of this script)
+## 5. Status: submitted 2026-08-15
 
-1. Re-check the OAuth user count against the 100-user cap — Cloud Console → OAuth consent screen →
-   Overview. Console-only, no API access to check this from code.
-2. Add `vezrin.com` under Authorized domains in the same Cloud Console screen.
-3. Click **Submit for review** once 1-2 and this video/text are in place.
+Clicked **Submit for review**. Google's confirmation ("Verification progress" panel): Trust & Safety
+team has the form, will email the contact address if they need anything, first contact expected
+3-5 days, full review up to 4-6 weeks. **"Your last approved consent screen is still in use"** —
+production is unaffected during review, the unverified-app warning behaves exactly as before until
+Google approves.
+
+Checklist Google is working through (shown in-app, no per-item timeline given): Homepage
+requirements, Privacy policy requirements, App functionality, Branding guidelines, Appropriate data
+access, Request minimum scopes, Additional requirements.
+
+**While waiting:**
+- Don't change publish status, user type, scopes, or the OAuth consent screen — Google's own
+  warning is that this can restart or delay the review clock.
+- Keep the test account (from §4's Additional info) and its password working and unchanged until
+  review actually concludes — don't rotate it early.
+- Keep the demoed features (Dashboard, Analytics, Upload, Videos edit/delete/thumbnail, Comments,
+  Settings) working roughly as shown — a reviewer may spot-check against the video.
+- Watch the Cloud Console contact email for the Trust & Safety team's first message.
+- **Not independently reverified before submitting:** items 1-2 below (user cap, Authorized
+  domains) — worth a self-check if not already confirmed, though the submission going through at
+  all suggests nothing was hard-blocking.
+
+1. OAuth user count vs the 100-user cap — Cloud Console → OAuth consent screen → Overview.
+2. `vezrin.com` under Authorized domains in the same Cloud Console screen.
