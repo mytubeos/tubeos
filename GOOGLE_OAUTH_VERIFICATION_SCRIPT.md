@@ -151,8 +151,39 @@ disposable test video.*
 1. Upload the video to YouTube as **Unlisted** (not private, not public).
 2. Paste that link into the Verification Center's demo video field.
 3. Paste the §2 text into each scope's justification box.
+4. Fill in the "Additional info" field on the verification questionnaire — see §4.
 
-## 4. Still open (not part of this script)
+## 4. "Additional info" field on the verification questionnaire
+
+Google's prompt: *"Share any final details about your app... test user credentials, project IDs of
+other projects that use OAuth, etc."* Worth filling in, not leaving blank — it can pre-empt a
+clarification round-trip that would otherwise add days to the review. Template:
+
+> **Test account for review:**
+> Email: [fill in — the Vezrin login for the account that owns the connected channel shown in the
+> demo video]
+> Password: [fill in — rotate it once review is done, standard hygiene for a shared credential]
+> This account already has a YouTube channel connected with real video/comment/analytics history,
+> matching what's shown in the demo video.
+>
+> **Note on scope overlap:** `youtube.readonly` and `youtube.upload` alone do not cover
+> `videos.update`, `videos.delete`, or `thumbnails.set` — confirmed via testing that all three
+> return 403 Insufficient Permission without the broader `youtube` scope. We request
+> `youtube.readonly` and `youtube.upload` explicitly rather than relying solely on the broader
+> `youtube` scope, so features needing only read or only upload access stay on the narrower scope
+> wherever possible.
+>
+> **Demo video timestamps:** [fill in your actual final cut's timestamps — approx per the script
+> above: 0:20 consent screen, 0:50 Dashboard, 1:20 Analytics/Heatmap, 2:00 Upload, 2:40 Videos
+> edit/delete/thumbnail, 3:20 Comments, 4:00 Settings]
+>
+> This is a single Google Cloud project — no other OAuth projects to disclose.
+
+Drop the last line if there actually is a second GCP project using OAuth somewhere — Google
+explicitly asks, and this repo/session has no visibility into the Cloud Console project list to
+confirm either way.
+
+## 5. Still open (not part of this script)
 
 1. Re-check the OAuth user count against the 100-user cap — Cloud Console → OAuth consent screen →
    Overview. Console-only, no API access to check this from code.
