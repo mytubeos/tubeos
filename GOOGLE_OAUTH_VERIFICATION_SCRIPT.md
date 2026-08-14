@@ -29,6 +29,11 @@ page and a real API call in this codebase — nothing generic/boilerplate.
 - Don't linger on the Google password field on camera — stay logged in beforehand, or trim that
   second out in a quick edit.
 - Target length: ~4-5 minutes. Google wants clarity, not padding.
+- **Confirm Cloud Console → OAuth consent screen → Branding has both Privacy Policy URL
+  (`https://vezrin.com/privacy`) and Terms of Service URL (`https://vezrin.com/terms`) filled in.**
+  Google only renders those links on the consent screen (Scene 1) when both fields are set — this
+  is a Console-only setting, can't be checked from here, so verify it yourself before recording or
+  Scene 1's Privacy Policy callout will have nothing to point at.
 
 ## 1. Shot-by-shot script
 
@@ -42,12 +47,21 @@ to show on screen since it's a disposable test account, not a real password.*
 > "Hi — this is Vezrin, a YouTube channel management and analytics platform for creators. I'm
 > signing in now, and I'll show how Vezrin uses each Google permission it requests, one at a time."
 
-**Scene 1 — Consent screen (0:20–0:50)**
+**Scene 1 — Consent screen + Privacy Policy (0:20–1:00)**
 *Navigate to `/channels` → click "Connect YouTube Channel."*
 > "To link a creator's channel, Vezrin sends them through Google's OAuth consent screen — this is
 > exactly what the user sees."
-*Let the account picker and full scope list render on camera before clicking Allow.*
-> "They review and approve access, Google redirects back, and the channel shows as connected."
+*Let the account picker and full scope list render on camera. Point the cursor at the Privacy
+Policy / Terms of Service links Google itself displays at the bottom of this screen — this only
+appears if Cloud Console → OAuth consent screen → Branding has both URLs filled in
+(`https://vezrin.com/privacy`, `https://vezrin.com/terms`); confirm that's set before recording,
+or there's nothing to point at here.*
+> "You'll notice Google links directly to our Privacy Policy and Terms right here, before the user
+> grants anything."
+*Click Allow. After the redirect confirms the channel is connected, briefly open
+`https://vezrin.com/privacy` and `/terms` in a new tab to show they're real, live pages, not
+placeholders.*
+> "Both pages are live and describe exactly how this data is stored and retained."
 
 **Scene 2 — `youtube.readonly` (0:50–1:20)**
 *Navigate to `/dashboard`.*
@@ -87,9 +101,7 @@ disposable test video.*
 > email, and photo, shown here in Settings. They're not used to access any YouTube data."
 
 **Scene 8 — Close (4:20–4:40)**
-*Show footer with Privacy Policy / Terms links.*
-> "That's every scope Vezrin requests, each tied to a specific feature. Our Privacy Policy and
-> Terms, linked here and on the consent screen, cover how this data is stored and retained. Thanks
+> "That's every scope Vezrin requests, each tied to a specific feature you just saw in action. Thanks
 > for reviewing."
 
 ## 2. Scope justification text (paste into the verification form)
