@@ -13,10 +13,17 @@ page and a real API call in this codebase — nothing generic/boilerplate.
 - Note: a fresh test account granting access still counts toward the 100-user unverified-app cap.
   Check the current count in Cloud Console → OAuth consent screen → Overview before burning a slot
   (this is still an open item — see §5).
-- **Log into Vezrin itself with a disposable/test account**, not a personal or admin login — don't
-  type real credentials on a video that will sit on YouTube (even unlisted).
-- Connect a channel that actually has some videos/comments/analytics history — empty states look
-  broken to a reviewer.
+- **Log into whichever Vezrin account already owns the channel with real videos/comments/analytics
+  history on it** — do this off-camera, before recording starts, just so no password is typed on a
+  video that will sit on YouTube (even unlisted). A fresh/disposable Vezrin account is not needed:
+  `channelId` is globally unique (`youtube-channel.model.js:17-21`), and a channel already
+  connected under one Vezrin account can't be reconnected under a different one without a direct
+  DB change — `handleOAuthCallback` 409s with "already connected to another Vezrin account"
+  (`youtube.service.js:86-94`) even after a normal disconnect, since disconnect only flips
+  `isActive`/`connectionStatus` and never clears `userId`. So the account with real data dictates
+  which Vezrin login you record with, not the other way around.
+- Empty channels (no videos/comments/analytics) make for a broken-looking demo — don't use one of
+  those just because it's a "fresh" account.
 - Recorder: OBS Studio (free) or Windows' built-in Xbox Game Bar (`Win+G`) — no paid tool needed.
   1080p, system audio + mic narration.
 - Don't linger on the Google password field on camera — stay logged in beforehand, or trim that
