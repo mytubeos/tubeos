@@ -18,6 +18,8 @@ const {
   updatePricing,
   getLimits,
   updateLimits,
+  getReportSettings,
+  updateReportSettings,
 } = require('../controllers/admin.controller');
 
 router.use(protect, adminProtect);
@@ -43,5 +45,9 @@ router.put('/pricing/:plan', updatePricing);
 // Plan feature limits
 router.get('/limits', getLimits);
 router.put('/limits/:plan', updateLimits);
+
+// Weekly/monthly report email schedule + sender
+router.get('/report-settings', getReportSettings);
+router.put('/report-settings', updateReportSettings);
 
 module.exports = router;

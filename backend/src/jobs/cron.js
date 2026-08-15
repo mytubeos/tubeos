@@ -251,13 +251,16 @@ const refreshTrends = async () => {
 };
 
 // ---------- Weekly report ----------
-// Runs every 24h; fires real emails only on Monday (UTC).
+// Runs every 24h; fires real emails only on the admin-configured day (UTC,
+// derived from the IST day/time set in report-settings.service.js — default
+// Monday, matching the original hardcoded schedule this replaced).
 // Sends to users with weeklyReport=true AND reportFrequency='weekly' (or unset).
 const sendWeeklyReports = async () => {
+  const { getWeeklyUtcDayOfWeek } = require('../services/report-settings.service');
   const day = new Date().getUTCDay(); // 0=Sun 1=Mon
-  if (day !== 1) return;
+  if (day !== (await getWeeklyUtcDayOfWeek())) return;
 
-  logger.info('[cron] weekly-report: starting Monday send');
+  logger.info('[cron] weekly-report: starting scheduled send');
 
   const User = require('../models/user.model');
   const { gatherReportData } = require('../services/report.service');
@@ -305,13 +308,16 @@ const sendWeeklyReports = async () => {
 };
 
 // ---------- Monthly report ----------
-// Runs every 24h; fires real emails only on the 1st of each month (UTC).
+// Runs every 24h; fires real emails only on the admin-configured day-of-month
+// (UTC, derived from the IST day/time in report-settings.service.js —
+// default the 1st, matching the original hardcoded schedule this replaced).
 // Sends to users with weeklyReport=true AND reportFrequency='monthly'.
 const sendMonthlyReports = async () => {
+  const { getMonthlyUtcDayOfMonth } = require('../services/report-settings.service');
   const date = new Date().getUTCDate(); // 1–31
-  if (date !== 1) return;
+  if (date !== (await getMonthlyUtcDayOfMonth())) return;
 
-  logger.info('[cron] monthly-report: starting 1st-of-month send');
+  logger.info('[cron] monthly-report: starting scheduled send');
 
   const User = require('../models/user.model');
   const { gatherMonthlyReportData } = require('../services/report.service');

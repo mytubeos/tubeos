@@ -23,6 +23,10 @@ const adminAPI = {
   // Plan feature limits (uploads, AI replies/content, bulk replies, thumbnails)
   getLimits: () => api.get('/admin/limits'),
   updateLimits: (plan, data) => api.put(`/admin/limits/${plan}`, data),
+
+  // Weekly/monthly report email schedule + sender (times are IST both ways)
+  getReportSettings: () => api.get('/admin/report-settings'),
+  updateReportSettings: (data) => api.put('/admin/report-settings', data),
 }
 
 export default adminAPI

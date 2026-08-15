@@ -17,18 +17,39 @@ const logger = require('../config/logger');
 
 const QUEUE_NAME = 'vezrin-scheduler';
 
-// Cron schedule for each job (UTC)
+// Cron schedule for each job (UTC). weekly-reports/monthly-reports are NOT
+// here — their pattern is admin-editable (report-settings.service.js,
+// stored in IST) and registered separately below, in registerReportJobs().
 const JOB_SCHEDULES = [
   { id: 'reap-schedules', pattern: '* * * * *' }, // every 1 min
   { id: 'refresh-trends', pattern: '0 */12 * * *' }, // every 12h
   { id: 'sync-analytics', pattern: '0 2 * * *' }, // daily 2am
-  { id: 'weekly-reports', pattern: '0 8 * * 1' }, // Monday 8am
-  { id: 'monthly-reports', pattern: '0 9 1 * *' }, // 1st of month 9am
   { id: 'renew-pubsub', pattern: '0 3 */7 * *' }, // every 7 days 3am
   { id: 'chingari-nudges', pattern: '0 */6 * * *' }, // every 6h
   { id: 'purge-expired-data', pattern: '0 4 * * *' }, // daily 4am
   { id: 'downgrade-expired-subscriptions', pattern: '0 5 * * *' }, // daily 5am
 ];
+
+// Registers (or re-registers) the two report-email jobs using whatever
+// schedule is currently in the DB. Called once at boot alongside the static
+// JOB_SCHEDULES above, and again any time an admin saves a new schedule
+// (report-settings.service.js's updateSettings calls rescheduleReportJobs,
+// exported below) so a change takes effect immediately, not on next deploy.
+const registerReportJobs = async () => {
+  if (!queue) return;
+  // Lazy require — report-settings.service isn't needed until a job
+  // actually registers, same reasoning as the worker's lazy `./cron`
+  // require below (avoids a load-order cycle with services that may
+  // themselves touch jobs/index.js).
+  const { getWeeklyUtcSchedule, getMonthlyUtcSchedule } = require('../services/report-settings.service');
+  const [weekly, monthly] = await Promise.all([getWeeklyUtcSchedule(), getMonthlyUtcSchedule()]);
+  await queue.upsertJobScheduler('weekly-reports', { pattern: weekly.pattern }, { name: 'weekly-reports' });
+  await queue.upsertJobScheduler('monthly-reports', { pattern: monthly.pattern }, { name: 'monthly-reports' });
+  logger.info('[bullmq] report job schedules registered', {
+    weekly: weekly.pattern,
+    monthly: monthly.pattern,
+  });
+};
 
 let queue = null;
 let worker = null;
@@ -94,6 +115,7 @@ const startWorkers = async () => {
   for (const job of JOB_SCHEDULES) {
     await queue.upsertJobScheduler(job.id, { pattern: job.pattern }, { name: job.id });
   }
+  await registerReportJobs();
 
   worker = new Worker(
     QUEUE_NAME,
@@ -141,8 +163,19 @@ const startWorkers = async () => {
     logger.error('[bullmq] worker error', { error: err.message });
   });
 
-  logger.info(`[bullmq] started — ${JOB_SCHEDULES.length} job schedules registered`);
+  logger.info(`[bullmq] started — ${JOB_SCHEDULES.length + 2} job schedules registered`);
   return true;
+};
+
+/**
+ * Re-registers the weekly/monthly report jobs from whatever schedule is
+ * currently in the DB. Safe to call whether or not BullMQ is the active
+ * scheduler — a no-op (via registerReportJobs' own `if (!queue) return`)
+ * when it isn't, since the setInterval fallback in jobs/cron.js reads the
+ * schedule fresh from the DB on its own next tick regardless.
+ */
+const rescheduleReportJobs = async () => {
+  await registerReportJobs();
 };
 
 /**
@@ -159,4 +192,4 @@ const stopWorkers = async () => {
   }
 };
 
-module.exports = { startWorkers, stopWorkers };
+module.exports = { startWorkers, stopWorkers, rescheduleReportJobs };

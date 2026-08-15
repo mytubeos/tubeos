@@ -276,7 +276,9 @@ const sendWeeklyReportEmail = async (user, reportData) => {
 
   const { generateSubjectLine } = require('../services/report.service');
   const { buildReportPdf, getReportBrand } = require('../services/export.service');
+  const { getSettings } = require('../services/report-settings.service');
   const brand = getReportBrand(user);
+  const reportSettings = await getSettings();
   const subject = generateSubjectLine(user.name, reportData.kpis, reportData.weekRange);
   const html = buildWeeklyReportHtml(user, reportData, brand);
 
@@ -296,11 +298,14 @@ const sendWeeklyReportEmail = async (user, reportData) => {
     await axios.post(
       BREVO_API_URL,
       {
-        sender: { email: EMAIL_FROM, name: brand.companyName || 'Vezrin Reports' },
+        sender: {
+          email: reportSettings.senderEmail,
+          name: brand.companyName || reportSettings.senderName,
+        },
         to: [{ email: user.email, name: user.name }],
         subject,
         htmlContent: html,
-        replyTo: { email: EMAIL_FROM },
+        replyTo: { email: reportSettings.senderEmail },
         ...(attachment ? { attachment } : {}),
       },
       {
@@ -324,7 +329,9 @@ const sendMonthlyReportEmail = async (user, reportData) => {
   if (!user?.email || !reportData) return;
 
   const { buildReportPdf, getReportBrand } = require('../services/export.service');
+  const { getSettings } = require('../services/report-settings.service');
   const brand = getReportBrand(user);
+  const reportSettings = await getSettings();
   const kpis = reportData.kpis;
   const firstName = user.name?.split(' ')[0] || 'Creator';
   const views = kpis?.views?.value || 0;
@@ -363,11 +370,14 @@ const sendMonthlyReportEmail = async (user, reportData) => {
     await axios.post(
       BREVO_API_URL,
       {
-        sender: { email: EMAIL_FROM, name: brand.companyName || 'Vezrin Reports' },
+        sender: {
+          email: reportSettings.senderEmail,
+          name: brand.companyName || reportSettings.senderName,
+        },
         to: [{ email: user.email, name: user.name }],
         subject,
         htmlContent: html,
-        replyTo: { email: EMAIL_FROM },
+        replyTo: { email: reportSettings.senderEmail },
         ...(attachment ? { attachment } : {}),
       },
       {

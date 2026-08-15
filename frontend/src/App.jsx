@@ -14,6 +14,7 @@ import { AdminCoupons } from './pages/admin/AdminCoupons'
 import { AdminUsers } from './pages/admin/AdminUsers'
 import { AdminPricing } from './pages/admin/AdminPricing'
 import { AdminPlanLimits } from './pages/admin/AdminPlanLimits'
+import { AdminReportSettings } from './pages/admin/AdminReportSettings'
 
 // Auth Pages
 import { Login } from './pages/auth/Login'
@@ -123,6 +124,7 @@ export default function App() {
         <Route path="/admin/coupons" element={<AdminCoupons />} />
         <Route path="/admin/pricing" element={<AdminPricing />} />
         <Route path="/admin/limits" element={<AdminPlanLimits />} />
+        <Route path="/admin/report-settings" element={<AdminReportSettings />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

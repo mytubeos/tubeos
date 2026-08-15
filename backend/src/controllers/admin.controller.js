@@ -2,6 +2,7 @@
 const couponService = require('../services/coupon.service');
 const pricingService = require('../services/pricing.service');
 const planLimitService = require('../services/plan-limit.service');
+const reportSettingsService = require('../services/report-settings.service');
 const User = require('../models/user.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
 const { successResponse, errorResponse, paginatedResponse } = require('../utils/response.utils');
@@ -247,6 +248,28 @@ const updateLimits = async (req, res) => {
   }
 };
 
+// ==================== REPORT EMAIL SETTINGS ====================
+
+// GET /api/v1/admin/report-settings
+const getReportSettings = async (req, res) => {
+  try {
+    const settings = await reportSettingsService.getSettings();
+    return successResponse(res, 200, 'Report settings fetched', settings);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
+// PUT /api/v1/admin/report-settings
+const updateReportSettings = async (req, res) => {
+  try {
+    const result = await reportSettingsService.updateSettings(req.body, req.user.id);
+    return successResponse(res, 200, 'Report settings updated', result);
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
 module.exports = {
   getUserStats,
   listUsers,
@@ -262,4 +285,6 @@ module.exports = {
   updatePricing,
   getLimits,
   updateLimits,
+  getReportSettings,
+  updateReportSettings,
 };

@@ -12,6 +12,7 @@ import {
   IndianRupee,
   Gauge,
   ArrowLeft,
+  Mail,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { useState, useEffect } from 'react'
@@ -22,6 +23,7 @@ const NAV = [
   { to: '/admin/coupons', label: 'Coupons', icon: Tag },
   { to: '/admin/pricing', label: 'Pricing', icon: IndianRupee },
   { to: '/admin/limits', label: 'Plan Limits', icon: Gauge },
+  { to: '/admin/report-settings', label: 'Report Emails', icon: Mail },
 ]
 
 const SidebarContent = ({ onClose, onLogout, onExit }) => (
