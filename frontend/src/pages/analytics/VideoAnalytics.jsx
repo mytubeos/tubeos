@@ -94,6 +94,16 @@ export const VideoAnalytics = () => {
     { key: 'ctr', label: 'CTR', color: '#06B6D4' },
   ]
 
+  const thumbnailImg = video.thumbnail?.url ? (
+    <img src={video.thumbnail.url} className="w-full h-full object-cover" alt="" />
+  ) : (
+    <div className="w-full h-full bg-brand/20 flex items-center justify-center">
+      <Eye size={24} className="text-brand/50" />
+    </div>
+  )
+  const thumbnailClass =
+    'group relative w-full aspect-video sm:w-40 sm:h-24 rounded-xl overflow-hidden bg-base-600 shrink-0'
+
   return (
     <div className="space-y-5">
       {/* Back + Title */}
@@ -104,17 +114,27 @@ export const VideoAnalytics = () => {
       </div>
 
       {/* Video header */}
-      <div className="glass p-5 rounded-2xl flex items-start gap-5">
-        <div className="w-40 h-24 rounded-xl overflow-hidden bg-base-600 shrink-0">
-          {video.thumbnail?.url ? (
-            <img src={video.thumbnail.url} className="w-full h-full object-cover" alt="" />
-          ) : (
-            <div className="w-full h-full bg-brand/20 flex items-center justify-center">
-              <Eye size={24} className="text-brand/50" />
+      <div className="glass p-5 rounded-2xl flex flex-col sm:flex-row items-start gap-5">
+        {video.youtubeVideoId ? (
+          <a
+            href={`https://www.youtube.com/watch?v=${video.youtubeVideoId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={thumbnailClass}
+            aria-label="Watch on YouTube"
+          >
+            {thumbnailImg}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+              <ExternalLink
+                size={20}
+                className="text-white opacity-0 group-hover:opacity-100 transition-opacity"
+              />
             </div>
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
+          </a>
+        ) : (
+          <div className={thumbnailClass}>{thumbnailImg}</div>
+        )}
+        <div className="flex-1 min-w-0 w-full">
           <div className="flex items-start justify-between gap-3">
             <h2 className="font-display font-bold text-white text-xl leading-tight">
               {video.title}
