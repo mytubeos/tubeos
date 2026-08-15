@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.vezrin.app",
+    "sha256_cert_fingerprints": ["62:11:95:A0:E7:1E:DC:27:87:2E:F4:C2:68:95:00:16:06:31:9D:8C:A4:5D:D2:01:B0:0B:F0:D0:49:49:F1:4E"]
+  }
+}]
