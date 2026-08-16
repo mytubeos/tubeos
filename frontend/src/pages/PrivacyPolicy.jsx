@@ -240,9 +240,50 @@ export function PrivacyPolicy() {
             <p className="mt-4">To exercise any of these rights, contact us at hello@vezrin.com</p>
           </section>
 
-          {/* 10. Children's Privacy */}
+          {/* 10. How to Delete Your Account */}
+          <section id="account-deletion">
+            <h2 className="text-2xl font-bold text-white mb-4">10. How to Delete Your Account</h2>
+            <p>You can request deletion of your Vezrin account and all associated data at any time:</p>
+            <ol className="list-decimal list-inside space-y-2 ml-4">
+              <li>
+                Email{' '}
+                <a
+                  href="mailto:hello@vezrin.com?subject=Account%20Deletion%20Request"
+                  className="text-blue-400 underline"
+                >
+                  hello@vezrin.com
+                </a>{' '}
+                with the subject "Account Deletion Request" from your registered email address.
+              </li>
+              <li>Your account and personal data are permanently deleted within 90 days of your request.</li>
+            </ol>
+            <p className="mt-4">
+              To delete only your YouTube data without deleting your whole account, disconnect the
+              channel from the Channels page — that channel's data is deleted 30 days after
+              disconnection.
+            </p>
+
+            <h3 className="text-xl font-semibold text-white mt-6 mb-3">What gets deleted</h3>
+            <ul className="list-disc list-inside space-y-2 ml-4">
+              <li>Your profile: name, email, password, avatar, bio</li>
+              <li>Connected YouTube channel data: analytics, video metadata, synced comments</li>
+              <li>AI-generated content history and usage records</li>
+              <li>Referral wallet and payout history</li>
+            </ul>
+
+            <h3 className="text-xl font-semibold text-white mt-6 mb-3">What we retain, and why</h3>
+            <ul className="list-disc list-inside space-y-2 ml-4">
+              <li>Payment and transaction records — retained as required by Indian tax and accounting law</li>
+              <li>
+                Server request/error logs — retained per our hosting and monitoring providers' own
+                log-retention windows, not tied to your account
+              </li>
+            </ul>
+          </section>
+
+          {/* 11. Children's Privacy */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">10. Children's Privacy</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">11. Children's Privacy</h2>
             <p>
               Vezrin is not intended for children under 13 years of age. We do not knowingly collect
               personal data from children under 13. If we become aware that a child under 13 has
@@ -257,7 +298,7 @@ export function PrivacyPolicy() {
           {/* 11. California Privacy Rights */}
           <section>
             <h2 className="text-2xl font-bold text-white mb-4">
-              11. California Privacy Rights (CCPA)
+              12. California Privacy Rights (CCPA)
             </h2>
             <p>
               If you are a California resident, you have additional rights under the California
@@ -274,7 +315,7 @@ export function PrivacyPolicy() {
 
           {/* 12. GDPR Compliance */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">12. GDPR Compliance (EU Users)</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">13. GDPR Compliance (EU Users)</h2>
             <p>
               For EU residents, Vezrin complies with the General Data Protection Regulation (GDPR):
             </p>
@@ -293,7 +334,7 @@ export function PrivacyPolicy() {
 
           {/* 13. International Data Transfers */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">13. International Data Transfers</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">14. International Data Transfers</h2>
             <p>
               Your data may be transferred to, and maintained in, computers located outside your
               state, province, country, or other governmental jurisdiction where privacy laws may
@@ -304,7 +345,7 @@ export function PrivacyPolicy() {
 
           {/* 14. Data Breach Notification */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">14. Data Breach Notification</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">15. Data Breach Notification</h2>
             <p>
               If we discover a data breach that compromises your personal information, we will
               notify you by email as soon as reasonably possible, and notify relevant authorities if
@@ -314,7 +355,7 @@ export function PrivacyPolicy() {
 
           {/* 15. Marketing Communications */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">15. Marketing Communications</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">16. Marketing Communications</h2>
             <p>We may send you marketing emails if you opt-in. You can:</p>
             <ul className="list-disc list-inside space-y-2 ml-4">
               <li>Opt-out via the "Unsubscribe" link in emails</li>
@@ -326,7 +367,7 @@ export function PrivacyPolicy() {
           {/* 16. Policy Updates */}
           <section>
             <h2 className="text-2xl font-bold text-white mb-4">
-              16. Changes to This Privacy Policy
+              17. Changes to This Privacy Policy
             </h2>
             <p>
               We may update this Privacy Policy from time to time. We will notify you of any changes
@@ -341,7 +382,7 @@ export function PrivacyPolicy() {
 
           {/* 17. Contact Us */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">17. Contact Information</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">18. Contact Information</h2>
             <p>If you have questions about this Privacy Policy or our privacy practices:</p>
             <p className="mt-4">
               <strong>Email:</strong> hello@vezrin.com
