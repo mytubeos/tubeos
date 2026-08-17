@@ -251,14 +251,23 @@ const refreshTrends = async () => {
 };
 
 // ---------- Weekly report ----------
-// Runs every 24h; fires real emails only on the admin-configured day (UTC,
-// derived from the IST day/time set in report-settings.service.js — default
-// Monday, matching the original hardcoded schedule this replaced).
+// Runs every hour; fires real emails only in the admin-configured day+hour
+// (UTC, derived from the IST day/time set in report-settings.service.js —
+// default Monday 8am UTC, matching the original hardcoded schedule this
+// replaced). Hourly (not daily) on purpose: this is the setInterval
+// fallback used when BullMQ/Redis isn't available (see startCron below) —
+// a once-per-24h-from-boot check can miss its whole target day entirely if
+// that check already ran earlier the same day under the previous schedule,
+// especially right after an admin changes the schedule. Checking hourly
+// means a schedule change takes effect within the hour instead of
+// potentially the following day. BullMQ, when active, doesn't use this
+// function's timing at all — it fires the real cron pattern directly.
 // Sends to users with weeklyReport=true AND reportFrequency='weekly' (or unset).
 const sendWeeklyReports = async () => {
-  const { getWeeklyUtcDayOfWeek } = require('../services/report-settings.service');
-  const day = new Date().getUTCDay(); // 0=Sun 1=Mon
-  if (day !== (await getWeeklyUtcDayOfWeek())) return;
+  const { getWeeklyUtcSchedule } = require('../services/report-settings.service');
+  const now = new Date();
+  const target = await getWeeklyUtcSchedule();
+  if (now.getUTCDay() !== target.dayOfWeek || now.getUTCHours() !== target.hour) return;
 
   logger.info('[cron] weekly-report: starting scheduled send');
 
@@ -308,14 +317,17 @@ const sendWeeklyReports = async () => {
 };
 
 // ---------- Monthly report ----------
-// Runs every 24h; fires real emails only on the admin-configured day-of-month
-// (UTC, derived from the IST day/time in report-settings.service.js —
-// default the 1st, matching the original hardcoded schedule this replaced).
+// Runs every hour; fires real emails only in the admin-configured
+// day-of-month+hour (UTC, derived from the IST day/time in
+// report-settings.service.js — default the 1st at 9am UTC, matching the
+// original hardcoded schedule this replaced). Hourly for the same reason as
+// sendWeeklyReports above — see that function's comment.
 // Sends to users with weeklyReport=true AND reportFrequency='monthly'.
 const sendMonthlyReports = async () => {
-  const { getMonthlyUtcDayOfMonth } = require('../services/report-settings.service');
-  const date = new Date().getUTCDate(); // 1–31
-  if (date !== (await getMonthlyUtcDayOfMonth())) return;
+  const { getMonthlyUtcSchedule } = require('../services/report-settings.service');
+  const now = new Date();
+  const target = await getMonthlyUtcSchedule();
+  if (now.getUTCDate() !== target.dayOfMonth || now.getUTCHours() !== target.hour) return;
 
   logger.info('[cron] monthly-report: starting scheduled send');
 
@@ -529,11 +541,15 @@ const startCron = () => {
   // Every 24h: daily analytics snapshot sync (dashboard/analytics/growth foundation)
   timers.push(setInterval(syncAllChannelsAnalytics, 24 * 60 * 60 * 1000));
 
-  // Every 24h: weekly report check (fires Monday only)
-  timers.push(setInterval(sendWeeklyReports, 24 * 60 * 60 * 1000));
+  // Every hour: weekly report check (only actually sends in the configured
+  // day+hour — hourly so an admin schedule change takes effect within the
+  // hour instead of potentially being missed for a full day, see
+  // sendWeeklyReports' own comment for why)
+  timers.push(setInterval(sendWeeklyReports, 60 * 60 * 1000));
 
-  // Every 24h: monthly report check (fires on 1st of month only)
-  timers.push(setInterval(sendMonthlyReports, 24 * 60 * 60 * 1000));
+  // Every hour: monthly report check (only actually sends in the configured
+  // day-of-month+hour — same reasoning as weekly above)
+  timers.push(setInterval(sendMonthlyReports, 60 * 60 * 1000));
 
   // Every 7 days: renew PubSubHubbub subscriptions (9-day lease, renew before expiry)
   timers.push(setInterval(renewPubSubSubscriptions, 7 * 24 * 60 * 60 * 1000));

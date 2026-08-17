@@ -95,12 +95,6 @@ const getMonthlyUtcSchedule = async () => {
   };
 };
 
-// What cron.js's setInterval-fallback gating needs — just today's UTC
-// day-of-week/day-of-month to compare against, without building a full
-// cron string.
-const getWeeklyUtcDayOfWeek = async () => (await getWeeklyUtcSchedule()).dayOfWeek;
-const getMonthlyUtcDayOfMonth = async () => (await getMonthlyUtcSchedule()).dayOfMonth;
-
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const updateSettings = async (data, adminUserId) => {
@@ -167,8 +161,6 @@ module.exports = {
   updateSettings,
   getWeeklyUtcSchedule,
   getMonthlyUtcSchedule,
-  getWeeklyUtcDayOfWeek,
-  getMonthlyUtcDayOfMonth,
   weeklyIstToUtc,
   monthlyIstToUtc,
 };
