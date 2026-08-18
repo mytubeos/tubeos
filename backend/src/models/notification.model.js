@@ -20,6 +20,7 @@ const notificationSchema = new mongoose.Schema(
         'streak_milestone',
         'welcome',
         'subscription_expired',
+        'plan_activated',
       ],
       required: true,
     },
