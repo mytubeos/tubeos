@@ -73,6 +73,7 @@ const sendOTPEmail = async (recipientEmail, recipientName, otp) => {
           'api-key': BREVO_API_KEY,
           'Content-Type': 'application/json',
         },
+        timeout: 10000,
       }
     );
 
@@ -161,6 +162,7 @@ const sendPasswordResetEmail = async (recipientEmail, recipientName, resetToken)
           'api-key': BREVO_API_KEY,
           'Content-Type': 'application/json',
         },
+        timeout: 10000,
       }
     );
 
@@ -251,6 +253,7 @@ const sendWelcomeEmail = async (recipientEmail, recipientName) => {
           'api-key': BREVO_API_KEY,
           'Content-Type': 'application/json',
         },
+        timeout: 10000,
       }
     );
 
@@ -310,6 +313,7 @@ const sendWeeklyReportEmail = async (user, reportData) => {
       },
       {
         headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json' },
+        timeout: 10000,
       }
     );
     logger.info('[sendWeeklyReportEmail] sent', { email: user.email, hasPdf: !!attachment });
@@ -382,6 +386,7 @@ const sendMonthlyReportEmail = async (user, reportData) => {
       },
       {
         headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json' },
+        timeout: 10000,
       }
     );
     logger.info('[sendMonthlyReportEmail] sent', { email: user.email, hasPdf: !!attachment });

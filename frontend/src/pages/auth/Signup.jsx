@@ -201,6 +201,11 @@ export const Signup = () => {
             <Button type="submit" disabled={loading} className="w-full mb-4">
               {loading ? 'Creating Account...' : 'Sign Up'}
             </Button>
+            {loading && (
+              <p className="text-center text-slate-500 text-xs -mt-2 mb-4">
+                First request can take up to a minute if our server was idle — hang tight.
+              </p>
+            )}
 
             <p className="text-center text-slate-500 text-xs mb-4">
               By signing up, you agree to our{' '}

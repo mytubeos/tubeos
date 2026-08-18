@@ -12,7 +12,10 @@ const api = axios.create({
   // Vercel (frontend) + Render (backend) = alag domains = cookies blocked
   // Isliye hum sirf localStorage token use karenge
   withCredentials: false,
-  timeout: 30000,
+  // Render's free tier cold-starts and can take 30-50s+ to wake from sleep
+  // (see README's deploy notes) — a shorter timeout was killing legitimate
+  // first-requests-after-idle before the server even got a chance to answer.
+  timeout: 60000,
 })
 
 // ==================== REQUEST INTERCEPTOR ====================
