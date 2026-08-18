@@ -46,6 +46,11 @@ const clearPersistedAuth = () => {
   import('../store/authStore').then((m) =>
     m.useAuthStore.setState({ user: null, isAuthenticated: false })
   )
+  // Same reasoning as authStore.js's logout() — channelStore persists to its
+  // own localStorage key and survives a plain auth-state reset otherwise,
+  // leaking the previous account's channels into the next session on this
+  // device.
+  import('../store/channelStore').then((m) => m.useChannelStore.getState().clearChannels())
 }
 
 const processQueue = (error, token = null) => {

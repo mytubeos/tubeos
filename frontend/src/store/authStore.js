@@ -2,6 +2,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import authApi from '../api/auth.api'
+import { useChannelStore } from './channelStore'
 
 export const useAuthStore = create(
   persist(
@@ -77,6 +78,11 @@ export const useAuthStore = create(
         } catch {}
         localStorage.removeItem('accessToken')
         localStorage.removeItem('refreshToken')
+        // channelStore is persisted separately (localStorage key 'tubeos-channels')
+        // and was never wiped on logout — the next account to log in on this
+        // device would briefly render the previous user's channels/stats until
+        // something happened to call fetchChannels() again.
+        useChannelStore.getState().clearChannels()
         set({ user: null, accessToken: null, isAuthenticated: false })
       },
 
