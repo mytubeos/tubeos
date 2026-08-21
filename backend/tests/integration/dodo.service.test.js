@@ -7,7 +7,6 @@ const require = createRequire(import.meta.url);
 const dodoService = require('../../src/services/dodo.service.js');
 const pricingService = require('../../src/services/pricing.service.js');
 const User = require('../../src/models/user.model.js');
-const Coupon = require('../../src/models/coupon.model.js');
 const PaymentHistory = require('../../src/models/payment-history.model.js');
 
 const createTestUser = async (overrides = {}) =>
@@ -20,10 +19,14 @@ const createTestUser = async (overrides = {}) =>
   });
 
 // Shape of a Dodo `payment.succeeded` webhook's `data` object — only the
-// fields activatePlanFromPayload actually reads.
+// fields activatePlanFromPayload actually reads. `discounts` mirrors Dodo's
+// own payload shape for a payment that had a Dodo-native discount code
+// applied at checkout (see dodo-discount.service.js) — no longer anything
+// Vezrin validates or redeems itself, just recorded for reporting.
 const buildPayload = ({ userId, plan, couponCode, totalAmount }) => ({
   total_amount: totalAmount,
-  metadata: { userId, plan, couponCode: couponCode || '' },
+  metadata: { userId, plan },
+  ...(couponCode ? { discounts: [{ code: couponCode }] } : {}),
 });
 
 describe('dodo.service.activatePlanFromPayload', () => {
@@ -59,15 +62,8 @@ describe('dodo.service.activatePlanFromPayload', () => {
     expect(entry.stripePaymentIntentId).toBeUndefined();
   });
 
-  it('redeems the coupon when a couponCode is present in metadata', async () => {
+  it('records which Dodo-native discount code was used, straight from the webhook payload', async () => {
     const user = await createTestUser();
-    await Coupon.create({
-      code: 'DODO50',
-      type: 'public',
-      discountType: 'percent',
-      discountValue: 50,
-      validPlans: ['pro'],
-    });
     const payload = buildPayload({
       userId: user._id.toString(),
       plan: 'pro',
@@ -77,8 +73,22 @@ describe('dodo.service.activatePlanFromPayload', () => {
 
     await dodoService.activatePlanFromPayload(payload, 'pay_test3');
 
-    const coupon = await Coupon.findOne({ code: 'DODO50' });
-    expect(coupon.usedCount).toBe(1);
+    const entry = await PaymentHistory.findOne({ dodoPaymentId: 'pay_test3' });
+    expect(entry.couponCode).toBe('DODO50');
+  });
+
+  it('leaves couponCode null when no discount was applied', async () => {
+    const user = await createTestUser();
+    const payload = buildPayload({
+      userId: user._id.toString(),
+      plan: 'creator',
+      totalAmount: 499,
+    });
+
+    await dodoService.activatePlanFromPayload(payload, 'pay_test3b');
+
+    const entry = await PaymentHistory.findOne({ dodoPaymentId: 'pay_test3b' });
+    expect(entry.couponCode).toBeNull();
   });
 
   it('does not create a duplicate history entry when the webhook is delivered twice', async () => {

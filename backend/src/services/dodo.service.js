@@ -27,7 +27,6 @@ const { config } = require('../config/env');
 // Cast to any: mongoose v8 Model<any> union overloads cause TS2349 in @ts-check JS files.
 const User = /** @type {any} */ (require('../models/user.model'));
 const PaymentHistory = /** @type {any} */ (require('../models/payment-history.model'));
-const { validateCoupon, redeemCoupon } = require('./coupon.service');
 const pricingService = require('./pricing.service');
 const { PLAN_LABELS } = pricingService;
 const logger = require('../config/logger');
@@ -57,17 +56,17 @@ const notConfiguredError = () => {
   return err;
 };
 
-// Create a Dodo checkout session — always USD, admin-editable price. Coupons
-// mirror stripe.service.js's non-INR handling exactly: only percent discounts
-// apply (a fixed-rupee discountedPrice from a coupon has no meaning against a
-// USD amount), fixed coupons are silently skipped and the list price stands.
+// Create a Dodo checkout session — always USD, admin-editable price. Discount
+// codes are no longer applied here: they're entered by the customer directly
+// on Dodo's own hosted checkout page and enforced by Dodo itself (native
+// Discount API, see dodo-discount.service.js) — this just sends the plain
+// list price every time.
 /**
  * @param {string} userId
  * @param {PlanName} plan
- * @param {string|null} [couponCode]
  * @returns {Promise<{sessionId: string, url: string}>}
  */
-const createCheckoutSession = async (userId, plan, couponCode = null) => {
+const createCheckoutSession = async (userId, plan) => {
   const client = getDodoClient();
   if (!client) throw notConfiguredError();
 
@@ -91,28 +90,17 @@ const createCheckoutSession = async (userId, plan, couponCode = null) => {
   }
 
   const { amount: listAmount } = await pricingService.getPrice(plan, 'USD');
-  let finalAmount = listAmount;
-  let couponApplied = null;
-
-  if (couponCode) {
-    const couponResult = await validateCoupon(couponCode, plan);
-    if (couponResult.discountType === 'percent') {
-      finalAmount = Math.max(1, Math.round(listAmount * (1 - couponResult.discountValue / 100)));
-    }
-    couponApplied = couponCode.toUpperCase().trim();
-  }
 
   const label = PLAN_LABELS[plan];
   const clientUrl = config.cors.clientUrl;
 
   const { data } = await client
     .post('/checkouts', {
-      product_cart: [{ product_id: productId, quantity: 1, amount: finalAmount }],
+      product_cart: [{ product_id: productId, quantity: 1, amount: listAmount }],
       customer: { email: user.email, name: user.name || undefined },
       metadata: {
         userId: userId.toString(),
         plan,
-        couponCode: couponApplied || '',
       },
       return_url: `${clientUrl}/pricing?dodo_return=1`,
     })
@@ -138,14 +126,14 @@ const createCheckoutSession = async (userId, plan, couponCode = null) => {
 };
 
 // Shared by the webhook handler — activates the plan from a Dodo payment
-// event's metadata (the same {userId, plan, couponCode} bag set at checkout
-// creation above).
+// event's metadata (the same {userId, plan} bag set at checkout creation
+// above).
 /**
  * @param {any} payload
  * @param {string} paymentId
  */
 const activatePlanFromPayload = async (payload, paymentId) => {
-  const { userId, plan, couponCode } = payload.metadata || {};
+  const { userId, plan } = payload.metadata || {};
   if (!userId || !plan || !pricingService.PLANS.includes(plan)) {
     logger.warn('[dodo] webhook payload missing/invalid metadata, skipping activation', {
       paymentId,
@@ -155,15 +143,10 @@ const activatePlanFromPayload = async (payload, paymentId) => {
 
   const { amount: listAmount } = await pricingService.getPrice(plan, 'USD');
 
-  if (couponCode) {
-    try {
-      await redeemCoupon(couponCode);
-    } catch (err) {
-      logger.warn('[dodo] coupon redeem failed (non-fatal, may already be redeemed)', {
-        error: err.message,
-      });
-    }
-  }
+  // Dodo enforces/redeems its own discount codes now — this just records
+  // which one (if any) for Vezrin's own reporting, straight from the
+  // webhook payload, no local validation needed.
+  const couponCode = payload.discounts?.[0]?.code || null;
 
   const now = new Date();
   const expiresAt = new Date(now);
@@ -241,4 +224,8 @@ module.exports = {
   // Exported purely for testability — takes a plain webhook-data shape, no
   // real Dodo API call involved.
   activatePlanFromPayload,
+  // Reused by dodo-discount.service.js — same client/error-shape for every
+  // Dodo API call, checkout or discount.
+  getDodoClient,
+  notConfiguredError,
 };

@@ -1,5 +1,7 @@
 // src/controllers/admin.controller.js
-const couponService = require('../services/coupon.service');
+// Coupon endpoints below are backed by Dodo Payments' own native Discount
+// API now, not the local Coupon model — see dodo-discount.service.js.
+const couponService = require('../services/dodo-discount.service');
 const pricingService = require('../services/pricing.service');
 const planLimitService = require('../services/plan-limit.service');
 const reportSettingsService = require('../services/report-settings.service');

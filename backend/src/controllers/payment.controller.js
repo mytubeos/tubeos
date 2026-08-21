@@ -135,10 +135,10 @@ const stripeWebhook = async (req, res) => {
 // POST /api/v1/payment/dodo/create-checkout-session
 const createDodoCheckoutSession = async (req, res) => {
   try {
-    const { plan, couponCode } = req.body;
+    const { plan } = req.body;
     if (!plan) return errorResponse(res, 400, 'Plan is required');
 
-    const session = await dodoService.createCheckoutSession(req.user.id, plan, couponCode || null);
+    const session = await dodoService.createCheckoutSession(req.user.id, plan);
     return successResponse(res, 200, 'Checkout session created', session);
   } catch (err) {
     return errorResponse(res, err.statusCode || 500, err.message);

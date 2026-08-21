@@ -1,10 +1,9 @@
 // src/pages/Pricing.jsx
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, X, Zap, ArrowLeft, Loader2, Tag } from 'lucide-react'
+import { Check, X, Zap, ArrowLeft, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Button } from '../components/ui/Button'
-import paymentAPI from '../api/payment.api'
 import pricingAPI from '../api/pricing.api'
 import { useAuthStore } from '../store/authStore'
 import { useDodoCheckout } from '../hooks/useDodoCheckout'
@@ -102,12 +101,6 @@ export const Pricing = () => {
   const { startDodoCheckout, loadingPlan, verifying } = useDodoCheckout({
     onSuccess: () => navigate('/dashboard'),
   })
-  const [couponState, setCouponState] = useState({
-    activePlan: null, // which plan's coupon box is open
-    code: '',
-    validating: false,
-    result: null, // { originalPrice, discountedPrice, discountValue, discountType }
-  })
 
   useEffect(() => {
     pricingAPI
@@ -138,30 +131,7 @@ export const Pricing = () => {
     }
   }
 
-  const openCouponBox = (plan) => {
-    if (!isAuthenticated) {
-      navigate('/login')
-      return
-    }
-    setCouponState({ activePlan: plan, code: '', validating: false, result: null })
-  }
-
-  const closeCouponBox = () =>
-    setCouponState({ activePlan: null, code: '', validating: false, result: null })
-
-  const validateCoupon = async (plan) => {
-    if (!couponState.code.trim()) return
-    setCouponState((s) => ({ ...s, validating: true, result: null }))
-    try {
-      const res = await paymentAPI.validateCoupon(couponState.code.trim(), plan)
-      setCouponState((s) => ({ ...s, validating: false, result: res.data.data }))
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Invalid coupon')
-      setCouponState((s) => ({ ...s, validating: false, result: null }))
-    }
-  }
-
-  const handleUpgradeClick = (plan, couponCode = null) => {
+  const handleUpgradeClick = (plan) => {
     if (plan === 'free') {
       navigate('/signup')
       return
@@ -174,7 +144,7 @@ export const Pricing = () => {
       toast("You're already on this plan.")
       return
     }
-    startDodoCheckout(plan, couponCode)
+    startDodoCheckout(plan)
   }
 
   return (
@@ -256,99 +226,20 @@ export const Pricing = () => {
                   >
                     Get Free
                   </Button>
-                ) : couponState.activePlan === plan ? (
-                  <div className="space-y-2">
-                    <div className="flex gap-1.5">
-                      <input
-                        className="input-field h-9 text-sm px-3 flex-1 uppercase"
-                        placeholder="COUPON CODE"
-                        value={couponState.code}
-                        onChange={(e) =>
-                          setCouponState((s) => ({
-                            ...s,
-                            code: e.target.value.toUpperCase(),
-                            result: null,
-                          }))
-                        }
-                        onKeyDown={(e) => e.key === 'Enter' && validateCoupon(plan)}
-                      />
-                      <button
-                        onClick={() => validateCoupon(plan)}
-                        disabled={couponState.validating}
-                        className="px-3 h-9 bg-brand/20 border border-brand/30 rounded-lg text-brand text-sm
-                                   hover:bg-brand/30 transition-colors disabled:opacity-50"
-                      >
-                        {couponState.validating ? (
-                          <Loader2 size={14} className="animate-spin" />
-                        ) : (
-                          'Apply'
-                        )}
-                      </button>
-                      <button
-                        onClick={closeCouponBox}
-                        className="p-2 h-9 glass border border-white/10 rounded-lg text-gray-500 hover:text-white"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-
-                    {couponState.result &&
-                      (couponState.result.discountType === 'percent' ? (
-                        <div className="flex items-center gap-1.5 px-3 py-2 bg-emerald/10 border border-emerald/20 rounded-lg">
-                          <Check size={13} className="text-emerald shrink-0" />
-                          <span className="text-xs text-emerald">
-                            {couponState.result.discountValue}% off applied at checkout
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 px-3 py-2 bg-amber/10 border border-amber/20 rounded-lg">
-                          <X size={13} className="text-amber shrink-0" />
-                          <span className="text-xs text-amber">
-                            This coupon isn’t valid for USD checkout
-                          </span>
-                        </div>
-                      ))}
-
-                    <Button
-                      size="sm"
-                      variant={plan === 'creator' ? 'brand' : 'ghost'}
-                      className="w-full"
-                      disabled={loadingPlan === plan}
-                      onClick={() => {
-                        closeCouponBox()
-                        handleUpgradeClick(plan, couponState.code || null)
-                      }}
-                    >
-                      {loadingPlan === plan ? (
-                        <Loader2 size={16} className="animate-spin mx-auto" />
-                      ) : (
-                        'Upgrade'
-                      )}
-                    </Button>
-                  </div>
                 ) : (
-                  <>
-                    <Button
-                      size="sm"
-                      variant={plan === 'creator' ? 'brand' : 'ghost'}
-                      className="w-full"
-                      disabled={loadingPlan === plan}
-                      onClick={() => handleUpgradeClick(plan)}
-                    >
-                      {loadingPlan === plan ? (
-                        <Loader2 size={16} className="animate-spin mx-auto" />
-                      ) : (
-                        'Upgrade'
-                      )}
-                    </Button>
-                    <button
-                      onClick={() => openCouponBox(plan)}
-                      className="flex items-center justify-center gap-1 w-full text-xs text-gray-600
-                             hover:text-gray-400 transition-colors py-1.5"
-                    >
-                      <Tag size={11} /> Have a coupon?
-                    </button>
-                  </>
+                  <Button
+                    size="sm"
+                    variant={plan === 'creator' ? 'brand' : 'ghost'}
+                    className="w-full"
+                    disabled={loadingPlan === plan}
+                    onClick={() => handleUpgradeClick(plan)}
+                  >
+                    {loadingPlan === plan ? (
+                      <Loader2 size={16} className="animate-spin mx-auto" />
+                    ) : (
+                      'Upgrade'
+                    )}
+                  </Button>
                 )}
 
                 {/* What's included — only the features this plan actually has */}
@@ -422,101 +313,19 @@ export const Pricing = () => {
                       Get Free
                     </Button>
                   ) : (
-                    <div className="mt-3 space-y-2">
-                      {/* Coupon box */}
-                      {couponState.activePlan === plan ? (
-                        <div className="space-y-2">
-                          <div className="flex gap-1">
-                            <input
-                              className="input-field h-7 text-xs px-2 flex-1 uppercase"
-                              placeholder="COUPON CODE"
-                              value={couponState.code}
-                              onChange={(e) =>
-                                setCouponState((s) => ({
-                                  ...s,
-                                  code: e.target.value.toUpperCase(),
-                                  result: null,
-                                }))
-                              }
-                              onKeyDown={(e) => e.key === 'Enter' && validateCoupon(plan)}
-                            />
-                            <button
-                              onClick={() => validateCoupon(plan)}
-                              disabled={couponState.validating}
-                              className="px-2 h-7 bg-brand/20 border border-brand/30 rounded-lg text-brand text-xs
-                                       hover:bg-brand/30 transition-colors disabled:opacity-50"
-                            >
-                              {couponState.validating ? (
-                                <Loader2 size={11} className="animate-spin" />
-                              ) : (
-                                'Apply'
-                              )}
-                            </button>
-                            <button
-                              onClick={closeCouponBox}
-                              className="p-1.5 h-7 glass border border-white/10 rounded-lg text-gray-500 hover:text-white"
-                            >
-                              <X size={11} />
-                            </button>
-                          </div>
-
-                          {couponState.result &&
-                            (couponState.result.discountType === 'percent' ? (
-                              <div className="flex items-center gap-1.5 px-2 py-1.5 bg-emerald/10 border border-emerald/20 rounded-lg">
-                                <Check size={11} className="text-emerald shrink-0" />
-                                <span className="text-2xs text-emerald">
-                                  {couponState.result.discountValue}% off applied
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5 px-2 py-1.5 bg-amber/10 border border-amber/20 rounded-lg">
-                                <X size={11} className="text-amber shrink-0" />
-                                <span className="text-2xs text-amber">Not valid for USD</span>
-                              </div>
-                            ))}
-
-                          <Button
-                            size="xs"
-                            variant={plan === 'creator' ? 'brand' : 'ghost'}
-                            className="w-full"
-                            disabled={loadingPlan === plan}
-                            onClick={() => {
-                              closeCouponBox()
-                              handleUpgradeClick(plan, couponState.code || null)
-                            }}
-                          >
-                            {loadingPlan === plan ? (
-                              <Loader2 size={14} className="animate-spin mx-auto" />
-                            ) : (
-                              'Upgrade'
-                            )}
-                          </Button>
-                        </div>
+                    <Button
+                      size="xs"
+                      variant={plan === 'creator' ? 'brand' : 'ghost'}
+                      className="mt-3 w-full"
+                      disabled={loadingPlan === plan}
+                      onClick={() => handleUpgradeClick(plan)}
+                    >
+                      {loadingPlan === plan ? (
+                        <Loader2 size={14} className="animate-spin mx-auto" />
                       ) : (
-                        <>
-                          <Button
-                            size="xs"
-                            variant={plan === 'creator' ? 'brand' : 'ghost'}
-                            className="w-full"
-                            disabled={loadingPlan === plan}
-                            onClick={() => handleUpgradeClick(plan)}
-                          >
-                            {loadingPlan === plan ? (
-                              <Loader2 size={14} className="animate-spin mx-auto" />
-                            ) : (
-                              'Upgrade'
-                            )}
-                          </Button>
-                          <button
-                            onClick={() => openCouponBox(plan)}
-                            className="flex items-center justify-center gap-1 w-full text-2xs text-gray-600
-                                 hover:text-gray-400 transition-colors py-0.5"
-                          >
-                            <Tag size={10} /> Have a coupon?
-                          </button>
-                        </>
+                        'Upgrade'
                       )}
-                    </div>
+                    </Button>
                   )}
                 </div>
               ))}
