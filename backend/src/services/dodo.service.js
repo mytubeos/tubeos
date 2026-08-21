@@ -35,7 +35,7 @@ const logger = require('../config/logger');
 /** @typedef {'creator' | 'pro' | 'agency'} PlanName */
 
 const DODO_BASE_URL = {
-  live: 'https://dodopayments.com',
+  live: 'https://live.dodopayments.com',
   test: 'https://test.dodopayments.com',
 };
 

@@ -96,7 +96,7 @@ const config = {
   dodo: {
     apiKey: process.env.DODO_PAYMENTS_API_KEY,
     webhookSecret: process.env.DODO_WEBHOOK_SECRET,
-    // 'live' talks to dodopayments.com; anything else uses their sandbox
+    // 'live' talks to live.dodopayments.com; anything else uses their sandbox
     // (test.dodopayments.com) so local/staging never touches real cards.
     mode: process.env.DODO_MODE === 'live' ? 'live' : 'test',
     // One Dodo "product" per plan, created in their dashboard as a one-time
