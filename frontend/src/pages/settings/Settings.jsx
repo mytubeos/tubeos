@@ -1,7 +1,7 @@
 // src/pages/settings/Settings.jsx
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { User, Lock, Bell, CreditCard, Check, Loader2, Tag, X, Palette } from 'lucide-react'
+import { User, Lock, Bell, CreditCard, Check, Loader2, Palette } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import authApi from '../../api/auth.api'
 import paymentAPI from '../../api/payment.api'
@@ -76,25 +76,6 @@ export const Settings = () => {
       })
       .catch(() => {})
   }, [])
-
-  // Coupon state for the in-app upgrade cards (keyed by which plan's box is open)
-  const [coupon, setCoupon] = useState({ plan: null, code: '', validating: false, result: null })
-
-  const openCoupon = (planKey) =>
-    setCoupon({ plan: planKey, code: '', validating: false, result: null })
-  const closeCoupon = () => setCoupon({ plan: null, code: '', validating: false, result: null })
-
-  const applyCoupon = async (planKey) => {
-    if (!coupon.code.trim()) return
-    setCoupon((s) => ({ ...s, validating: true, result: null }))
-    try {
-      const res = await paymentAPI.validateCoupon(coupon.code.trim(), planKey)
-      setCoupon((s) => ({ ...s, validating: false, result: res.data.data }))
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Invalid coupon')
-      setCoupon((s) => ({ ...s, validating: false, result: null }))
-    }
-  }
 
   // Profile state
   const [name, setName] = useState(user?.name || '')
@@ -535,100 +516,20 @@ export const Settings = () => {
                           </div>
                         ))}
                       </div>
-                      {/* Coupon box */}
-                      {coupon.plan === key ? (
-                        <div className="mt-4 space-y-2">
-                          <div className="flex gap-1">
-                            <input
-                              className="input-field h-8 text-xs px-2 flex-1 uppercase"
-                              placeholder="COUPON CODE"
-                              value={coupon.code}
-                              onChange={(e) =>
-                                setCoupon((s) => ({
-                                  ...s,
-                                  code: e.target.value.toUpperCase(),
-                                  result: null,
-                                }))
-                              }
-                              onKeyDown={(e) => e.key === 'Enter' && applyCoupon(key)}
-                            />
-                            <button
-                              onClick={() => applyCoupon(key)}
-                              disabled={coupon.validating}
-                              className="px-2 h-8 bg-brand/20 border border-brand/30 rounded-lg text-brand text-xs
-                                         hover:bg-brand/30 transition-colors disabled:opacity-50"
-                            >
-                              {coupon.validating ? (
-                                <Loader2 size={11} className="animate-spin" />
-                              ) : (
-                                'Apply'
-                              )}
-                            </button>
-                            <button
-                              onClick={closeCoupon}
-                              className="p-1.5 h-8 glass border border-white/10 rounded-lg text-gray-500 hover:text-white"
-                            >
-                              <X size={11} />
-                            </button>
-                          </div>
-
-                          {coupon.result &&
-                            (coupon.result.discountType === 'percent' ? (
-                              <div className="flex items-center gap-1.5 px-2 py-1.5 bg-emerald/10 border border-emerald/20 rounded-lg">
-                                <Check size={11} className="text-emerald shrink-0" />
-                                <span className="text-2xs text-emerald">
-                                  {coupon.result.discountValue}% off applied
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5 px-2 py-1.5 bg-amber/10 border border-amber/20 rounded-lg">
-                                <X size={11} className="text-amber shrink-0" />
-                                <span className="text-2xs text-amber">Not valid for USD</span>
-                              </div>
-                            ))}
-
-                          <Button
-                            size="sm"
-                            fullWidth
-                            variant={key === 'pro' ? 'brand' : 'ghost'}
-                            disabled={loadingPlan === key}
-                            onClick={() => {
-                              const code = coupon.code.trim() || null
-                              startDodoCheckout(key, code)
-                            }}
-                          >
-                            {loadingPlan === key ? (
-                              <Loader2 size={14} className="animate-spin mx-auto" />
-                            ) : (
-                              'Upgrade'
-                            )}
-                          </Button>
-                        </div>
-                      ) : (
-                        <>
-                          <Button
-                            size="sm"
-                            fullWidth
-                            className="mt-4"
-                            variant={key === 'pro' ? 'brand' : 'ghost'}
-                            disabled={loadingPlan === key}
-                            onClick={() => startDodoCheckout(key)}
-                          >
-                            {loadingPlan === key ? (
-                              <Loader2 size={14} className="animate-spin mx-auto" />
-                            ) : (
-                              'Upgrade'
-                            )}
-                          </Button>
-                          <button
-                            onClick={() => openCoupon(key)}
-                            className="flex items-center justify-center gap-1 w-full text-2xs text-gray-600
-                                   hover:text-gray-400 transition-colors py-1 mt-1.5"
-                          >
-                            <Tag size={10} /> Have a coupon?
-                          </button>
-                        </>
-                      )}
+                      <Button
+                        size="sm"
+                        fullWidth
+                        className="mt-4"
+                        variant={key === 'pro' ? 'brand' : 'ghost'}
+                        disabled={loadingPlan === key}
+                        onClick={() => startDodoCheckout(key)}
+                      >
+                        {loadingPlan === key ? (
+                          <Loader2 size={14} className="animate-spin mx-auto" />
+                        ) : (
+                          'Upgrade'
+                        )}
+                      </Button>
                     </div>
                   ))}
               </div>

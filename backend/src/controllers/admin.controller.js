@@ -1,8 +1,12 @@
 // src/controllers/admin.controller.js
-const couponService = require('../services/coupon.service');
+// Coupon endpoints below are backed by Dodo Payments' own native Discount
+// API now, not the local Coupon model — see dodo-discount.service.js.
+const couponService = require('../services/dodo-discount.service');
 const pricingService = require('../services/pricing.service');
 const planLimitService = require('../services/plan-limit.service');
 const reportSettingsService = require('../services/report-settings.service');
+const { createNotification } = require('../services/notification.service');
+const logger = require('../config/logger');
 const User = require('../models/user.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
 const { successResponse, errorResponse, paginatedResponse } = require('../utils/response.utils');
@@ -77,6 +81,9 @@ const changeUserPlan = async (req, res) => {
     if (!['free', 'creator', 'pro', 'agency'].includes(plan)) {
       return errorResponse(res, 400, 'Invalid plan');
     }
+    const before = await User.findById(req.params.id).select('plan');
+    if (!before) return errorResponse(res, 404, 'User not found');
+
     const now = new Date();
     const expiresAt = new Date(now);
     expiresAt.setMonth(expiresAt.getMonth() + 1);
@@ -89,7 +96,27 @@ const changeUserPlan = async (req, res) => {
       },
       { new: true }
     ).select('name email plan subscriptionExpiresAt');
-    if (!user) return errorResponse(res, 404, 'User not found');
+
+    // Only celebrate a real grant — not a downgrade to free, not a no-op re-save.
+    // Best-effort: the plan change above already succeeded, so a notification
+    // hiccup shouldn't turn this into a failed request.
+    if (plan !== 'free' && plan !== before.plan) {
+      try {
+        const label = pricingService.PLAN_LABELS[plan] || plan;
+        await createNotification(
+          user._id,
+          'plan_activated',
+          `🎉 Congratulations! Your ${label} has been activated by admin — enjoy the new features!`,
+          'celebrate'
+        );
+      } catch (err) {
+        logger.error('[admin] failed to create plan_activated notification', {
+          userId: user._id.toString(),
+          error: err.message,
+        });
+      }
+    }
+
     return successResponse(res, 200, `Plan changed to ${plan}`, user);
   } catch (err) {
     return errorResponse(res, 500, err.message);

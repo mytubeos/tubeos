@@ -23,11 +23,11 @@ export const useDodoCheckout = ({ onSuccess } = {}) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const pollTimer = useRef(null)
 
-  const startDodoCheckout = async (plan, couponCode = null) => {
+  const startDodoCheckout = async (plan) => {
     if (loadingPlan) return
     setLoadingPlan(plan)
     try {
-      const res = await paymentAPI.createDodoCheckout(plan, couponCode)
+      const res = await paymentAPI.createDodoCheckout(plan)
       sessionStorage.setItem(PENDING_PLAN_KEY, plan)
       window.location.href = res.data.data.url
       // Do NOT clear loadingPlan here — this tab is navigating away to Dodo.

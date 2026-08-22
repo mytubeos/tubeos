@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Button } from '../../components/ui/Button'
-import { Input, Select } from '../../components/ui/Input'
+import { Input } from '../../components/ui/Input'
 import { Badge } from '../../components/ui/Badge'
 import { Modal, ConfirmModal } from '../../components/ui/Modal'
 import adminAPI from '../../api/admin.api'
@@ -34,8 +34,7 @@ const randomCode = () => {
   return `${w}${n}`
 }
 
-const formatDiscount = (c) =>
-  c.discountType === 'percent' ? `${c.discountValue}% off` : `₹${c.discountValue} off`
+const formatDiscount = (c) => `${c.discountValue}% off`
 
 const formatExpiry = (d) => {
   if (!d) return 'Never'
@@ -219,26 +218,18 @@ const CouponForm = ({ isOpen, onClose, editData, onSaved }) => {
           </div>
         </div>
 
-        {/* Discount */}
-        <div className="grid grid-cols-2 gap-3">
-          <Select
-            label="Discount Type"
-            value={form.discountType}
-            onChange={(e) => set('discountType', e.target.value)}
-            options={[
-              { value: 'percent', label: 'Percentage (%)' },
-              { value: 'fixed', label: 'Fixed Amount (₹)' },
-            ]}
-          />
-          <Input
-            label={form.discountType === 'percent' ? 'Discount %' : 'Discount ₹'}
-            type="number"
-            placeholder={form.discountType === 'percent' ? '50' : '100'}
-            value={form.discountValue}
-            onChange={(e) => set('discountValue', e.target.value)}
-            hint={form.discountType === 'percent' ? 'Max 100' : 'In rupees'}
-          />
-        </div>
+        {/* Discount — percent only: these codes live on Dodo Payments now
+            (Dodo enforces them at checkout), and Dodo's basis-point amount
+            field only maps cleanly to a percentage here, not a fixed ₹/$
+            deduction. */}
+        <Input
+          label="Discount %"
+          type="number"
+          placeholder="50"
+          value={form.discountValue}
+          onChange={(e) => set('discountValue', e.target.value)}
+          hint="1–100"
+        />
 
         {/* Valid Plans */}
         <div>

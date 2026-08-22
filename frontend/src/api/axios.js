@@ -12,7 +12,10 @@ const api = axios.create({
   // Vercel (frontend) + Render (backend) = alag domains = cookies blocked
   // Isliye hum sirf localStorage token use karenge
   withCredentials: false,
-  timeout: 30000,
+  // Render's free tier cold-starts and can take 30-50s+ to wake from sleep
+  // (see README's deploy notes) — a shorter timeout was killing legitimate
+  // first-requests-after-idle before the server even got a chance to answer.
+  timeout: 60000,
 })
 
 // ==================== REQUEST INTERCEPTOR ====================
@@ -43,6 +46,11 @@ const clearPersistedAuth = () => {
   import('../store/authStore').then((m) =>
     m.useAuthStore.setState({ user: null, isAuthenticated: false })
   )
+  // Same reasoning as authStore.js's logout() — channelStore persists to its
+  // own localStorage key and survives a plain auth-state reset otherwise,
+  // leaking the previous account's channels into the next session on this
+  // device.
+  import('../store/channelStore').then((m) => m.useChannelStore.getState().clearChannels())
 }
 
 const processQueue = (error, token = null) => {

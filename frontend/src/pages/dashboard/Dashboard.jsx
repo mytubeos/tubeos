@@ -59,6 +59,17 @@ export const Dashboard = () => {
     }
   }
 
+  // Dashboard only ever reads channelStore, never fetches it (Channels.jsx
+  // is normally what populates it) — so a browser that's never visited
+  // /channels for the *current* account (e.g. right after switching accounts
+  // on a shared device, now that logout correctly clears the previous
+  // account's cached channels) would otherwise sit on an empty state here
+  // indefinitely instead of loading the real one.
+  useEffect(() => {
+    fetchChannels()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     notificationAPI
       .getAll({ limit: 1, unreadOnly: true })
