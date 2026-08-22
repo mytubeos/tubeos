@@ -336,7 +336,12 @@ const callCloudflareImageGen = async (prompt) => {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiToken}`,
     },
-    body: JSON.stringify({ prompt, width: 1280, height: 720 }),
+    // FLUX-1-schnell's input schema only accepts prompt/seed/steps — width
+    // and height belong to FLUX.2, not this model, and get rejected with
+    // "Additional or unevaluated properties '/width', '/height' not allowed".
+    // Output is this model's fixed native resolution; the frontend's crop
+    // step (ThumbnailGeneratorModal) reframes it to 16:9 afterward.
+    body: JSON.stringify({ prompt, steps: 8 }),
   });
 
   const contentType = response.headers.get('content-type') || '';
