@@ -1,6 +1,6 @@
 // src/pages/admin/AdminReportSettings.jsx
 import { useEffect, useState } from 'react'
-import { Mail, Info } from 'lucide-react'
+import { Mail, Info, Send } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Button } from '../../components/ui/Button'
 import { Input, Select } from '../../components/ui/Input'
@@ -74,6 +74,9 @@ export const AdminReportSettings = () => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+  const [testEmail, setTestEmail] = useState('')
+  const [testSending, setTestSending] = useState(null) // null | 'weekly' | 'monthly'
+
   const fetchSettings = async () => {
     setLoading(true)
     try {
@@ -116,6 +119,20 @@ export const AdminReportSettings = () => {
       toast.error(err.response?.data?.message || 'Failed to save report settings')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleSendTest = async (type) => {
+    if (!testEmail.trim()) return toast.error('Enter a user email to test with')
+
+    setTestSending(type)
+    try {
+      const res = await adminAPI.sendTestReport({ email: testEmail.trim(), type })
+      toast.success(res.data.message || 'Test report sent')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send test report')
+    } finally {
+      setTestSending(null)
     }
   }
 
@@ -222,6 +239,46 @@ export const AdminReportSettings = () => {
       <p className="text-2xs text-gray-600 mt-3">
         Saving reschedules the next send immediately — no redeploy needed.
       </p>
+
+      {/* Manual test send — runs the exact same report-generation + send code
+          the scheduled cron uses, right now, for one user, bypassing the
+          day/hour gate entirely. */}
+      <div className="glass p-6 rounded-2xl mt-6">
+        <h3 className="text-sm font-semibold text-white mb-1">Send a test report</h3>
+        <p className="text-2xs text-gray-500 mb-3">
+          Generates a real report for this user's own connected channel and emails it to them right
+          now — doesn't wait for the schedule.
+        </p>
+        <div className="flex items-end gap-3">
+          <div className="flex-1">
+            <Input
+              label="User email"
+              type="email"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              placeholder="creator@example.com"
+            />
+          </div>
+          <Button
+            variant="ghost"
+            icon={Send}
+            loading={testSending === 'weekly'}
+            disabled={testSending === 'monthly'}
+            onClick={() => handleSendTest('weekly')}
+          >
+            Send Weekly
+          </Button>
+          <Button
+            variant="ghost"
+            icon={Send}
+            loading={testSending === 'monthly'}
+            disabled={testSending === 'weekly'}
+            onClick={() => handleSendTest('monthly')}
+          >
+            Send Monthly
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

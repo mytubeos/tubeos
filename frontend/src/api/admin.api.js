@@ -27,6 +27,7 @@ const adminAPI = {
   // Weekly/monthly report email schedule + sender (times are IST both ways)
   getReportSettings: () => api.get('/admin/report-settings'),
   updateReportSettings: (data) => api.put('/admin/report-settings', data),
+  sendTestReport: (data) => api.post('/admin/report-settings/test-send', data),
 }
 
 export default adminAPI

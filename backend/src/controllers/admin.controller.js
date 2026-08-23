@@ -297,6 +297,59 @@ const updateReportSettings = async (req, res) => {
   }
 };
 
+// POST /api/v1/admin/report-settings/test-send
+// Manually generates + sends one real weekly/monthly report to a specific
+// user right now, outside the schedule — for verifying the pipeline works
+// without waiting on the cron gate (and its up-to-an-hour timing slop).
+// Reuses the exact same gatherReportData/gatherMonthlyReportData +
+// sendWeeklyReportEmail/sendMonthlyReportEmail path the real cron jobs use,
+// so a successful test here means the scheduled send will work too.
+const sendTestReport = async (req, res) => {
+  try {
+    const { email, type } = req.body;
+    if (!email || !['weekly', 'monthly'].includes(type)) {
+      return errorResponse(res, 400, 'email and type ("weekly" or "monthly") are required');
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select(
+      'name email plan branding preferences'
+    );
+    if (!user) return errorResponse(res, 404, `No user found with email ${email}`);
+
+    const channel = await YoutubeChannel.findOne({ userId: user._id, isActive: true }).sort({
+      isPrimary: -1,
+    });
+    if (!channel) {
+      return errorResponse(res, 400, `${email} has no connected YouTube channel to report on`);
+    }
+
+    const { gatherReportData, gatherMonthlyReportData } = require('../services/report.service');
+    const { sendWeeklyReportEmail, sendMonthlyReportEmail } = require('../utils/email.utils');
+
+    const reportData =
+      type === 'weekly'
+        ? await gatherReportData(user._id.toString(), channel._id.toString(), 7, user.plan)
+        : await gatherMonthlyReportData(user._id.toString(), channel._id.toString(), user.plan);
+
+    if (!reportData) {
+      return errorResponse(res, 400, 'Could not gather report data for this channel');
+    }
+
+    if (type === 'weekly') {
+      await sendWeeklyReportEmail(user, reportData);
+    } else {
+      await sendMonthlyReportEmail(user, reportData);
+    }
+
+    return successResponse(res, 200, `Test ${type} report sent to ${user.email}`, {
+      channel: channel.channelName,
+    });
+  } catch (err) {
+    logger.error('[sendTestReport] failed', { error: err.message });
+    return errorResponse(res, err.statusCode || 500, err.message);
+  }
+};
+
 module.exports = {
   getUserStats,
   listUsers,
@@ -314,4 +367,5 @@ module.exports = {
   updateLimits,
   getReportSettings,
   updateReportSettings,
+  sendTestReport,
 };

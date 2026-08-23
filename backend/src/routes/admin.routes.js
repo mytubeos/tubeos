@@ -20,6 +20,7 @@ const {
   updateLimits,
   getReportSettings,
   updateReportSettings,
+  sendTestReport,
 } = require('../controllers/admin.controller');
 
 router.use(protect, adminProtect);
@@ -49,5 +50,6 @@ router.put('/limits/:plan', updateLimits);
 // Weekly/monthly report email schedule + sender
 router.get('/report-settings', getReportSettings);
 router.put('/report-settings', updateReportSettings);
+router.post('/report-settings/test-send', sendTestReport);
 
 module.exports = router;
