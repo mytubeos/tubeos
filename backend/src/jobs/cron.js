@@ -264,14 +264,17 @@ const refreshTrends = async () => {
 // function's timing at all — it fires the real cron pattern directly.
 // User has no embedded channel list — channels live in their own collection,
 // keyed by userId. Returns a Map of userId (string) -> that user's primary
-// channelId, falling back to whichever channel was found first for users
-// with no channel explicitly marked primary.
+// channel's Mongo _id (NOT the YouTube-side channelId string — report.service
+// and the Video model both key off the YoutubeChannel document's own _id,
+// same convention the /api/v1/analytics/:channelId routes use), falling back
+// to whichever channel was found first for users with no channel explicitly
+// marked primary.
 const getPrimaryChannelByUser = async () => {
-  const channels = await YoutubeChannel.find({}).select('userId channelId isPrimary').lean();
+  const channels = await YoutubeChannel.find({}).select('userId isPrimary').lean();
   const channelByUser = new Map();
   for (const ch of channels) {
     const uid = ch.userId.toString();
-    if (!channelByUser.has(uid) || ch.isPrimary) channelByUser.set(uid, ch.channelId);
+    if (!channelByUser.has(uid) || ch.isPrimary) channelByUser.set(uid, ch._id);
   }
   return channelByUser;
 };
