@@ -262,6 +262,20 @@ const refreshTrends = async () => {
 // means a schedule change takes effect within the hour instead of
 // potentially the following day. BullMQ, when active, doesn't use this
 // function's timing at all — it fires the real cron pattern directly.
+// User has no embedded channel list — channels live in their own collection,
+// keyed by userId. Returns a Map of userId (string) -> that user's primary
+// channelId, falling back to whichever channel was found first for users
+// with no channel explicitly marked primary.
+const getPrimaryChannelByUser = async () => {
+  const channels = await YoutubeChannel.find({}).select('userId channelId isPrimary').lean();
+  const channelByUser = new Map();
+  for (const ch of channels) {
+    const uid = ch.userId.toString();
+    if (!channelByUser.has(uid) || ch.isPrimary) channelByUser.set(uid, ch.channelId);
+  }
+  return channelByUser;
+};
+
 // Sends to users with weeklyReport=true AND reportFrequency='weekly' (or unset).
 const sendWeeklyReports = async () => {
   const { getWeeklyUtcSchedule } = require('../services/report-settings.service');
@@ -275,6 +289,8 @@ const sendWeeklyReports = async () => {
   const { gatherReportData } = require('../services/report.service');
   const { sendWeeklyReportEmail } = require('../utils/email.utils');
 
+  const channelByUser = await getPrimaryChannelByUser();
+
   const users = await User.find({
     isActive: true,
     isBanned: false,
@@ -282,16 +298,16 @@ const sendWeeklyReports = async () => {
     'preferences.weeklyReport': { $ne: false },
     // Only send weekly to users who want weekly (or haven't set a preference — default weekly)
     'preferences.reportFrequency': { $in: ['weekly', null, undefined] },
-    youtubeChannels: { $exists: true, $not: { $size: 0 } },
+    _id: { $in: [...channelByUser.keys()] },
   })
-    .select('name email plan branding preferences youtubeChannels')
+    .select('name email plan branding preferences')
     .lean();
 
   logger.info(`[cron] weekly-report: sending to ${users.length} user(s)`);
   let sent = 0;
 
   for (const user of users) {
-    const channelId = user.youtubeChannels?.[0];
+    const channelId = channelByUser.get(user._id.toString());
     if (!channelId) continue;
 
     try {
@@ -335,22 +351,24 @@ const sendMonthlyReports = async () => {
   const { gatherMonthlyReportData } = require('../services/report.service');
   const { sendMonthlyReportEmail } = require('../utils/email.utils');
 
+  const channelByUser = await getPrimaryChannelByUser();
+
   const users = await User.find({
     isActive: true,
     isBanned: false,
     isEmailVerified: true,
     'preferences.weeklyReport': { $ne: false },
     'preferences.reportFrequency': 'monthly',
-    youtubeChannels: { $exists: true, $not: { $size: 0 } },
+    _id: { $in: [...channelByUser.keys()] },
   })
-    .select('name email plan branding preferences youtubeChannels')
+    .select('name email plan branding preferences')
     .lean();
 
   logger.info(`[cron] monthly-report: sending to ${users.length} user(s)`);
   let sent = 0;
 
   for (const user of users) {
-    const channelId = user.youtubeChannels?.[0];
+    const channelId = channelByUser.get(user._id.toString());
     if (!channelId) continue;
 
     try {
