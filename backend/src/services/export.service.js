@@ -351,7 +351,7 @@ const buildReportPdf = (reportData, user, brand = {}) => {
       .fillColor('white')
       .font('Helvetica-Bold')
       .fontSize(22)
-      .text(brand.companyName || '⚡ Vezrin', 65, 44);
+      .text(brand.companyName || 'Vezrin', 65, 44);
     doc
       .fillColor('#4DBBFF')
       .font('Helvetica')
@@ -420,18 +420,21 @@ const buildReportPdf = (reportData, user, brand = {}) => {
           width: kpiBoxW - 16,
         });
       if (k.change != null) {
+        // PDFKit's standard Helvetica font only supports WinAnsi — arrow
+        // glyphs (↑↓→) fall outside that and render as garbage, so the
+        // +/- sign carries the direction instead (color already reinforces it).
         const chgClr = k.change > 0 ? '#16a34a' : k.change < 0 ? '#dc2626' : GRAY;
-        const arrow = k.change > 0 ? '↑' : k.change < 0 ? '↓' : '→';
+        const sign = k.change > 0 ? '+' : k.change < 0 ? '-' : '';
         doc
           .fillColor(chgClr)
           .fontSize(8)
-          .text(`${arrow} ${Math.abs(k.change)}%`, x + 8, kpiY + 42, { width: kpiBoxW - 16 });
+          .text(`${sign}${Math.abs(k.change)}%`, x + 8, kpiY + 42, { width: kpiBoxW - 16 });
       }
     });
 
     // ---- Top Videos ----
     let y = kpiY + 70;
-    doc.fillColor(DARK).font('Helvetica-Bold').fontSize(11).text('🏆 Top Performing Videos', 50, y);
+    doc.fillColor(DARK).font('Helvetica-Bold').fontSize(11).text('Top Performing Videos', 50, y);
     doc
       .moveTo(50, y + 16)
       .lineTo(50 + W, y + 16)
@@ -456,7 +459,7 @@ const buildReportPdf = (reportData, user, brand = {}) => {
         .fillColor(GRAY)
         .fontSize(8)
         .text(
-          `👁 ${fmtNum(v.performance?.views || 0)} views  ·  👍 ${fmtNum(v.performance?.likes || 0)} likes`,
+          `${fmtNum(v.performance?.views || 0)} views  ·  ${fmtNum(v.performance?.likes || 0)} likes`,
           68,
           y + 12,
           { width: W - 100 }
@@ -475,7 +478,7 @@ const buildReportPdf = (reportData, user, brand = {}) => {
       doc.addPage();
       y = 50;
     }
-    doc.fillColor(DARK).font('Helvetica-Bold').fontSize(11).text('✨ AI Insights', 50, y);
+    doc.fillColor(DARK).font('Helvetica-Bold').fontSize(11).text('AI Insights', 50, y);
     doc
       .moveTo(50, y + 16)
       .lineTo(50 + W, y + 16)
@@ -511,7 +514,7 @@ const buildReportPdf = (reportData, user, brand = {}) => {
       doc.addPage();
       y = 50;
     }
-    doc.fillColor(DARK).font('Helvetica-Bold').fontSize(11).text('📋 Action Plan', 50, y);
+    doc.fillColor(DARK).font('Helvetica-Bold').fontSize(11).text('Action Plan', 50, y);
     doc
       .moveTo(50, y + 16)
       .lineTo(50 + W, y + 16)
@@ -521,7 +524,7 @@ const buildReportPdf = (reportData, user, brand = {}) => {
     y += 22;
 
     (actionItems || []).forEach((item) => {
-      doc.fillColor(BRAND).font('Helvetica-Bold').fontSize(10).text('✓', 50, y, { width: 16 });
+      doc.fillColor(BRAND).font('Helvetica-Bold').fontSize(10).text('•', 50, y, { width: 16 });
       doc
         .fillColor('#374151')
         .font('Helvetica')
