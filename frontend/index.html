@@ -3,20 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-
     <!-- Primary meta -->
-    <title>Vezrin — Creator Command Center</title>
+    <title>Vezrin</title>  <!-- ← YE CHANGE किया -->
     <meta
       name="description"
       content="AI-powered YouTube creator management platform. Upload, schedule, analyze, and automate your channel growth."
     />
     <meta name="theme-color" content="#06060A" />
-
+    
+    <!-- Structured Data (नया) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Vezrin",
+      "url": "https://vezrin.com",
+      "logo": "https://vezrin.com/pwa-512x512.png",
+      "description": "AI-powered YouTube creator management platform"
+    }
+    </script>
+    
     <!-- Icons -->
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/icon.png" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
-
+    
     <!-- PWA manifest (VitePWA injects this automatically in build; kept for dev) -->
     <link rel="manifest" href="/manifest.webmanifest" />
 
