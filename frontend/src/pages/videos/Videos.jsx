@@ -296,21 +296,25 @@ export const Videos = () => {
           <div className="space-y-4">
             <Input
               label="Title"
+              name="video-title"
               value={editForm.title}
               onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
             />
             <Textarea
               label="Description"
+              name="video-description"
               value={editForm.description}
               onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
             />
             <Input
               label="Tags (comma separated)"
+              name="video-tags"
               value={editForm.tags}
               onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
             />
             <Select
               label="Visibility"
+              name="video-privacy"
               value={editForm.privacy}
               onChange={(e) => setEditForm({ ...editForm, privacy: e.target.value })}
               options={[
@@ -329,6 +333,7 @@ export const Videos = () => {
                 </p>
                 <Input
                   label="Video file"
+                  name="video-retry-file"
                   type="file"
                   accept="video/*"
                   onChange={(e) => setRetryFile(e.target.files?.[0] || null)}

@@ -26,6 +26,19 @@ const payload = (user, extra = {}) => ({
 });
 
 describe('Dodo transaction and USD referral accounting', () => {
+  it('attributes historical mixed-case referral codes and generates uppercase codes', async () => {
+    const referrer = await createUser({ referral: { myCode: 'CREabc123' } });
+    const result = await auth.register({
+      name: 'New Creator',
+      email: 'new-creator@example.com',
+      password: 'password123',
+      referralCode: ' creABC123 ',
+    });
+    const user = await User.findById(result.userId);
+    expect(user.referral.referredBy.toString()).toBe(referrer._id.toString());
+    expect(user.referral.myCode).toBe(user.referral.myCode.toUpperCase());
+    expect((await User.findById(referrer._id)).referral.totalReferrals).toBe(1);
+  });
   it('credits cents once under concurrent delivery and leaves historical INR untouched', async () => {
     const referrer = await createUser({ wallet: { balance: 123 } });
     const user = await createUser({ referral: { referredBy: referrer._id } });

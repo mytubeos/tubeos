@@ -44,8 +44,11 @@ const deleteTempToken = async (key) => {
 };
 
 const generateUniqueReferralCode = async (name) => {
-  const base = name.slice(0, 3).toUpperCase() + Math.random().toString(36).substring(2, 8);
-  const exists = await User.findOne({ 'referral.myCode': base });
+  const base = (name.slice(0, 3) + Math.random().toString(36).substring(2, 8)).toUpperCase();
+  const exists = await User.findOne({ 'referral.myCode': base }).collation({
+    locale: 'en',
+    strength: 2,
+  });
   return exists ? generateUniqueReferralCode(name) : base;
 };
 
@@ -77,7 +80,10 @@ const register = async ({ name, email, password, referralCode }) => {
   // Handle referral
   let referredBy = null;
   if (referralCode) {
-    const referrer = await User.findOne({ 'referral.myCode': referralCode.toUpperCase() });
+    // Existing codes used mixed case; compare without rewriting users' shared links.
+    const referrer = await User.findOne({
+      'referral.myCode': referralCode.trim().toUpperCase(),
+    }).collation({ locale: 'en', strength: 2 });
     if (referrer) {
       referredBy = referrer._id;
     }
