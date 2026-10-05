@@ -237,6 +237,15 @@ const userSchema = new mongoose.Schema(
     },
 
     // ==================== WALLET (referral earnings + withdrawals) ====================
+    sessionVersion: { type: Number, default: 0 },
+    lastPaymentAt: { type: Date, default: null },
+    usdWallet: {
+      balanceCents: { type: Number, default: 0, min: 0 },
+      totalEarnedCents: { type: Number, default: 0, min: 0 },
+      pendingPayoutCents: { type: Number, default: 0, min: 0 },
+      totalWithdrawnCents: { type: Number, default: 0, min: 0 },
+    },
+    // Historical INR wallet: preserved for reconciliation, never relabelled USD.
     wallet: {
       balance: { type: Number, default: 0 }, // available to withdraw (₹)
       totalEarned: { type: Number, default: 0 }, // lifetime earned (₹)

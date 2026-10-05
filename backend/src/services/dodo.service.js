@@ -30,6 +30,8 @@ const PaymentHistory = /** @type {any} */ (require('../models/payment-history.mo
 const pricingService = require('./pricing.service');
 const { PLAN_LABELS } = pricingService;
 const logger = require('../config/logger');
+const { recordUsdEarning } = require('./referral.service');
+const Notification = /** @type {any} */ (require('../models/notification.model'));
 
 /** @typedef {'creator' | 'pro' | 'agency'} PlanName */
 
@@ -141,43 +143,98 @@ const activatePlanFromPayload = async (payload, paymentId) => {
     return null;
   }
 
-  const { amount: listAmount } = await pricingService.getPrice(plan, 'USD');
-
-  // Dodo enforces/redeems its own discount codes now — this just records
-  // which one (if any) for Vezrin's own reporting, straight from the
-  // webhook payload, no local validation needed.
-  const couponCode = payload.discounts?.[0]?.code || null;
-
-  const now = new Date();
-  const expiresAt = new Date(now);
-  expiresAt.setMonth(expiresAt.getMonth() + 1);
-
-  const user = await User.findByIdAndUpdate(
-    userId,
-    { plan, subscriptionStartedAt: now, subscriptionExpiresAt: expiresAt },
-    { new: true }
-  );
-
-  // Referral commissions are wallet-credited in rupees with no exchange-rate
-  // source here — same deliberate scope cut as stripe.service.js's non-INR
-  // path. Skip, don't fail, the rest of activation over this.
-  try {
-    await PaymentHistory.create({
-      user: userId,
-      plan,
-      amount: payload.total_amount ?? listAmount,
-      originalAmount: listAmount,
-      currency: 'USD',
-      couponCode: couponCode || null,
-      gateway: 'dodo',
-      dodoPaymentId: paymentId,
-    });
-  } catch (err) {
-    if (err.code !== 11000) {
-      logger.error('[dodo] recordPaymentHistory failed (non-fatal)', { error: err.message });
-    }
+  if (
+    typeof paymentId !== 'string' ||
+    !paymentId ||
+    payload.currency !== 'USD' ||
+    !Number.isSafeInteger(payload.total_amount) ||
+    payload.total_amount < 0 ||
+    (payload.status && payload.status !== 'succeeded')
+  ) {
+    const err = new Error('Invalid USD payment payload');
+    err.statusCode = 400;
+    throw err;
   }
-
+  const { amount: listAmount } = await pricingService.getPrice(plan, 'USD');
+  const paidAt = payload.created_at ? new Date(payload.created_at) : new Date();
+  if (!Number.isFinite(paidAt.getTime())) throw new Error('Invalid payment timestamp');
+  const activate = () =>
+    User.db.transaction(async (session) => {
+      const existing = await PaymentHistory.findOne({ dodoPaymentId: paymentId }).session(session);
+      if (existing) {
+        if (existing.user.toString() !== userId || existing.plan !== plan)
+          throw new Error('Payment ownership mismatch');
+        return User.findById(userId).session(session);
+      }
+      const user = await User.findById(userId).session(session);
+      if (!user) throw new Error('Payment user not found');
+      // Preserve paid time on renewal, and do not let a delayed older payment downgrade the plan.
+      const now = new Date();
+      const expiresAt = new Date(
+        Math.max(now.getTime(), user.subscriptionExpiresAt?.getTime() || 0)
+      );
+      // Calendar month with end-of-month clamping (Jan 31 -> Feb 28/29).
+      const day = expiresAt.getUTCDate();
+      expiresAt.setUTCDate(1);
+      expiresAt.setUTCMonth(expiresAt.getUTCMonth() + 1);
+      const lastDay = new Date(
+        Date.UTC(expiresAt.getUTCFullYear(), expiresAt.getUTCMonth() + 1, 0)
+      ).getUTCDate();
+      expiresAt.setUTCDate(Math.min(day, lastDay));
+      if (!user.lastPaymentAt || paidAt >= user.lastPaymentAt) {
+        user.plan = plan;
+        user.lastPaymentAt = paidAt;
+      }
+      user.subscriptionStartedAt = user.subscriptionStartedAt || now;
+      user.subscriptionExpiresAt = expiresAt;
+      await user.save({ session });
+      await PaymentHistory.create(
+        [
+          {
+            user: userId,
+            plan,
+            amount: payload.total_amount,
+            originalAmount: listAmount,
+            currency: 'USD',
+            couponCode: payload.discounts?.[0]?.code || null,
+            gateway: 'dodo',
+            dodoPaymentId: paymentId,
+          },
+        ],
+        { session }
+      );
+      const tax = payload.tax || 0;
+      if (!Number.isSafeInteger(tax) || tax < 0 || tax > payload.total_amount)
+        throw new Error('Invalid payment tax');
+      await recordUsdEarning({
+        referredUser: user,
+        amountCents: payload.total_amount - tax,
+        paymentId,
+        plan,
+        session,
+      });
+      await Notification.create(
+        [
+          {
+            userId,
+            type: 'plan_activated',
+            mood: 'celebrate',
+            message: `Your ${PLAN_LABELS[user.plan] || user.plan} is active. Payment received successfully.`,
+          },
+        ],
+        { session }
+      );
+      return user;
+    });
+  let user;
+  try {
+    user = await activate();
+  } catch (err) {
+    // Concurrent deliveries can race on the unique history index. Retry the
+    // whole transaction so the winner's receipt is checked before any effects.
+    if (err.code !== 11000) throw err;
+    user = await activate();
+  }
   return {
     plan: user.plan,
     subscriptionStartedAt: user.subscriptionStartedAt,
@@ -194,7 +251,7 @@ const activatePlanFromPayload = async (payload, paymentId) => {
  * @returns {Promise<void>}
  */
 const handleWebhook = async (rawBody, headers) => {
-  if (!config.dodo.apiKey || !config.dodo.webhookSecret) return;
+  if (!config.dodo.apiKey || !config.dodo.webhookSecret) throw notConfiguredError();
 
   const webhook = new Webhook(config.dodo.webhookSecret);
   const webhookHeaders = {

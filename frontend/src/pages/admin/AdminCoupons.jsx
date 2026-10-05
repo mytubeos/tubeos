@@ -220,7 +220,7 @@ const CouponForm = ({ isOpen, onClose, editData, onSaved }) => {
 
         {/* Discount — percent only: these codes live on Dodo Payments now
             (Dodo enforces them at checkout), and Dodo's basis-point amount
-            field only maps cleanly to a percentage here, not a fixed ₹/$
+            field only maps cleanly to a percentage here, not a fixed USD
             deduction. */}
         <Input
           label="Discount %"

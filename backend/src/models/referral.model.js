@@ -23,6 +23,10 @@ const referralEarningSchema = new mongoose.Schema(
     commissionRate: { type: Number, required: true }, // % at time of earning (10/12/15/20)
     commissionAmount: { type: Number, required: true }, // ₹ credited to wallet
     razorpayPaymentId: { type: String, default: null },
+    currency: { type: String, default: 'INR' },
+    paidAmountCents: Number,
+    commissionCents: Number,
+    dodoPaymentId: { type: String, unique: true, sparse: true },
     billingCycleIndex: { type: Number, default: 1 }, // 1..6 (commission valid for 6 cycles)
     status: {
       type: String,
@@ -45,6 +49,8 @@ const payoutRequestSchema = new mongoose.Schema(
       index: true,
     },
     amount: { type: Number, required: true },
+    currency: { type: String, default: 'INR' },
+    amountCents: Number,
     method: { type: String, enum: ['upi', 'bank'], required: true },
     upi: { type: String, default: null },
     bankAccount: {

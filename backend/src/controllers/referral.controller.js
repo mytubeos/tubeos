@@ -41,7 +41,7 @@ const createPayout = async (req, res) => {
   try {
     const { amount, method, upi, bankAccount } = req.body;
     const result = await referralService.requestPayout(req.user.id, {
-      amount: parseInt(amount),
+      amount: Number(amount),
       method,
       upi,
       bankAccount,

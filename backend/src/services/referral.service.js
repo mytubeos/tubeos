@@ -71,6 +71,54 @@ const recordEarningFromPayment = async ({
   return earning;
 };
 
+// USD ledger entries and wallet increments share the payment transaction.
+const recordUsdEarning = async ({ referredUser, amountCents, paymentId, plan, session }) => {
+  if (!referredUser.referral?.referredBy) return;
+  const referrer = await User.findById(referredUser.referral.referredBy).session(session);
+  if (!referrer || referrer._id.equals(referredUser._id)) return;
+  const prior = await ReferralEarning.countDocuments({
+    referrerId: referrer._id,
+    referredUserId: referredUser._id,
+    status: 'credited',
+  }).session(session);
+  if (prior >= MAX_COMMISSION_CYCLES) return;
+  const rate = getCommissionRate(referrer.referral.totalReferrals || 0);
+  const commissionCents = Math.round((amountCents * rate) / 100);
+  if (commissionCents <= 0) return;
+  await ReferralEarning.create(
+    [
+      {
+        referrerId: referrer._id,
+        referredUserId: referredUser._id,
+        plan,
+        currency: 'USD',
+        paidAmount: amountCents / 100,
+        paidAmountCents: amountCents,
+        commissionRate: rate,
+        commissionAmount: commissionCents / 100,
+        commissionCents,
+        dodoPaymentId: paymentId,
+        billingCycleIndex: prior + 1,
+      },
+    ],
+    { session }
+  );
+  await User.updateOne(
+    { _id: referrer._id },
+    {
+      $inc: {
+        'usdWallet.balanceCents': commissionCents,
+        'usdWallet.totalEarnedCents': commissionCents,
+      },
+    },
+    { session }
+  );
+};
+
+const configuredMinimum = Number(process.env.REFERRAL_MIN_PAYOUT_CENTS || 500);
+const MIN_USD_PAYOUT_CENTS =
+  Number.isSafeInteger(configuredMinimum) && configuredMinimum > 0 ? configuredMinimum : 500;
+
 // GET /referral/stats — per-user dashboard data
 const getStats = async (userId) => {
   const user = await User.findById(userId);
@@ -102,13 +150,15 @@ const getStats = async (userId) => {
       totalReferrals >= 50 ? null : totalReferrals >= 25 ? 50 : totalReferrals >= 10 ? 25 : 10,
     totalReferrals,
     activeReferrals,
+    currency: 'USD',
     wallet: {
-      balance: user.wallet?.balance || 0,
-      totalEarned: user.wallet?.totalEarned || 0,
-      totalWithdrawn: user.wallet?.totalWithdrawn || 0,
-      pendingPayout: user.wallet?.pendingPayout || 0,
+      balance: (user.usdWallet?.balanceCents || 0) / 100,
+      totalEarned: (user.usdWallet?.totalEarnedCents || 0) / 100,
+      totalWithdrawn: (user.usdWallet?.totalWithdrawnCents || 0) / 100,
+      pendingPayout: (user.usdWallet?.pendingPayoutCents || 0) / 100,
     },
-    minPayout: MIN_PAYOUT,
+    legacyBalanceNeedsReconciliation: !!(user.wallet?.balance || user.wallet?.pendingPayout),
+    minPayout: MIN_USD_PAYOUT_CENTS / 100,
   };
 };
 
@@ -142,8 +192,16 @@ const listReferredUsers = async (userId, { page = 1, limit = 20 } = {}) => {
 
 // POST /referral/payout — request a withdrawal
 const requestPayout = async (userId, { amount, method, upi, bankAccount }) => {
-  if (!amount || amount < MIN_PAYOUT) {
-    const err = new Error(`Minimum payout is ₹${MIN_PAYOUT}`);
+  const amountCents = Math.round(Number(amount) * 100);
+  if (
+    !Number.isFinite(Number(amount)) ||
+    !Number.isSafeInteger(amountCents) ||
+    Math.abs(Number(amount) * 100 - amountCents) > 0.000001 ||
+    amountCents < MIN_USD_PAYOUT_CENTS
+  ) {
+    const err = new Error(
+      `Minimum payout is $${(MIN_USD_PAYOUT_CENTS / 100).toFixed(2)}. Use at most two decimal places.`
+    );
     err.statusCode = 400;
     throw err;
   }
@@ -166,36 +224,42 @@ const requestPayout = async (userId, { amount, method, upi, bankAccount }) => {
     throw err;
   }
 
-  const user = await User.findById(userId);
-  if (!user) {
-    const err = new Error('User not found');
-    err.statusCode = 404;
-    throw err;
-  }
-
-  const available = user.wallet?.balance || 0;
-  if (amount > available) {
-    const err = new Error(`Insufficient balance. Available: ₹${available}`);
-    err.statusCode = 400;
-    throw err;
-  }
-
-  // Move money: balance → pendingPayout
-  user.wallet.balance = available - amount;
-  user.wallet.pendingPayout = (user.wallet.pendingPayout || 0) + amount;
-  if (method === 'upi') user.wallet.upi = upi;
-  if (method === 'bank') user.wallet.bankAccount = bankAccount;
-  await user.save();
-
-  const payout = await PayoutRequest.create({
-    userId,
-    amount,
-    method,
-    upi: method === 'upi' ? upi : null,
-    bankAccount: method === 'bank' ? bankAccount : undefined,
+  return User.db.transaction(async (session) => {
+    const user = await User.findOneAndUpdate(
+      { _id: userId, 'usdWallet.balanceCents': { $gte: amountCents } },
+      {
+        $inc: {
+          'usdWallet.balanceCents': -amountCents,
+          'usdWallet.pendingPayoutCents': amountCents,
+        },
+      },
+      { new: true, session }
+    );
+    if (!user) {
+      const err = new Error('Insufficient USD balance');
+      err.statusCode = 400;
+      throw err;
+    }
+    const [payout] = await PayoutRequest.create(
+      [
+        {
+          userId,
+          amount: amountCents / 100,
+          amountCents,
+          currency: 'USD',
+          method,
+          upi: method === 'upi' ? upi : null,
+          bankAccount: method === 'bank' ? bankAccount : undefined,
+        },
+      ],
+      { session }
+    );
+    return {
+      payout,
+      message:
+        'USD payout request submitted. Settlement details will be confirmed before transfer.',
+    };
   });
-
-  return { payout, message: 'Payout request submitted. Processed within 3 business days.' };
 };
 
 // GET /referral/payouts — request history
@@ -210,6 +274,7 @@ const listPayouts = async (userId, { page = 1, limit = 20 } = {}) => {
 
 module.exports = {
   recordEarningFromPayment,
+  recordUsdEarning,
   getStats,
   listEarnings,
   listReferredUsers,

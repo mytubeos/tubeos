@@ -1,6 +1,6 @@
 // src/pages/admin/AdminPricing.jsx
 import { useEffect, useState } from 'react'
-import { Pencil, IndianRupee } from 'lucide-react'
+import { Pencil, DollarSign } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
@@ -9,7 +9,7 @@ import { PLANS as PLAN_NAMES } from '../../utils/constants'
 import { formatPrice } from '../../utils/currency'
 import adminAPI from '../../api/admin.api'
 
-const CURRENCIES = ['INR', 'EUR', 'USD']
+const CURRENCIES = ['USD']
 const PLANS = ['creator', 'pro', 'agency']
 
 // ─── Edit Form Modal ────────────────────────────────────────────────────────
@@ -89,8 +89,8 @@ const PricingForm = ({ isOpen, onClose, plan, prices, onSaved }) => {
     >
       <div className="space-y-5">
         <p className="text-xs text-gray-500">
-          Amounts are whole rupees/euros/dollars — e.g. enter{' '}
-          <span className="text-gray-300">199</span> for ₹199, not 19900.
+          Amounts are US dollars — e.g. enter <span className="text-gray-300">9.99</span> for $9.99,
+          not 999.
         </p>
         {CURRENCIES.map((currency) => (
           <div key={currency} className="grid grid-cols-2 gap-3">
@@ -148,8 +148,7 @@ export const AdminPricing = () => {
         <div>
           <h1 className="font-display font-bold text-white text-2xl">Pricing</h1>
           <p className="text-gray-500 text-sm mt-0.5">
-            What each plan costs, per currency — shown on Pricing/Landing/Settings based on the
-            visitor's detected region.
+            USD prices used across Pricing, Landing, Settings and Dodo checkout.
           </p>
         </div>
       </div>
@@ -160,7 +159,7 @@ export const AdminPricing = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/8">
-                {['Plan', 'INR', 'EUR', 'USD', ''].map((h) => (
+                {['Plan', 'USD', ''].map((h) => (
                   <th
                     key={h}
                     className="px-4 py-3 text-left text-2xs font-semibold text-gray-500 uppercase tracking-wider"
@@ -229,9 +228,8 @@ export const AdminPricing = () => {
       </div>
 
       <p className="flex items-center gap-1.5 text-2xs text-gray-600 mt-3">
-        <IndianRupee size={11} />
-        Razorpay only supports INR — EUR/USD checkouts go through Stripe (needs a Stripe account
-        configured on the backend).
+        <DollarSign size={11} />
+        All new payments use Dodo Payments in USD.
       </p>
 
       {/* Edit Modal */}

@@ -50,10 +50,10 @@ describe('useDodoCheckout.startDodoCheckout', () => {
     const { result } = renderHook(() => useDodoCheckout())
 
     await act(async () => {
-      await result.current.startDodoCheckout('pro', 'SAVE20')
+      await result.current.startDodoCheckout('pro')
     })
 
-    expect(paymentAPI.createDodoCheckout).toHaveBeenCalledWith('pro', 'SAVE20')
+    expect(paymentAPI.createDodoCheckout).toHaveBeenCalledWith('pro')
     expect(sessionStorage.getItem('dodo_pending_plan')).toBe('pro')
     expect(window.location.href).toBe('https://checkout.dodopayments.com/session/cks_1')
   })
