@@ -25,9 +25,7 @@ export const PlanActivatedModal = ({ message, onClose }) => {
           <div className="relative">
             <Chingari mood="celebrate" size={76} className="mx-auto mb-4" />
 
-            <h2 className="font-display font-bold text-2xl text-white mb-2">
-              🎉 Congratulations!
-            </h2>
+            <h2 className="font-display font-bold text-2xl text-white mb-2">🎉 Congratulations!</h2>
 
             <p className="text-gray-300 text-sm leading-relaxed mb-6">{message}</p>
 

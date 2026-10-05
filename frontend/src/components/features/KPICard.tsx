@@ -44,7 +44,7 @@ const KPI_CONFIG = {
     format: formatWatchTime,
   },
   likes: {
-    label: 'Likes',
+    label: 'Total Likes',
     icon: ThumbsUp,
     iconColor: 'amber',
     format: formatNumber,
@@ -107,7 +107,13 @@ const PERIOD_LABEL = {
   '365d': 'last 12 months',
 }
 
-export const KPIGrid = ({ overview, loading = false, channelStats = null, period = '30d' }) => {
+export const KPIGrid = ({
+  overview,
+  loading = false,
+  channelStats = null,
+  period = '30d',
+  dashboard = false,
+}) => {
   const metrics = overview?.metrics || {}
   const periodLabel = PERIOD_LABEL[period] || 'this period'
 
@@ -153,6 +159,15 @@ export const KPIGrid = ({ overview, loading = false, channelStats = null, period
         subtitle={isBasicMode ? 'Total views (all videos)' : periodLabel}
         loading={loading}
       />
+      {dashboard && (
+        <KPICard
+          type="likes"
+          value={metrics.likes?.value}
+          change={metrics.likes?.change ?? undefined}
+          subtitle={isBasicMode ? 'Total likes (synced videos)' : periodLabel}
+          loading={loading}
+        />
+      )}
       <KPICard
         type={subType}
         value={subValue}
@@ -169,12 +184,14 @@ export const KPIGrid = ({ overview, loading = false, channelStats = null, period
         subtitle={periodLabel}
         loading={loading}
       />
-      <KPICard
-        type="ctr"
-        value={metrics.ctr?.value}
-        subtitle={`avg · ${periodLabel}`}
-        loading={loading}
-      />
+      {!dashboard && (
+        <KPICard
+          type="ctr"
+          value={metrics.ctr?.value}
+          subtitle={`avg · ${periodLabel}`}
+          loading={loading}
+        />
+      )}
     </div>
   )
 }

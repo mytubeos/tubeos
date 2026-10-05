@@ -83,7 +83,10 @@ const cronPattern = ({ minute, hour, dayOfMonth = '*', dayOfWeek = '*' }) =>
 const getWeeklyUtcSchedule = async () => {
   const s = await getSettings();
   const utc = weeklyIstToUtc(s.weeklyDayOfWeek, s.weeklyHour, s.weeklyMinute);
-  return { ...utc, pattern: cronPattern({ minute: utc.minute, hour: utc.hour, dayOfWeek: utc.dayOfWeek }) };
+  return {
+    ...utc,
+    pattern: cronPattern({ minute: utc.minute, hour: utc.hour, dayOfWeek: utc.dayOfWeek }),
+  };
 };
 
 const getMonthlyUtcSchedule = async () => {

@@ -50,11 +50,11 @@ export const Modal = ({
 
       {/* Modal */}
       <div
-        className={`relative w-full ${sizes[size]} bg-base-700 border border-white/10
+        className={`relative flex flex-col max-h-[calc(100dvh-2rem)] w-full ${sizes[size]} bg-base-700 border border-white/10
                        rounded-2xl shadow-2xl animate-slide-up ${className}`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-white/8">
+        <div className="flex items-center justify-between p-5 shrink-0 border-b border-white/8">
           <h2 className="font-display font-semibold text-white text-lg">{title}</h2>
           <button
             onClick={onClose}
@@ -66,11 +66,11 @@ export const Modal = ({
         </div>
 
         {/* Body */}
-        <div className="p-5 max-h-[70vh] overflow-y-auto">{children}</div>
+        <div className="p-5 min-h-0 overflow-y-auto">{children}</div>
 
         {/* Footer */}
         {footer && (
-          <div className="p-5 border-t border-white/8 flex items-center justify-end gap-3">
+          <div className="p-5 shrink-0 border-t border-white/8 flex items-center justify-end gap-3">
             {footer}
           </div>
         )}

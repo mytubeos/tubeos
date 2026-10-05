@@ -115,3 +115,22 @@ describe('KPIGrid', () => {
     expect(changeEl.textContent).not.toContain('%')
   })
 })
+
+it('dashboard shows Views, Likes, Subscribers, Watch Time in order, without CTR', () => {
+  const { container } = render(
+    <KPIGrid
+      dashboard
+      overview={{
+        metrics: { views: { value: 100 }, likes: { value: 25 }, watchTime: { value: 120 } },
+      }}
+      channelStats={{ subscriberCount: 50 }}
+    />
+  )
+  const text = container.textContent
+  const labels = ['Total Views', 'Total Likes', 'Total Subscribers', 'Watch Time']
+  labels
+    .slice(1)
+    .forEach((label, i) => expect(text.indexOf(label)).toBeGreaterThan(text.indexOf(labels[i])))
+  expect(screen.queryByText('Click-Through Rate')).not.toBeInTheDocument()
+  expect(screen.getByText('25')).toBeInTheDocument()
+})

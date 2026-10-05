@@ -99,7 +99,7 @@ describe('formatDate', () => {
   })
 
   it('formats short date as month + day', () => {
-    const result = formatDate('2024-03-27T00:00:00Z', 'short')
+    const result = formatDate(new Date(2024, 2, 27, 12), 'short')
     expect(result).toMatch(/Mar/)
     expect(result).toMatch(/27/)
   })

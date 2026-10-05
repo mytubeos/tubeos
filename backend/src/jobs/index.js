@@ -41,10 +41,21 @@ const registerReportJobs = async () => {
   // actually registers, same reasoning as the worker's lazy `./cron`
   // require below (avoids a load-order cycle with services that may
   // themselves touch jobs/index.js).
-  const { getWeeklyUtcSchedule, getMonthlyUtcSchedule } = require('../services/report-settings.service');
+  const {
+    getWeeklyUtcSchedule,
+    getMonthlyUtcSchedule,
+  } = require('../services/report-settings.service');
   const [weekly, monthly] = await Promise.all([getWeeklyUtcSchedule(), getMonthlyUtcSchedule()]);
-  await queue.upsertJobScheduler('weekly-reports', { pattern: weekly.pattern }, { name: 'weekly-reports' });
-  await queue.upsertJobScheduler('monthly-reports', { pattern: monthly.pattern }, { name: 'monthly-reports' });
+  await queue.upsertJobScheduler(
+    'weekly-reports',
+    { pattern: weekly.pattern },
+    { name: 'weekly-reports' }
+  );
+  await queue.upsertJobScheduler(
+    'monthly-reports',
+    { pattern: monthly.pattern },
+    { name: 'monthly-reports' }
+  );
   logger.info('[bullmq] report job schedules registered', {
     weekly: weekly.pattern,
     monthly: monthly.pattern,

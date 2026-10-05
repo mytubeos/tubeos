@@ -243,7 +243,9 @@ export function PrivacyPolicy() {
           {/* 10. How to Delete Your Account */}
           <section id="account-deletion">
             <h2 className="text-2xl font-bold text-white mb-4">10. How to Delete Your Account</h2>
-            <p>You can request deletion of your Vezrin account and all associated data at any time:</p>
+            <p>
+              You can request deletion of your Vezrin account and all associated data at any time:
+            </p>
             <ol className="list-decimal list-inside space-y-2 ml-4">
               <li>
                 Email{' '}
@@ -255,7 +257,10 @@ export function PrivacyPolicy() {
                 </a>{' '}
                 with the subject "Account Deletion Request" from your registered email address.
               </li>
-              <li>Your account and personal data are permanently deleted within 90 days of your request.</li>
+              <li>
+                Your account and personal data are permanently deleted within 90 days of your
+                request.
+              </li>
             </ol>
             <p className="mt-4">
               To delete only your YouTube data without deleting your whole account, disconnect the
@@ -273,7 +278,10 @@ export function PrivacyPolicy() {
 
             <h3 className="text-xl font-semibold text-white mt-6 mb-3">What we retain, and why</h3>
             <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>Payment and transaction records — retained as required by Indian tax and accounting law</li>
+              <li>
+                Payment and transaction records — retained as required by Indian tax and accounting
+                law
+              </li>
               <li>
                 Server request/error logs — retained per our hosting and monitoring providers' own
                 log-retention windows, not tied to your account
