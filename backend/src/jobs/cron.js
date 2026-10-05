@@ -41,6 +41,12 @@ const reapPublishedSchedules = async () => {
 
     for (const s of due) {
       try {
+        // Atomic claim: cancellation/rescheduling and other workers must not race an upload.
+        const claimed = await Schedule.findOneAndUpdate(
+          { _id: s._id, status: 'pending', scheduledAt: { $lte: now } },
+          { status: 'processing' }
+        );
+        if (!claimed) continue;
         const video = await Video.findById(s.videoId);
         if (!video) {
           s.status = 'failed';
@@ -586,6 +592,7 @@ const startCron = () => {
 
   // Fire once on boot (best-effort)
   setTimeout(reapPublishedSchedules, 5_000);
+  setTimeout(generateNudges, 35_000);
   setTimeout(refreshTrends, 10_000);
   // Delay the first analytics sync so boot isn't slowed and quota isn't hit at startup
   setTimeout(syncAllChannelsAnalytics, 30_000);

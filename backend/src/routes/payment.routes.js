@@ -1,38 +1,26 @@
-// src/routes/payment.routes.js
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middlewares/auth.middleware');
-const {
-  createOrder,
-  verifyPayment,
-  validateCouponEndpoint,
-  webhook,
-  getPaymentHistory,
-  downgradeToFree,
-  createStripeCheckoutSession,
-  verifyStripeSession,
-  stripeWebhook,
-  createDodoCheckoutSession,
-  dodoWebhook,
-} = require('../controllers/payment.controller');
-
-// Webhooks — no auth, raw body captured in app.js
-router.post('/webhook', webhook);
-router.post('/stripe/webhook', stripeWebhook);
-router.post('/dodo/webhook', dodoWebhook);
-
-// Protected routes
-router.post('/create-order', protect, createOrder);
-router.post('/verify', protect, verifyPayment);
-router.post('/validate-coupon', protect, validateCouponEndpoint);
-router.get('/history', protect, getPaymentHistory);
-router.post('/downgrade', protect, downgradeToFree);
-
-// Stripe — alternate checkout, used only as a Razorpay-decline fallback
-router.post('/stripe/create-checkout-session', protect, createStripeCheckoutSession);
-router.post('/stripe/verify-session', protect, verifyStripeSession);
-
-// Dodo — primary USD checkout (Merchant of Record)
-router.post('/dodo/create-checkout-session', protect, createDodoCheckoutSession);
-
+const controller = require('../controllers/payment.controller');
+router.post('/dodo/webhook', controller.dodoWebhook);
+router.post('/dodo/create-checkout-session', protect, controller.createDodoCheckoutSession);
+router.get('/history', protect, controller.getPaymentHistory);
+router.post('/downgrade', protect, controller.downgradeToFree);
+// Explicit retirement prevents old clients from activating plans via legacy processors.
+for (const path of [
+  '/webhook',
+  '/create-order',
+  '/verify',
+  '/validate-coupon',
+  '/stripe/webhook',
+  '/stripe/create-checkout-session',
+  '/stripe/verify-session',
+]) {
+  router.post(path, (_req, res) =>
+    res.status(410).json({
+      success: false,
+      message: 'This payment method has been retired. Please use Dodo checkout.',
+    })
+  );
+}
 module.exports = router;

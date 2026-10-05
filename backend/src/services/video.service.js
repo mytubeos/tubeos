@@ -185,6 +185,7 @@ const uploadVideo = async (userId, videoId, fileRef, mimeType) => {
 
     // 4. Check user plan upload limit
     const user = await User.findById(userId);
+    await user.resetMonthlyUsageIfNeeded();
     if (!(await user.hasUsageLeft('uploads'))) {
       const err = new Error(`Monthly upload limit reached. Upgrade your plan for more uploads.`);
       err.statusCode = 429;
@@ -194,7 +195,13 @@ const uploadVideo = async (userId, videoId, fileRef, mimeType) => {
     // 5. Get valid access token
     const accessToken = await getValidAccessToken(channel);
 
-    // 6. Update video status to uploading
+    // Claim this attempt atomically so two retry clicks cannot upload twice.
+    const claimed = await Video.findOneAndUpdate(
+      { _id: videoId, userId, status: video.status },
+      { $set: { status: 'uploading' } }
+    );
+    if (!claimed)
+      throw Object.assign(new Error('An upload is already in progress'), { statusCode: 409 });
     video.status = 'uploading';
     video.uploadInfo.uploadStartedAt = new Date();
     await video.save();
@@ -605,12 +612,24 @@ const cancelScheduled = async (userId, videoId) => {
     throw err;
   }
 
+  if (!video.youtubeVideoId) {
+    const { cancelSchedule } = require('./schedule.service');
+    await cancelSchedule(userId, videoId);
+    return { video: await Video.findById(videoId), message: 'Schedule cancelled' };
+  }
+  const channel = await YoutubeChannel.findById(video.channelId).select(
+    '+oauth.accessToken +oauth.refreshToken +oauth.expiresAt'
+  );
+  const token = await getValidAccessToken(channel);
+  await youtubeRequest('/videos?part=status', {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ id: video.youtubeVideoId, status: { privacyStatus: 'private' } }),
+  });
   video.status = 'cancelled';
   video.scheduledAt = null;
+  video.privacy = 'private';
   await video.save();
-
-  // Cancel BullMQ job if exists (Part 3 will handle this)
-  // Will be integrated when scheduler is built
 
   return { video, message: 'Scheduled video cancelled' };
 };

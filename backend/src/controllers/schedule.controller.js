@@ -58,7 +58,9 @@ const getCalendar = async (req, res) => {
     const result = await scheduleService.getCalendarView(
       req.user.id,
       parseInt(year) || now.getFullYear(),
-      parseInt(month) || now.getMonth() + 1
+      parseInt(month) || now.getMonth() + 1,
+      req.query.channelId,
+      req.query.timezone || 'UTC'
     );
     return successResponse(res, 200, 'Calendar fetched', result);
   } catch (err) {

@@ -78,7 +78,7 @@ export const Sidebar = ({ collapsed = false, open = false, onClose }) => {
       )}
 
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-50 h-screen bg-base-800 border-r border-white/8
+        className={`fixed md:static inset-y-0 left-0 z-50 h-[100dvh] bg-base-800 border-r border-white/8
                           flex flex-col transition-transform duration-300 md:translate-x-0
                           ${open ? 'translate-x-0' : '-translate-x-full'}
                           ${collapsed ? 'w-16' : 'w-60'}`}

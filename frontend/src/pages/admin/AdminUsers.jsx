@@ -31,7 +31,7 @@ const PLAN_META = {
   agency: { color: 'rose', label: 'Max' },
 }
 
-const PLAN_PRICES = { creator: '₹199/mo', pro: '₹499/mo', agency: '₹2999/mo', free: 'Free' }
+const PLAN_PRICES = { creator: 'Creator', pro: 'Pro', agency: 'Max', free: 'Free' }
 
 const fmt = (d) =>
   d

@@ -191,6 +191,7 @@ export const Dashboard = () => {
 
       {/* KPI Cards */}
       <KPIGrid
+        dashboard
         overview={overview}
         loading={isLoading}
         channelStats={activeChannel?.stats}

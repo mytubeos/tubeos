@@ -9,7 +9,7 @@ export const formatNumber = (num) => {
 }
 
 // Format compact number: 1234567 → ₹12.3L or $1.2M
-export const formatCurrency = (num, currency = 'INR') => {
+export const formatCurrency = (num, currency = 'USD') => {
   if (!num && num !== 0) return '—'
   if (currency === 'INR') {
     if (num >= 10_000_000) return `₹${(num / 10_000_000).toFixed(1)}Cr`

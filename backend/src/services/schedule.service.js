@@ -36,7 +36,7 @@ const createSchedule = async (userId, videoId, scheduledAt, options = {}) => {
 
   // 2. Validate scheduled time
   const scheduleDate = new Date(scheduledAt);
-  if (scheduleDate <= new Date()) {
+  if (!Number.isFinite(scheduleDate.getTime()) || scheduleDate <= new Date()) {
     const err = new Error('Scheduled time must be in the future');
     err.statusCode = 400;
     throw err;
@@ -86,69 +86,60 @@ const createSchedule = async (userId, videoId, scheduledAt, options = {}) => {
 
 // ==================== RESCHEDULE ====================
 const reschedule = async (userId, videoId, newScheduledAt) => {
-  const schedule = await Schedule.findOne({ videoId, userId });
-  if (!schedule) {
-    const err = new Error('Schedule not found');
-    err.statusCode = 404;
-    throw err;
+  const date = new Date(newScheduledAt);
+  const max = new Date();
+  max.setMonth(max.getMonth() + 6);
+  if (!Number.isFinite(date.getTime()) || date <= new Date() || date > max) {
+    throw Object.assign(new Error('Choose a future time within six months'), { statusCode: 400 });
   }
-
-  if (schedule.status === 'published') {
-    const err = new Error('Cannot reschedule an already published video');
-    err.statusCode = 400;
-    throw err;
-  }
-
-  const newDate = new Date(newScheduledAt);
-  if (newDate <= new Date()) {
-    const err = new Error('Scheduled time must be in the future');
-    err.statusCode = 400;
-    throw err;
-  }
-  const video = await Video.findById(videoId);
-
-  // Update schedule — the reaper cron just re-reads scheduledAt each poll
-  schedule.scheduledAt = newDate;
-  schedule.status = 'pending';
-  schedule.failReason = null;
-  await schedule.save();
-
-  // Update video
-  video.scheduledAt = newDate;
-  video.status = 'scheduled';
-  await video.save();
-
-  return {
-    schedule,
-    message: `Rescheduled to ${newDate.toISOString()}`,
-  };
-};
-
-// ==================== CANCEL SCHEDULE ====================
-const cancelSchedule = async (userId, videoId) => {
-  const schedule = await Schedule.findOne({ videoId, userId });
-  if (!schedule) {
-    const err = new Error('Schedule not found');
-    err.statusCode = 404;
-    throw err;
-  }
-
-  // Update schedule
-  schedule.status = 'cancelled';
-  await schedule.save();
-
-  // Update video back to draft — its staged file stays attached, so it can
-  // be rescheduled again without re-uploading.
-  await Video.findOneAndUpdate(
-    { _id: { $eq: videoId } },
-    {
-      status: 'draft',
-      scheduledAt: null,
+  return Schedule.db.transaction(async (session) => {
+    const schedule = await Schedule.findOne({
+      videoId,
+      userId,
+      status: { $in: ['pending', 'failed', 'cancelled'] },
+    }).session(session);
+    const video = await Video.findOne({ _id: videoId, userId }).session(session);
+    if (
+      !schedule ||
+      !video ||
+      !['scheduled', 'draft', 'failed'].includes(video.status) ||
+      !video.stagedFile?.gcsPath ||
+      video.youtubeVideoId
+    ) {
+      throw Object.assign(
+        new Error('This video cannot be rescheduled. Attach a file to a draft first.'),
+        { statusCode: 409 }
+      );
     }
-  );
-
-  return { message: 'Schedule cancelled successfully' };
+    schedule.scheduledAt = date;
+    schedule.status = 'pending';
+    schedule.failReason = null;
+    video.scheduledAt = date;
+    video.status = 'scheduled';
+    await schedule.save({ session });
+    await video.save({ session });
+    return { schedule, message: `Rescheduled to ${date.toISOString()}` };
+  });
 };
+
+const cancelSchedule = async (userId, videoId) =>
+  Schedule.db.transaction(async (session) => {
+    const schedule = await Schedule.findOne({ videoId, userId, status: 'pending' }).session(
+      session
+    );
+    const video = await Video.findOne({ _id: videoId, userId }).session(session);
+    if (!schedule || !video || video.status !== 'scheduled' || video.youtubeVideoId) {
+      throw Object.assign(new Error('Only a pending, not-yet-uploaded schedule can be cancelled'), {
+        statusCode: 409,
+      });
+    }
+    schedule.status = 'cancelled';
+    video.status = 'draft';
+    video.scheduledAt = null;
+    await schedule.save({ session });
+    await video.save({ session });
+    return { message: 'Schedule cancelled successfully' };
+  });
 
 // ==================== GET MY SCHEDULES ====================
 const getMySchedules = async (userId, filters = {}) => {
@@ -183,12 +174,19 @@ const getMySchedules = async (userId, filters = {}) => {
 
 // ==================== GET CALENDAR VIEW ====================
 // Returns schedules grouped by date for calendar UI
-const getCalendarView = async (userId, year, month) => {
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0, 23, 59, 59);
-
+const getCalendarView = async (userId, year, month, channelId, timezone = 'UTC') => {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const prefix = `${year}-${String(month).padStart(2, '0')}`;
+  const startDate = new Date(Date.UTC(year, month - 1, 1) - 14 * 3600000);
+  const endDate = new Date(Date.UTC(year, month, 1) + 14 * 3600000);
   const schedules = await Schedule.find({
     userId,
+    ...(channelId ? { channelId } : {}),
     scheduledAt: { $gte: startDate, $lte: endDate },
   })
     .populate('videoId', 'title thumbnail privacy isShort')
@@ -198,7 +196,8 @@ const getCalendarView = async (userId, year, month) => {
   // Group by date
   const calendar = {};
   schedules.forEach((schedule) => {
-    const dateKey = new Date(schedule.scheduledAt).toISOString().split('T')[0];
+    const dateKey = formatter.format(new Date(schedule.scheduledAt));
+    if (!dateKey.startsWith(prefix)) return;
     if (!calendar[dateKey]) calendar[dateKey] = [];
     calendar[dateKey].push({
       _id: schedule._id,
@@ -211,7 +210,10 @@ const getCalendarView = async (userId, year, month) => {
     });
   });
 
-  return { calendar, totalScheduled: schedules.length };
+  return {
+    calendar,
+    totalScheduled: Object.values(calendar).reduce((total, items) => total + items.length, 0),
+  };
 };
 
 // ==================== GET JOB STATUS ====================

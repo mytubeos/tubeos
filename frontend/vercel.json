@@ -1,7 +1,5 @@
 {
-  "rewrites": [
-    { "source": "/((?!\\.well-known/).*)", "destination": "/index.html" }
-  ],
+  "rewrites": [{ "source": "/((?!\\.well-known/).*)", "destination": "/index.html" }],
   "headers": [
     {
       "source": "/.well-known/assetlinks.json",

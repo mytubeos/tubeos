@@ -1,6 +1,8 @@
 // src/components/features/VideoCard.jsx
 import {
   Eye,
+  Upload,
+  Info,
   ThumbsUp,
   Clock,
   ExternalLink,
@@ -14,7 +16,15 @@ import { useNavigate } from 'react-router-dom'
 import { StatusBadge } from '../ui/Badge'
 import { formatNumber, formatDate, timeAgo } from '../../utils/formatters'
 
-export const VideoCard = ({ video, onEdit, onDelete, onCancel, compact = false }) => {
+export const VideoCard = ({
+  video,
+  onEdit,
+  onDelete,
+  onCancel,
+  onRetry,
+  onDetails,
+  compact = false,
+}) => {
   const [showMenu, setShowMenu] = useState(false)
   const navigate = useNavigate()
 
@@ -42,9 +52,9 @@ export const VideoCard = ({ video, onEdit, onDelete, onCancel, compact = false }
   }
 
   return (
-    <div className="glass rounded-xl overflow-hidden hover:border-white/12 transition-all group">
+    <div className="glass rounded-xl hover:border-white/12 transition-all group">
       {/* Thumbnail */}
-      <div className="relative aspect-video bg-base-600 overflow-hidden">
+      <div className="relative aspect-video rounded-t-xl bg-base-600 overflow-hidden">
         {thumb ? (
           <img
             src={thumb}
@@ -101,6 +111,7 @@ export const VideoCard = ({ video, onEdit, onDelete, onCancel, compact = false }
           {/* Menu */}
           <div className="relative shrink-0">
             <button
+              aria-label={`Actions for ${video.title}`}
               onClick={() => setShowMenu(!showMenu)}
               className="w-7 h-7 rounded-lg flex items-center justify-center
                          text-gray-500 hover:text-white hover:bg-white/8 transition-all"
@@ -114,6 +125,28 @@ export const VideoCard = ({ video, onEdit, onDelete, onCancel, compact = false }
                   className="absolute right-0 top-8 w-40 bg-base-700 border border-white/10
                                 rounded-xl shadow-2xl z-20 overflow-hidden"
                 >
+                  {onDetails && (
+                    <button
+                      onClick={() => {
+                        onDetails(video)
+                        setShowMenu(false)
+                      }}
+                      className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm text-gray-300 hover:bg-white/5"
+                    >
+                      <Info size={14} /> View details
+                    </button>
+                  )}
+                  {onRetry && (
+                    <button
+                      onClick={() => {
+                        onRetry(video)
+                        setShowMenu(false)
+                      }}
+                      className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm text-brand hover:bg-white/5"
+                    >
+                      <Upload size={14} /> {video.status === 'failed' ? 'Re-upload' : 'Upload file'}
+                    </button>
+                  )}
                   {onEdit && (
                     <button
                       onClick={() => {
@@ -156,6 +189,11 @@ export const VideoCard = ({ video, onEdit, onDelete, onCancel, compact = false }
           </div>
         </div>
 
+        {video.status === 'failed' && (
+          <p className="text-xs text-rose mb-2 break-words line-clamp-2">
+            {video.lastError?.message || 'Upload failed. Open details or re-upload the file.'}
+          </p>
+        )}
         {/* Stats row */}
         <div className="flex items-center gap-3 text-2xs text-gray-500">
           {video.performance?.views > 0 && (

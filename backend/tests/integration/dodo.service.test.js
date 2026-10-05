@@ -24,6 +24,7 @@ const createTestUser = async (overrides = {}) =>
 // applied at checkout (see dodo-discount.service.js) — no longer anything
 // Vezrin validates or redeems itself, just recorded for reporting.
 const buildPayload = ({ userId, plan, couponCode, totalAmount }) => ({
+  currency: 'USD',
   total_amount: totalAmount,
   metadata: { userId, plan },
   ...(couponCode ? { discounts: [{ code: couponCode }] } : {}),

@@ -1,3 +1,6 @@
+import nock from 'nock'
+// Never allow UI tests to contact the production API or any external host.
+nock.disableNetConnect()
 import '@testing-library/jest-dom/vitest'
 import { cleanup, configure } from '@testing-library/react'
 import { afterEach, beforeEach, vi } from 'vitest'

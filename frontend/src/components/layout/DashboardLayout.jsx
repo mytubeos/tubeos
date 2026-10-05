@@ -1,6 +1,6 @@
 // src/components/layout/DashboardLayout.jsx
 import { Outlet, useLocation } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Sidebar } from './Sidebar'
 import { Navbar } from './Navbar'
 import { PlanActivatedModal } from '../features/PlanActivatedModal'
@@ -27,12 +27,14 @@ const getPageTitle = (pathname) => {
 
 export const DashboardLayout = () => {
   const { pathname } = useLocation()
+  const mainRef = useRef(null)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [celebration, setCelebration] = useState(null)
 
   // Close the mobile drawer automatically whenever the route changes
   useEffect(() => {
     setMobileNavOpen(false)
+    mainRef.current?.scrollTo({ top: 0, behavior: 'instant' })
   }, [pathname])
 
   // Once per app open: surface an admin plan grant as a full-screen
@@ -51,22 +53,26 @@ export const DashboardLayout = () => {
   }, [])
 
   const dismissCelebration = () => {
-    if (celebration) notificationAPI.markRead(celebration._id).catch(() => {})
+    if (celebration)
+      notificationAPI
+        .markRead(celebration._id)
+        .then(() => window.dispatchEvent(new Event('notifications-changed')))
+        .catch(() => {})
     setCelebration(null)
   }
 
   return (
-    <div className="flex h-screen bg-base-900 overflow-hidden">
+    <div className="flex h-[100dvh] bg-base-900 overflow-hidden">
       {/* Sidebar */}
       <Sidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
         <Navbar title={getPageTitle(pathname)} onMenuClick={() => setMobileNavOpen(true)} />
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-5 max-w-screen-xl mx-auto animate-fade-in">
+        <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto">
+          <div key={pathname} className="p-3 sm:p-5 max-w-screen-xl mx-auto route-enter">
             <Outlet />
           </div>
         </main>

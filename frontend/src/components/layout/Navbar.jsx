@@ -31,8 +31,17 @@ export const Navbar = ({ title, onMenuClick }) => {
 
   useEffect(() => {
     fetchNotifications()
-    const interval = setInterval(fetchNotifications, NOTIF_POLL_MS)
-    return () => clearInterval(interval)
+    const refreshOnFocus = () => {
+      if (!document.hidden) fetchNotifications()
+    }
+    window.addEventListener('focus', refreshOnFocus)
+    window.addEventListener('notifications-changed', fetchNotifications)
+    const interval = setInterval(refreshOnFocus, NOTIF_POLL_MS)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', refreshOnFocus)
+      window.removeEventListener('notifications-changed', fetchNotifications)
+    }
   }, [fetchNotifications])
 
   const handleOpenNotifs = () => {
@@ -47,7 +56,7 @@ export const Navbar = ({ title, onMenuClick }) => {
     try {
       await notificationAPI.markRead(n._id)
     } catch {
-      // Best-effort — a stale "read" state locally is harmless
+      await fetchNotifications()
     }
   }
 
@@ -57,14 +66,14 @@ export const Navbar = ({ title, onMenuClick }) => {
     try {
       await notificationAPI.markAllRead()
     } catch {
-      // Best-effort, same as above
+      await fetchNotifications()
     }
   }
 
   return (
     <header
-      className="h-14 bg-base-800/80 backdrop-blur-sm border-b border-white/8
-                        flex items-center justify-between px-5 sticky top-0 z-30"
+      className="h-14 shrink-0 bg-base-800/80 backdrop-blur-sm border-b border-white/8
+                        flex items-center justify-between gap-2 px-3 sm:px-5 sticky top-0 z-30"
     >
       {/* Left — Menu toggle (mobile) + Page title */}
       <div className="flex items-center gap-2.5 min-w-0">
@@ -85,6 +94,7 @@ export const Navbar = ({ title, onMenuClick }) => {
         {channels.length > 0 && (
           <div className="relative">
             <button
+              aria-label="Switch channel"
               onClick={() => setShowChannels(!showChannels)}
               className="flex items-center gap-2 h-9 px-3 rounded-lg glass
                          hover:bg-white/6 transition-all text-sm"
@@ -99,7 +109,7 @@ export const Navbar = ({ title, onMenuClick }) => {
                   alt=""
                 />
               )}
-              <span className="text-gray-300 text-sm max-w-[140px] truncate">
+              <span className="text-gray-300 text-sm hidden sm:inline max-w-[140px] truncate">
                 {activeChannel?.channelName || 'Select Channel'}
               </span>
               <ChevronDown size={14} className="text-gray-500" />
@@ -201,7 +211,7 @@ export const Navbar = ({ title, onMenuClick }) => {
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowNotifs(false)} />
               <div
-                className="absolute right-0 top-11 w-80 bg-base-700 border border-white/10
+                className="absolute right-0 top-11 w-80 max-w-[calc(100vw-24px)] bg-base-700 border border-white/10
                               rounded-xl shadow-2xl z-20 overflow-hidden animate-slide-up"
               >
                 <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-white/8">

@@ -40,7 +40,7 @@ describe('Referral withdraw flow (smoke)', () => {
   it('shows the withdraw button with the real balance', async () => {
     render(<Referral />)
     await waitFor(() => expect(referralAPI.getStats).toHaveBeenCalled())
-    expect(await screen.findByText('₹500')).toBeInTheDocument()
+    expect(await screen.findByText('$500.00')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /withdraw/i })).toBeEnabled()
   })
 
@@ -56,7 +56,7 @@ describe('Referral withdraw flow (smoke)', () => {
     })
     render(<Referral />)
     await waitFor(() => expect(referralAPI.getStats).toHaveBeenCalled())
-    expect(await screen.findByText(/minimum ₹200 required/i)).toBeInTheDocument()
+    expect(await screen.findByText(/minimum \$200.00 required/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /withdraw/i })).toBeDisabled()
   })
 

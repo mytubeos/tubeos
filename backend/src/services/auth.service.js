@@ -2,6 +2,7 @@
 // FIXED: Full OTP verification via Brevo, forgot password, reset password, no bugs
 const crypto = require('crypto');
 const User = require('../models/user.model');
+const RevokedSession = require('../models/revoked-session.model');
 const TempToken = require('../models/temp-token.model');
 const { generateTokenPair, verifyRefreshToken } = require('../utils/jwt.utils');
 const { sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail } = require('../utils/email.utils');
@@ -43,8 +44,11 @@ const deleteTempToken = async (key) => {
 };
 
 const generateUniqueReferralCode = async (name) => {
-  const base = name.slice(0, 3).toUpperCase() + Math.random().toString(36).substring(2, 8);
-  const exists = await User.findOne({ 'referral.myCode': base });
+  const base = (name.slice(0, 3) + Math.random().toString(36).substring(2, 8)).toUpperCase();
+  const exists = await User.findOne({ 'referral.myCode': base }).collation({
+    locale: 'en',
+    strength: 2,
+  });
   return exists ? generateUniqueReferralCode(name) : base;
 };
 
@@ -76,7 +80,10 @@ const register = async ({ name, email, password, referralCode }) => {
   // Handle referral
   let referredBy = null;
   if (referralCode) {
-    const referrer = await User.findOne({ 'referral.myCode': referralCode.toUpperCase() });
+    // Existing codes used mixed case; compare without rewriting users' shared links.
+    const referrer = await User.findOne({
+      'referral.myCode': referralCode.trim().toUpperCase(),
+    }).collation({ locale: 'en', strength: 2 });
     if (referrer) {
       referredBy = referrer._id;
     }
@@ -181,7 +188,7 @@ const verifyEmail = async (otp, userId) => {
   await deleteTempToken(`email_otp:${userId}`);
 
   // Generate tokens
-  const tokens = generateTokenPair(user._id.toString(), user.email, user.plan);
+  const tokens = generateTokenPair(user);
 
   // Send welcome email
   try {
@@ -297,7 +304,7 @@ const login = async ({ email, password, ip }) => {
   }
 
   // Generate tokens
-  const tokens = generateTokenPair(user._id.toString(), user.email, user.plan);
+  const tokens = generateTokenPair(user);
 
   // Log login
   await User.findByIdAndUpdate(user._id, { lastLoginAt: new Date(), lastLoginIp: ip });
@@ -394,6 +401,7 @@ const resetPassword = async (resetToken, newPassword) => {
     throw error;
   }
 
+  user.sessionVersion = (user.sessionVersion || 0) + 1;
   user.password = newPassword; // Will be hashed by model
   user.passwordChangedAt = new Date();
   await user.save();
@@ -424,6 +432,14 @@ const refreshToken = async (token) => {
       throw error;
     }
 
+    if (
+      !user.isActive ||
+      user.isBanned ||
+      (decoded.version || 0) !== (user.sessionVersion || 0) ||
+      (decoded.sid && (await RevokedSession.exists({ _id: decoded.sid })))
+    ) {
+      throw new Error('Session has been revoked');
+    }
     // Check if password was changed after token issue
     if (user.passwordChangedAt) {
       const changedTime = Math.floor(user.passwordChangedAt.getTime() / 1000);
@@ -434,7 +450,7 @@ const refreshToken = async (token) => {
       }
     }
 
-    const tokens = generateTokenPair(user._id.toString(), user.email, user.plan);
+    const tokens = generateTokenPair(user, undefined, undefined, decoded.sid);
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
@@ -520,6 +536,7 @@ const changePassword = async (userId, currentPassword, newPassword) => {
   }
 
   // Update password
+  user.sessionVersion = (user.sessionVersion || 0) + 1;
   user.password = newPassword;
   user.passwordChangedAt = new Date();
   await user.save();
@@ -530,20 +547,25 @@ const changePassword = async (userId, currentPassword, newPassword) => {
 };
 
 // ==================== LOGOUT ====================
-const logout = async (userId, refreshToken) => {
-  // Could blacklist token in Redis if needed
-  // For now, token will just expire naturally
-  return {
-    message: 'Logged out successfully',
-  };
+const logout = async (userId, token, sessionId) => {
+  if (sessionId) {
+    // Revoked IDs are retained longer than either token lifetime (configurable TTL).
+    // No TTL deletion: retaining a revocation guarantees long-lived configured tokens stay revoked.
+    await RevokedSession.updateOne(
+      { _id: sessionId },
+      { $set: { expiresAt: new Date('9999-12-31T00:00:00Z') } },
+      { upsert: true }
+    );
+  } else {
+    // Legacy tokens have no session ID, so invalidate that generation.
+    await User.updateOne({ _id: userId }, { $inc: { sessionVersion: 1 } });
+  }
+  return { message: 'Logged out successfully' };
 };
 
-// ==================== LOGOUT ALL DEVICES ====================
 const logoutAll = async (userId) => {
-  // Could invalidate all tokens for this user in Redis
-  return {
-    message: 'Logged out from all devices',
-  };
+  await User.updateOne({ _id: userId }, { $inc: { sessionVersion: 1 } });
+  return { message: 'Logged out from all devices' };
 };
 
 module.exports = {

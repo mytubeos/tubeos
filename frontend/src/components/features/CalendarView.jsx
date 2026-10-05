@@ -28,7 +28,7 @@ const StatusDot = ({ status }) => {
   return <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${colors[status] || 'bg-gray-500'}`} />
 }
 
-export const CalendarView = ({ calendar = {}, onDayClick, loading = false }) => {
+export const CalendarView = ({ calendar = {}, onDayClick, onMonthChange, loading = false }) => {
   const today = new Date()
   const [current, setCurrent] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
 
@@ -70,8 +70,12 @@ export const CalendarView = ({ calendar = {}, onDayClick, loading = false }) => 
     weeks.push(cells.slice(i, i + 7))
   }
 
-  const prevMonth = () => setCurrent(new Date(year, month - 1, 1))
-  const nextMonth = () => setCurrent(new Date(year, month + 1, 1))
+  const changeMonth = (date) => {
+    setCurrent(date)
+    onMonthChange?.(date)
+  }
+  const prevMonth = () => changeMonth(new Date(year, month - 1, 1))
+  const nextMonth = () => changeMonth(new Date(year, month + 1, 1))
 
   return (
     <div>
@@ -89,7 +93,7 @@ export const CalendarView = ({ calendar = {}, onDayClick, loading = false }) => 
             <ChevronLeft size={16} />
           </button>
           <button
-            onClick={() => setCurrent(new Date(today.getFullYear(), today.getMonth(), 1))}
+            onClick={() => changeMonth(new Date(today.getFullYear(), today.getMonth(), 1))}
             className="px-2 sm:px-3 py-1 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/8 transition-all"
           >
             Today

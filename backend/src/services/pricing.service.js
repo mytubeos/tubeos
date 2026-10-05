@@ -65,10 +65,20 @@ const getPrice = async (plan, currency) => {
   assertKnownPlan(plan);
   assertKnownCurrency(currency);
 
-  const existing = await PlanPrice.findOne({ plan, currency });
-  if (existing) return existing;
-
-  return PlanPrice.create({ plan, currency, ...DEFAULT_PRICES[plan][currency] });
+  try {
+    return await PlanPrice.findOneAndUpdate(
+      { plan, currency },
+      { $setOnInsert: DEFAULT_PRICES[plan][currency] },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+  } catch (err) {
+    // Another request may seed the same unique row first. Never replace its
+    // values: an administrator could already have customized the price.
+    if (err.code !== 11000) throw err;
+    const existing = await PlanPrice.findOne({ plan, currency });
+    if (!existing) throw err;
+    return existing;
+  }
 };
 
 // All 9 rows, grouped by plan — shape the admin panel and the public

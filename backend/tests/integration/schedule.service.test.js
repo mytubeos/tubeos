@@ -284,3 +284,21 @@ describe('schedule.service.getBestTimeRecommendation — ranks slots by real sco
     expect(top.day).toBe('saturday');
   });
 });
+
+it('does not cancel or reset an already-published scheduled video', async () => {
+  const { user, video } = await createFixtures({
+    status: 'published',
+    youtubeVideoId: 'published-yt',
+  });
+  await Schedule.create({
+    userId: user._id,
+    channelId: video.channelId,
+    videoId: video._id,
+    status: 'published',
+    scheduledAt: new Date(),
+  });
+  await expect(scheduleService.cancelSchedule(user._id, video._id)).rejects.toMatchObject({
+    statusCode: 409,
+  });
+  expect((await Video.findById(video._id)).status).toBe('published');
+});

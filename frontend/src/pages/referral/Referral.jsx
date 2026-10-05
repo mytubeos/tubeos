@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { Modal } from '../../components/ui/Modal'
 import { Input, Select } from '../../components/ui/Input'
-import { formatNumber } from '../../utils/formatters'
+const dollars = (value) => `$${Number(value || 0).toFixed(2)}`
 import toast from 'react-hot-toast'
 import referralAPI from '../../api/referral.api'
 
@@ -43,7 +43,6 @@ const TIERS = [
     discount: '10%',
     color: 'amber',
     icon: '👑',
-    special: 'FREE PRO for life + featured on website!',
   },
 ]
 
@@ -59,7 +58,7 @@ export const Referral = () => {
     code: null,
     tier: 'Starter',
     commissionRate: 10,
-    minPayout: 200,
+    minPayout: 5,
   })
 
   const [showWithdraw, setShowWithdraw] = useState(false)
@@ -81,9 +80,10 @@ export const Referral = () => {
           pendingPayout: d.wallet?.pendingPayout ?? 0,
           balance: d.wallet?.balance ?? 0,
           code: d.code,
+          legacyBalanceNeedsReconciliation: d.legacyBalanceNeedsReconciliation,
           tier: d.tier || 'Starter',
           commissionRate: d.commissionRate ?? 10,
-          minPayout: d.minPayout ?? 200,
+          minPayout: d.minPayout ?? 5,
         })
       })
       .catch((err) => console.error('[Referral] stats load failed:', err.message))
@@ -102,13 +102,13 @@ export const Referral = () => {
   }
 
   const handleWithdraw = async () => {
-    const amount = parseInt(withdrawAmount, 10)
+    const amount = Number(withdrawAmount)
     if (!amount || amount < stats.minPayout) {
-      toast.error(`Minimum payout is ₹${stats.minPayout}`)
+      toast.error(`Minimum payout is ${dollars(stats.minPayout)}`)
       return
     }
     if (amount > stats.balance) {
-      toast.error(`Insufficient balance. Available: ₹${stats.balance}`)
+      toast.error(`Insufficient balance. Available: ${dollars(stats.balance)}`)
       return
     }
     if (withdrawMethod === 'upi' && !upi.trim()) {
@@ -159,7 +159,7 @@ export const Referral = () => {
   }
 
   const shareOnTwitter = () => {
-    const text = `I'm using Vezrin to grow my YouTube channel with AI. Use my code ${referralCode} for 10% off! 🚀`
+    const text = `I'm using Vezrin to grow my YouTube channel with AI. Use my code ${referralCode}! 🚀`
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(referralLink)}`,
       '_blank'
@@ -167,7 +167,7 @@ export const Referral = () => {
   }
 
   const shareOnWhatsApp = () => {
-    const text = `I'm using Vezrin to grow my YouTube channel with AI. Use my code ${referralCode} for 10% off! 🎉\n${referralLink}`
+    const text = `I'm using Vezrin to grow my YouTube channel with AI. Use my code ${referralCode}! 🎉\n${referralLink}`
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
   }
 
@@ -206,8 +206,8 @@ export const Referral = () => {
             {[
               { label: 'Referrals', value: stats.totalReferrals, icon: Users },
               { label: 'Active', value: stats.activeReferrals, icon: Zap },
-              { label: 'Earned', value: `₹${formatNumber(stats.totalEarned)}`, icon: TrendingUp },
-              { label: 'Pending', value: `₹${formatNumber(stats.pendingPayout)}`, icon: Gift },
+              { label: 'Earned', value: dollars(stats.totalEarned), icon: TrendingUp },
+              { label: 'Pending', value: dollars(stats.pendingPayout), icon: Gift },
             ].map(({ label, value, icon: Icon }) => (
               <div key={label} className="glass p-1.5 sm:p-3 rounded-xl text-center min-w-0">
                 <p className="font-display font-bold text-white text-xs sm:text-lg truncate">
@@ -222,12 +222,10 @@ export const Referral = () => {
           <div className="flex items-center justify-between gap-3 p-3 mb-3 bg-base-600 rounded-xl border border-white/10">
             <div>
               <p className="text-2xs text-gray-500 mb-0.5">Available to withdraw</p>
-              <p className="font-display font-bold text-white text-lg">
-                ₹{formatNumber(stats.balance)}
-              </p>
+              <p className="font-display font-bold text-white text-lg">{dollars(stats.balance)}</p>
               {stats.balance < stats.minPayout && (
                 <p className="text-2xs text-gray-500 mt-0.5">
-                  Minimum ₹{stats.minPayout} required to withdraw
+                  Minimum {dollars(stats.minPayout)} required to withdraw
                 </p>
               )}
             </div>
@@ -274,6 +272,12 @@ export const Referral = () => {
         </div>
       </div>
 
+      {stats.legacyBalanceNeedsReconciliation && (
+        <p className="text-sm text-amber">
+          Your historical wallet balance is preserved separately. Contact support to reconcile it
+          into USD before withdrawal.
+        </p>
+      )}
       {/* Current tier */}
       <Card>
         <CardHeader title="Your Tier" icon={Trophy} iconColor="amber" />
@@ -348,7 +352,7 @@ export const Referral = () => {
             {
               step: '2',
               title: 'They sign up & pay',
-              desc: 'They get 10% off for their first 3 months. You earn commission when they pay.',
+              desc: 'You earn commission on their successful Dodo payments.',
             },
             {
               step: '3',
@@ -358,7 +362,7 @@ export const Referral = () => {
             {
               step: '4',
               title: 'Reach Legend tier',
-              desc: '50+ referrals = 20% commission + FREE PRO plan for life + featured on website!',
+              desc: '50+ referrals unlock 20% commission.',
             },
           ].map(({ step, title, desc }) => (
             <div key={step} className="flex items-start gap-4">
@@ -404,14 +408,15 @@ export const Referral = () => {
       >
         <div className="space-y-4">
           <Input
-            label="Amount (₹)"
+            label="Amount (USD)"
             type="number"
             name="amount"
+            step="0.01"
             min={stats.minPayout}
             max={stats.balance}
             value={withdrawAmount}
             onChange={(e) => setWithdrawAmount(e.target.value)}
-            hint={`Available: ₹${formatNumber(stats.balance)} · Minimum: ₹${stats.minPayout}`}
+            hint={`Available: ${dollars(stats.balance)} · Minimum: ${dollars(stats.minPayout)}`}
           />
 
           <Select
@@ -459,7 +464,10 @@ export const Referral = () => {
           )}
 
           <div className="p-3 bg-brand/5 border border-brand/15 rounded-xl">
-            <p className="text-xs text-gray-400">Processed within 3 business days.</p>
+            <p className="text-xs text-gray-400">
+              Earnings are in USD. Transfer currency and settlement details are confirmed before
+              payout.
+            </p>
           </div>
         </div>
       </Modal>

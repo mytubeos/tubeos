@@ -176,7 +176,7 @@ export function TermsAndConditions() {
             <h2 className="text-2xl font-bold text-white mb-4">12. Subscription & Payment</h2>
             <ul className="list-disc list-inside space-y-2 ml-4">
               <li>Vezrin offers different subscription plans (Free, Creator, Pro, Max)</li>
-              <li>Payments are processed securely through Razorpay</li>
+              <li>Payments are processed securely through Dodo Payments</li>
               <li>Subscriptions renew automatically unless cancelled</li>
               <li>You can cancel your subscription anytime from your account settings</li>
               <li>No refunds for partial months or cancellations</li>
@@ -243,7 +243,7 @@ export function TermsAndConditions() {
             <h2 className="text-2xl font-bold text-white mb-4">17. Third-Party Services</h2>
             <p>
               Vezrin integrates with third-party services (including the YouTube Data API, DeepSeek,
-              Google Gemini, Groq, Cloudflare, Cloudinary, and Razorpay). Your use of features
+              Google Gemini, Groq, Cloudflare, Cloudinary, and Dodo Payments). Your use of features
               backed by these services is subject to their own terms and conditions. We are not
               responsible for their services, availability, or data handling.
             </p>

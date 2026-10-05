@@ -250,7 +250,7 @@ const changePassword = async (req, res) => {
 const logout = async (req, res) => {
   try {
     const token = req.cookies?.refreshToken || req.body?.refreshToken;
-    await authService.logout(req.user.id, token);
+    await authService.logout(req.user.id, token, req.user.sessionId);
 
     res.clearCookie('refreshToken', { path: '/api/v1/auth' });
 

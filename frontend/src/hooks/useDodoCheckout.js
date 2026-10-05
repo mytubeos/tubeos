@@ -6,6 +6,7 @@ import paymentAPI from '../api/payment.api'
 import { useAuthStore } from '../store/authStore'
 
 const PENDING_PLAN_KEY = 'dodo_pending_plan'
+const BASELINE_KEY = 'dodo_pending_baseline'
 const POLL_INTERVAL_MS = 2000
 const POLL_ATTEMPTS = 8 // ~16s — generous for a webhook that's usually near-instant
 
@@ -28,6 +29,13 @@ export const useDodoCheckout = ({ onSuccess } = {}) => {
     setLoadingPlan(plan)
     try {
       const res = await paymentAPI.createDodoCheckout(plan)
+      sessionStorage.setItem(
+        BASELINE_KEY,
+        JSON.stringify({
+          plan: useAuthStore.getState().user?.plan,
+          expiresAt: useAuthStore.getState().user?.subscriptionExpiresAt,
+        })
+      )
       sessionStorage.setItem(PENDING_PLAN_KEY, plan)
       window.location.href = res.data.data.url
       // Do NOT clear loadingPlan here — this tab is navigating away to Dodo.
@@ -55,6 +63,11 @@ export const useDodoCheckout = ({ onSuccess } = {}) => {
     }
 
     const pendingPlan = sessionStorage.getItem(PENDING_PLAN_KEY)
+    let baseline = {}
+    try {
+      baseline = JSON.parse(sessionStorage.getItem(BASELINE_KEY) || '{}')
+    } catch {}
+    sessionStorage.removeItem(BASELINE_KEY)
     sessionStorage.removeItem(PENDING_PLAN_KEY)
 
     if (!pendingPlan) {
@@ -64,13 +77,19 @@ export const useDodoCheckout = ({ onSuccess } = {}) => {
 
     setVerifying(true)
     let attempts = 0
+    let cancelled = false
 
     const poll = async () => {
       attempts += 1
       await refreshUser()
-      const currentPlan = useAuthStore.getState().user?.plan
+      if (cancelled) return
+      const current = useAuthStore.getState().user
+      const currentPlan = current?.plan
 
-      if (currentPlan === pendingPlan) {
+      if (
+        currentPlan === pendingPlan &&
+        (baseline.plan !== pendingPlan || current?.subscriptionExpiresAt !== baseline.expiresAt)
+      ) {
         setVerifying(false)
         toast.success('Plan activated!')
         if (onSuccess) onSuccess(currentPlan)
@@ -80,7 +99,9 @@ export const useDodoCheckout = ({ onSuccess } = {}) => {
 
       if (attempts >= POLL_ATTEMPTS) {
         setVerifying(false)
-        toast('Payment received — activating your plan, refresh in a moment if it doesn’t update.')
+        toast(
+          'Payment confirmation is still pending. Refresh shortly or contact support if you were charged.'
+        )
         clearReturnParam()
         return
       }
@@ -91,6 +112,7 @@ export const useDodoCheckout = ({ onSuccess } = {}) => {
     poll()
 
     return () => {
+      cancelled = true
       if (pollTimer.current) clearTimeout(pollTimer.current)
     }
     // Only meant to run once, against whatever URL Dodo redirected back with

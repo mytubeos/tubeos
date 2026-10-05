@@ -2,6 +2,7 @@
 // JWT token generation and verification utilities
 
 const jwt = require('jsonwebtoken');
+const { randomUUID } = require('crypto');
 const { config } = require('../config/env');
 
 // Generate access token (short-lived: 15 minutes)
@@ -40,7 +41,7 @@ const verifyRefreshToken = (token) => {
 
 // Generate both tokens for a user
 // Accepts either (user object) or (id, email, plan) for backwards compat
-const generateTokenPair = (userOrId, email, plan) => {
+const generateTokenPair = (userOrId, email, plan, sessionId = randomUUID()) => {
   let id, userEmail, userPlan, role;
 
   if (typeof userOrId === 'object' && userOrId !== null) {
@@ -55,9 +56,10 @@ const generateTokenPair = (userOrId, email, plan) => {
     role = 'user';
   }
 
-  const payload = { id, email: userEmail, plan: userPlan, role };
+  const version = typeof userOrId === 'object' ? userOrId.sessionVersion || 0 : 0;
+  const payload = { id, email: userEmail, plan: userPlan, role, version, sid: sessionId };
   const accessToken = generateAccessToken(payload);
-  const refreshToken = generateRefreshToken({ id });
+  const refreshToken = generateRefreshToken({ id, version, sid: sessionId });
 
   return { accessToken, refreshToken };
 };
