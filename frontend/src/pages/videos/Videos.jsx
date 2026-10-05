@@ -4,10 +4,10 @@ import { Plus, Search, Video } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useChannelStore } from '../../store/channelStore'
 import { videoApi } from '../../api/video.api'
-import { scheduleApi } from '../../api/schedule.api'
+
 import { VideoCard } from '../../components/features/VideoCard'
 import { Button } from '../../components/ui/Button'
-import { Input } from '../../components/ui/Input'
+import { Input, Textarea, Select } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
 import toast from 'react-hot-toast'
 
@@ -24,6 +24,66 @@ export const Videos = () => {
   const { activeChannel } = useChannelStore()
   const channelId = activeChannel?._id
 
+  const [actionVideo, setActionVideo] = useState(null)
+  const [actionMode, setActionMode] = useState('edit')
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    tags: '',
+    privacy: 'private',
+  })
+  const [retryFile, setRetryFile] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const openAction = (video, mode) => {
+    setActionVideo(video)
+    setActionMode(mode)
+    setRetryFile(null)
+    setEditForm({
+      title: video.title || '',
+      description: video.description || '',
+      tags: (video.tags || []).join(', '),
+      privacy: video.privacy || 'private',
+    })
+  }
+  const saveAction = async () => {
+    if (!editForm.title.trim()) {
+      toast.error('Title is required')
+      return
+    }
+    if (
+      actionMode === 'retry' &&
+      (!retryFile ||
+        !retryFile.type.startsWith('video/') ||
+        retryFile.size > 2 * 1024 * 1024 * 1024)
+    ) {
+      toast.error('Choose a video file up to 2 GB')
+      return
+    }
+    setSaving(true)
+    try {
+      await videoApi.update(actionVideo._id, {
+        ...editForm,
+        title: editForm.title.trim(),
+        tags: editForm.tags
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean),
+        ...(actionMode === 'retry' ? { scheduledAt: null } : {}),
+      })
+      if (actionMode === 'retry') {
+        const data = new FormData()
+        data.append('video', retryFile)
+        await videoApi.upload(actionVideo._id, data)
+      }
+      toast.success(actionMode === 'retry' ? 'Video uploaded successfully' : 'Video details saved')
+      setActionVideo(null)
+      await fetchVideos()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not save video. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
   const [videos, setVideos] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -83,7 +143,7 @@ export const Videos = () => {
 
   const handleCancelSchedule = async (videoId) => {
     try {
-      await scheduleApi.cancel(videoId)
+      await videoApi.cancel(videoId)
       toast.success('Schedule cancelled')
       fetchVideos()
     } catch {
@@ -176,6 +236,17 @@ export const Videos = () => {
             <VideoCard
               key={video._id}
               video={video}
+              onEdit={
+                ['draft', 'failed'].includes(video.status)
+                  ? (v) => openAction(v, 'edit')
+                  : undefined
+              }
+              onRetry={
+                ['draft', 'failed'].includes(video.status)
+                  ? (v) => openAction(v, 'retry')
+                  : undefined
+              }
+              onDetails={(v) => openAction(v, 'details')}
               onDelete={setDeleteId}
               onCancel={handleCancelSchedule}
             />
@@ -183,6 +254,90 @@ export const Videos = () => {
         </div>
       )}
 
+      <Modal
+        isOpen={!!actionVideo}
+        onClose={() => {
+          if (!saving) setActionVideo(null)
+        }}
+        title={
+          actionMode === 'retry'
+            ? 'Re-upload video'
+            : actionMode === 'details'
+              ? 'Video details'
+              : 'Edit video'
+        }
+        footer={
+          actionMode !== 'details' && (
+            <Button loading={saving} onClick={saveAction}>
+              {actionMode === 'retry' ? 'Upload video' : 'Save changes'}
+            </Button>
+          )
+        }
+      >
+        {actionMode === 'details' ? (
+          <div className="space-y-3 break-words">
+            <p>{actionVideo?.title}</p>
+            <p>Status: {actionVideo?.status}</p>
+            <p className="text-rose">
+              {actionVideo?.lastError?.message || 'No upload error recorded.'}
+            </p>
+            {actionVideo?.youtubeVideoId && (
+              <a
+                className="text-brand"
+                target="_blank"
+                rel="noopener noreferrer"
+                href={`https://www.youtube.com/watch?v=${actionVideo.youtubeVideoId}`}
+              >
+                Open on YouTube
+              </a>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <Input
+              label="Title"
+              value={editForm.title}
+              onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+            />
+            <Textarea
+              label="Description"
+              value={editForm.description}
+              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+            />
+            <Input
+              label="Tags (comma separated)"
+              value={editForm.tags}
+              onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
+            />
+            <Select
+              label="Visibility"
+              value={editForm.privacy}
+              onChange={(e) => setEditForm({ ...editForm, privacy: e.target.value })}
+              options={[
+                { value: 'private', label: 'Private' },
+                { value: 'unlisted', label: 'Unlisted' },
+                { value: 'public', label: 'Public' },
+              ]}
+            />
+            {actionMode === 'retry' && (
+              <>
+                <p className="text-sm text-gray-400">
+                  Select the video file again. This starts a new YouTube upload using these details.
+                  {actionVideo?.youtubeVideoId
+                    ? ' The existing YouTube video will remain until you delete it separately.'
+                    : ''}
+                </p>
+                <Input
+                  label="Video file"
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => setRetryFile(e.target.files?.[0] || null)}
+                />
+              </>
+            )}
+          </div>
+        )}
+      </Modal>
       {/* Pagination */}
       {total > 12 && (
         <div className="flex items-center justify-center gap-2">

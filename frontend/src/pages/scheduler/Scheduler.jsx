@@ -17,7 +17,7 @@ export const Scheduler = () => {
   const { activeChannel } = useChannelStore()
   const channelId = activeChannel?._id
 
-  const today = new Date()
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date())
   const [view, setView] = useState('calendar') // calendar | list
   const [calendar, setCalendar] = useState({})
   const [schedules, setSchedules] = useState([])
@@ -32,10 +32,10 @@ export const Scheduler = () => {
     if (!channelId) return
     setLoading(true)
     try {
-      const year = today.getFullYear()
-      const month = today.getMonth() + 1
+      const year = calendarMonth.getFullYear()
+      const month = calendarMonth.getMonth() + 1
       const [calRes, listRes, statsRes] = await Promise.all([
-        scheduleApi.getCalendar(year, month),
+        scheduleApi.getCalendar(year, month, channelId),
         scheduleApi.getAll({ status: 'pending', limit: 10, channelId }),
         scheduleApi.getQueueStats(),
       ])
@@ -51,7 +51,7 @@ export const Scheduler = () => {
 
   useEffect(() => {
     fetchData()
-  }, [channelId])
+  }, [channelId, calendarMonth])
 
   const handleCancel = async () => {
     if (!cancelId) return
@@ -86,7 +86,7 @@ export const Scheduler = () => {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center glass rounded-xl p-1">
           <button
             onClick={() => setView('calendar')}
@@ -134,7 +134,12 @@ export const Scheduler = () => {
         <div className="lg:col-span-2">
           {view === 'calendar' ? (
             <Card>
-              <CalendarView calendar={calendar} onDayClick={handleDayClick} loading={loading} />
+              <CalendarView
+                onMonthChange={setCalendarMonth}
+                calendar={calendar}
+                onDayClick={handleDayClick}
+                loading={loading}
+              />
             </Card>
           ) : (
             <Card>

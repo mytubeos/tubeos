@@ -3,7 +3,15 @@ import api from './axios'
 
 export const scheduleApi = {
   getAll: (params = {}) => api.get('/schedule', { params }),
-  getCalendar: (year, month) => api.get(`/schedule/calendar?year=${year}&month=${month}`),
+  getCalendar: (year, month, channelId) =>
+    api.get('/schedule/calendar', {
+      params: {
+        year,
+        month,
+        channelId,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+    }),
   getBestTime: (channelId) => api.get(`/schedule/best-time/${channelId}`),
   getJobStatus: (videoId) => api.get(`/schedule/${videoId}/status`),
   create: (data) => api.post('/schedule', data),
