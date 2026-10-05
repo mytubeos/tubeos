@@ -53,11 +53,16 @@ const markAllRead = async (userId) => {
 const createNotification = async (userId, type, message, mood = 'nudge') => {
   const user = await User.findById(userId).select('preferences');
   if (!user) return null;
+  if (['plan_activated', 'subscription_expired'].includes(type)) {
+    return Notification.create({ userId, type, message, mood });
+  }
   if (user.preferences?.chingariEnabled === false) return null;
 
   const maxPerDay = user.preferences?.maxNudgesPerDay ?? 2;
   const startOfDay = new Date();
   startOfDay.setUTCHours(0, 0, 0, 0);
+
+  if (await Notification.exists({ userId, type, createdAt: { $gte: startOfDay } })) return null;
 
   const todayCount = await Notification.countDocuments({
     userId,

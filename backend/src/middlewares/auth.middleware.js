@@ -4,6 +4,7 @@ const { verifyAccessToken } = require('../utils/jwt.utils');
 const { errorResponse } = require('../utils/response.utils');
 const User = require('../models/user.model');
 const logger = require('../config/logger');
+const RevokedSession = require('../models/revoked-session.model');
 
 // Protect route — verify JWT and attach user to request
 const protect = async (req, res, next) => {
@@ -35,6 +36,12 @@ const protect = async (req, res, next) => {
       return errorResponse(res, 401, 'User no longer exists');
     }
 
+    if (
+      (decoded.version || 0) !== (user.sessionVersion || 0) ||
+      (decoded.sid && (await RevokedSession.exists({ _id: decoded.sid })))
+    ) {
+      return errorResponse(res, 401, 'Session has been revoked. Please login again.');
+    }
     // 4. Check if user is banned
     if (user.isBanned) {
       return errorResponse(res, 403, 'Account has been suspended');
@@ -62,6 +69,7 @@ const protect = async (req, res, next) => {
     // downgrades) even though `user` here already has the current value.
     req.user = {
       id: decoded.id,
+      sessionId: decoded.sid,
       email: user.email,
       plan: user.plan,
     };
@@ -89,11 +97,20 @@ const optionalAuth = async (req, res, next) => {
       const decoded = verifyAccessToken(token);
       const user = await User.findById(decoded.id).lean();
 
-      if (user && user.isActive && !user.isBanned) {
+      if (
+        user &&
+        user.isActive &&
+        !user.isBanned &&
+        (decoded.version || 0) === (user.sessionVersion || 0) &&
+        !(decoded.sid && (await RevokedSession.exists({ _id: decoded.sid }))) &&
+        (!user.passwordChangedAt ||
+          decoded.iat >= Math.floor(user.passwordChangedAt.getTime() / 1000))
+      ) {
         // Same fix as protect() above -- use the freshly-fetched user's
         // plan/email, not the JWT's stale snapshot from token-issue time.
         req.user = {
           id: decoded.id,
+          sessionId: decoded.sid,
           email: user.email,
           plan: user.plan,
         };
