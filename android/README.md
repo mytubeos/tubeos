@@ -5,7 +5,7 @@ PWABuilder Trusted Web Activity source for `com.vezrin.app`, launching `https://
 ## Changes and current limits
 
 - Android Browser Helper is pinned to stable 2.7.3, which includes splash edge-to-edge support and launcher lifecycle improvements absent from the uploaded 2.6.2 project.
-- Keep Android 6.0 (API 23) compatibility, as in the previous APK. Target/compile API 36.
+- Require Android 7.0 (API 24) to meet the enabled Play automatic protection requirement. Target/compile API 36.
 - Restore Maven Central instead of retired JCenter.
 - The uploaded project reset versionCode to 1. Default to 3; override with a number greater than EVERY uploaded Play Console version.
 - Preserve the configured splash image, colors, notification delegation and browser selection.

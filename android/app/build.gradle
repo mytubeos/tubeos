@@ -56,7 +56,7 @@ android {
     namespace 'com.vezrin.app'
     defaultConfig {
         applicationId 'com.vezrin.app'
-        minSdkVersion 23
+        minSdkVersion 24
         targetSdkVersion 36
         versionCode providers.gradleProperty('releaseVersionCode').orElse('3').get().toInteger()
         versionName providers.gradleProperty('releaseVersionName').orElse('1.0.1').get()
