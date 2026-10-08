@@ -188,6 +188,7 @@ export const ScheduleForm = ({ prefilledDate, prefilledTime, onSuccess, onCancel
         <label className="text-sm font-medium text-gray-300 mb-2 block">Schedule Date & Time</label>
         <input
           type="datetime-local"
+          hint={`Device timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`}
           value={scheduledAt}
           onChange={(e) => setScheduledAt(e.target.value)}
           className="input-field"

@@ -87,6 +87,7 @@ export const Videos = () => {
   const [videos, setVideos] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [deleteId, setDeleteId] = useState(null)
   const [deleting, setDeleting] = useState(false)
@@ -100,7 +101,7 @@ export const Videos = () => {
     try {
       const params = { page, limit: 12, channelId }
       if (statusFilter) params.status = statusFilter
-      if (search) params.search = search
+      if (debouncedSearch) params.search = debouncedSearch
       const res = await videoApi.getAll(params)
       setVideos(res.data.data || [])
       setTotal(res.data.meta?.pagination?.total || 0)
@@ -113,15 +114,17 @@ export const Videos = () => {
 
   useEffect(() => {
     fetchVideos()
-  }, [channelId, statusFilter, page])
+  }, [channelId, statusFilter, page, debouncedSearch])
 
   // Debounced search
   useEffect(() => {
+    if (search === debouncedSearch) return
     const timer = setTimeout(() => {
-      if (channelId) fetchVideos()
+      setDebouncedSearch(search)
+      setPage(1)
     }, 400)
     return () => clearTimeout(timer)
-  }, [search])
+  }, [search, debouncedSearch])
 
   const deleteTarget = videos.find((v) => v._id === deleteId)
 
@@ -186,7 +189,7 @@ export const Videos = () => {
               setStatusFilter(f.value)
               setPage(1)
             }}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all
+            className={`shrink-0 whitespace-nowrap min-h-11 px-4 py-2 rounded-lg text-sm font-medium transition-all
                         ${
                           statusFilter === f.value
                             ? 'bg-brand text-white shadow-lg'

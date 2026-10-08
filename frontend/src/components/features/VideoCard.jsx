@@ -11,8 +11,9 @@ import {
   Calendar,
   MoreVertical,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Modal } from '../ui/Modal'
 import { StatusBadge } from '../ui/Badge'
 import { formatNumber, formatDate, timeAgo } from '../../utils/formatters'
 
@@ -27,6 +28,7 @@ export const VideoCard = ({
 }) => {
   const [showMenu, setShowMenu] = useState(false)
   const navigate = useNavigate()
+  const closeMenu = useCallback(() => setShowMenu(false), [])
 
   const thumb = video.thumbnail?.url
 
@@ -42,7 +44,7 @@ export const VideoCard = ({
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-white truncate">{video.title}</p>
-          <p className="text-2xs text-gray-500">
+          <p className="text-2xs text-gray-400">
             {formatDate(video.scheduledAt || video.createdAt, 'short')}
           </p>
         </div>
@@ -113,25 +115,55 @@ export const VideoCard = ({
             <button
               aria-label={`Actions for ${video.title}`}
               onClick={() => setShowMenu(!showMenu)}
-              className="w-7 h-7 rounded-lg flex items-center justify-center
-                         text-gray-500 hover:text-white hover:bg-white/8 transition-all"
+              aria-haspopup="dialog"
+              aria-expanded={showMenu}
+              className="w-11 h-11 rounded-lg flex items-center justify-center
+                         text-gray-400 hover:text-white hover:bg-white/8 transition-all"
             >
               <MoreVertical size={15} />
             </button>
             {showMenu && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                <div
-                  className="absolute right-0 top-8 w-40 bg-base-700 border border-white/10
-                                rounded-xl shadow-2xl z-20 overflow-hidden"
-                >
+              <Modal
+                isOpen={showMenu}
+                onClose={closeMenu}
+                title="Video actions"
+                size="sm"
+                mobileSheet
+              >
+                <div className="flex items-center gap-3 pb-4 mb-2 border-b border-white/10">
+                  {thumb && (
+                    <img src={thumb} alt="" className="w-16 h-10 object-cover rounded-lg" />
+                  )}
+                  <p className="text-sm text-white break-words min-w-0">{video.title}</p>
+                </div>
+                <div className="space-y-1">
+                  {video.youtubeVideoId && (
+                    <a
+                      className="flex items-center gap-2.5 min-h-12 px-3 text-sm text-gray-300"
+                      href={`https://www.youtube.com/watch?v=${video.youtubeVideoId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={closeMenu}
+                    >
+                      <ExternalLink size={16} /> Open on YouTube
+                    </a>
+                  )}
+                  <button
+                    className="flex items-center gap-2.5 w-full min-h-12 px-3 text-sm text-gray-300"
+                    onClick={() => {
+                      closeMenu()
+                      navigate(`/analytics/video/${video._id}`)
+                    }}
+                  >
+                    <Eye size={16} /> View analytics
+                  </button>
                   {onDetails && (
                     <button
                       onClick={() => {
                         onDetails(video)
                         setShowMenu(false)
                       }}
-                      className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm text-gray-300 hover:bg-white/5"
+                      className="flex items-center gap-2.5 w-full min-h-12 rounded-xl px-3 py-3 text-sm text-gray-300 hover:bg-white/5"
                     >
                       <Info size={14} /> View details
                     </button>
@@ -142,7 +174,7 @@ export const VideoCard = ({
                         onRetry(video)
                         setShowMenu(false)
                       }}
-                      className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm text-brand hover:bg-white/5"
+                      className="flex items-center gap-2.5 w-full min-h-12 rounded-xl px-3 py-3 text-sm text-brand hover:bg-white/5"
                     >
                       <Upload size={14} /> {video.status === 'failed' ? 'Re-upload' : 'Upload file'}
                     </button>
@@ -153,7 +185,7 @@ export const VideoCard = ({
                         onEdit(video)
                         setShowMenu(false)
                       }}
-                      className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm
+                      className="flex items-center gap-2.5 w-full min-h-12 rounded-xl px-3 py-3 text-sm
                                  text-gray-300 hover:bg-white/5 hover:text-white transition-all"
                     >
                       <Edit2 size={14} /> Edit
@@ -165,7 +197,7 @@ export const VideoCard = ({
                         onCancel(video._id)
                         setShowMenu(false)
                       }}
-                      className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm
+                      className="flex items-center gap-2.5 w-full min-h-12 rounded-xl px-3 py-3 text-sm
                                  text-amber hover:bg-amber/5 transition-all"
                     >
                       <Calendar size={14} /> Cancel Schedule
@@ -177,14 +209,14 @@ export const VideoCard = ({
                         onDelete(video._id)
                         setShowMenu(false)
                       }}
-                      className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm
-                                 text-rose hover:bg-rose/5 transition-all"
+                      className="flex items-center gap-2.5 w-full min-h-12 rounded-xl px-3 py-3 text-sm
+                                 text-rose border-t border-white/10 mt-2 hover:bg-rose/5 transition-all"
                     >
                       <Trash2 size={14} /> Delete
                     </button>
                   )}
                 </div>
-              </>
+              </Modal>
             )}
           </div>
         </div>
@@ -195,7 +227,7 @@ export const VideoCard = ({
           </p>
         )}
         {/* Stats row */}
-        <div className="flex items-center gap-3 text-2xs text-gray-500">
+        <div className="flex items-center gap-3 text-2xs text-gray-400">
           {video.performance?.views > 0 && (
             <span className="flex items-center gap-1">
               <Eye size={11} />

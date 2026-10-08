@@ -149,12 +149,14 @@ const useAuth = () => {
         success: true,
         message: response.data.message,
       }
-    } catch {
-      // Always return success for security (don't reveal if email exists)
-      return {
-        success: true,
-        message: 'If an account exists, a password reset link has been sent.',
-      }
+    } catch (err) {
+      // The API owns account-enumeration protection; transport failures must remain actionable.
+      const message =
+        err.response?.status === 429
+          ? 'Too many requests. Please wait before trying again.'
+          : 'Could not send the request. Check your connection and try again.'
+      setError(message)
+      return { success: false, error: message }
     } finally {
       setLoading(false)
     }

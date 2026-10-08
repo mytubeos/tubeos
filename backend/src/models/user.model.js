@@ -152,6 +152,8 @@ const userSchema = new mongoose.Schema(
 
     // ==================== PREFERENCES ====================
     preferences: {
+      uploadAlerts: { type: Boolean, default: true },
+      publishAlerts: { type: Boolean, default: true },
       emailNotifications: {
         type: Boolean,
         default: true,

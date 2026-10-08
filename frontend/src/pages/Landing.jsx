@@ -11,6 +11,7 @@ import {
   Check,
   Clock,
 } from 'lucide-react'
+import { PlanCarousel } from '../components/ui/PlanCarousel'
 import { Button } from '../components/ui/Button'
 import { useAuthStore } from '../store/authStore'
 import pricingAPI from '../api/pricing.api'
@@ -159,18 +160,23 @@ export const Landing = () => {
             <span className="font-display font-bold text-white text-lg">Vezrin</span>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
+            <Button
+              className="hidden sm:inline-flex"
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/login')}
+            >
               Sign In
             </Button>
             <Button size="sm" onClick={() => navigate('/signup')}>
-              Get Started Free
+              Get Started
             </Button>
           </div>
         </div>
       </nav>
 
       {/* Hero */}
-      <section className="relative pt-32 pb-20 px-5 overflow-hidden">
+      <section className="relative pt-24 sm:pt-32 pb-10 sm:pb-20 px-5 overflow-hidden">
         {/* Background glow */}
         <div
           className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px]
@@ -193,14 +199,13 @@ export const Landing = () => {
               <span className="text-brand font-semibold">
                 {getPriceDisplay('creator').price}/mo
               </span>{' '}
-              locked forever
+              on Creator
             </span>
-            <span className="text-xs text-gray-500">88 spots left</span>
           </div>
 
           <h1
-            className="font-display font-bold text-5xl sm:text-6xl lg:text-7xl text-white
-                          leading-none tracking-tight mb-6 animate-slide-up"
+            className="font-display font-bold text-4xl sm:text-6xl lg:text-7xl text-white
+                          leading-tight tracking-tight mb-5"
           >
             The AI brain for
             <br />
@@ -210,7 +215,7 @@ export const Landing = () => {
           </h1>
 
           <p
-            className="text-gray-400 text-lg sm:text-xl max-w-2xl mx-auto mb-8 animate-slide-up"
+            className="text-gray-300 text-base sm:text-xl max-w-2xl mx-auto mb-6"
             style={{ animationDelay: '0.1s' }}
           >
             Upload, schedule, analyze, and automate your channel growth. One platform. Everything
@@ -218,7 +223,7 @@ export const Landing = () => {
           </p>
 
           <div
-            className="flex items-center justify-center gap-3 flex-wrap animate-slide-up"
+            className="flex items-center justify-center gap-3 flex-wrap"
             style={{ animationDelay: '0.2s' }}
           >
             <Button
@@ -233,32 +238,32 @@ export const Landing = () => {
             </Button>
           </div>
 
-          <p className="text-sm text-gray-600 mt-4">No credit card required · Free plan forever</p>
+          <p className="text-sm text-gray-400 mt-4">No credit card required · Free plan forever</p>
         </div>
 
         {/* Hero stats */}
-        <div className="max-w-3xl mx-auto mt-16 grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="max-w-3xl mx-auto mt-8 sm:mt-16 grid grid-cols-3 gap-2 sm:gap-4">
           {[
-            { value: '6hr', label: 'Saved per day' },
-            { value: '100+', label: 'Features' },
-            { value: '7×', label: 'Faster growth' },
+            { value: 'AI', label: 'Content tools' },
+            { value: '24/7', label: 'Scheduling' },
+            { value: '1', label: 'Workspace' },
           ].map(({ value, label }) => (
             <div key={label} className="glass p-3 sm:p-5 rounded-2xl text-center">
               <p className="font-display font-bold text-white text-2xl sm:text-3xl">{value}</p>
-              <p className="text-gray-500 text-xs sm:text-sm mt-1">{label}</p>
+              <p className="text-gray-400 text-xs sm:text-sm mt-1">{label}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* Features */}
-      <section className="py-20 px-5">
+      <section className="py-12 sm:py-20 px-5">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="font-display font-bold text-white text-4xl mb-4">
+            <h2 className="font-display font-bold text-white text-3xl sm:text-4xl mb-4">
               Everything you need to grow
             </h2>
-            <p className="text-gray-500 text-lg">
+            <p className="text-gray-400 text-lg">
               7 AI-powered modules. One creator command center.
             </p>
           </div>
@@ -276,7 +281,7 @@ export const Landing = () => {
                   <Icon size={21} className={`text-${color}`} />
                 </div>
                 <h3 className="font-display font-semibold text-white text-lg mb-2">{title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+                <p className="text-gray-400 text-sm leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
@@ -284,21 +289,21 @@ export const Landing = () => {
       </section>
 
       {/* Pricing */}
-      <section className="py-20 px-5 relative">
+      <section className="py-12 sm:py-20 px-5 relative">
         <div className="absolute inset-0 bg-gradient-radial from-brand/5 to-transparent pointer-events-none" />
         <div className="max-w-5xl mx-auto relative">
           <div className="text-center mb-12">
-            <h2 className="font-display font-bold text-white text-4xl mb-4">
+            <h2 className="font-display font-bold text-white text-3xl sm:text-4xl mb-4">
               Simple, transparent pricing
             </h2>
-            <p className="text-gray-500">Lock in founders pricing before it goes up forever.</p>
+            <p className="text-gray-400">Start free. Choose a plan when you need more.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+          <PlanCarousel labels={PLANS.map((plan) => plan.name)}>
             {PLANS.map((plan) => (
               <div
                 key={plan.name}
-                className={`relative p-6 rounded-2xl transition-all
+                className={`relative p-5 sm:p-6 rounded-2xl transition-all h-full flex flex-col
                             ${
                               plan.comingSoon
                                 ? 'glass opacity-70 border border-white/8'
@@ -331,30 +336,30 @@ export const Landing = () => {
                   <div className="flex items-end gap-1">
                     <span
                       className={`font-display font-bold text-4xl
-                                     ${plan.comingSoon ? 'text-gray-500' : 'text-white'}`}
+                                     ${plan.comingSoon ? 'text-gray-400' : 'text-white'}`}
                     >
                       {getPriceDisplay(plan.key).price}
                     </span>
-                    <span className="text-gray-500 text-sm mb-1">{plan.period}</span>
+                    <span className="text-gray-400 text-sm mb-1">{plan.period}</span>
                   </div>
                   {getPriceDisplay(plan.key).note && (
-                    <p className="text-2xs text-gray-600 mt-1">{getPriceDisplay(plan.key).note}</p>
+                    <p className="text-2xs text-gray-400 mt-1">{getPriceDisplay(plan.key).note}</p>
                   )}
                 </div>
 
-                <div className="space-y-2.5 mb-6">
+                <div className="space-y-2.5 mb-6 flex-1">
                   {plan.features.map((f) => (
                     <div key={f} className="flex items-start gap-2.5">
                       <Check
                         size={14}
                         className={
                           plan.comingSoon
-                            ? 'text-gray-600 shrink-0 mt-0.5'
+                            ? 'text-gray-400 shrink-0 mt-0.5'
                             : 'text-emerald shrink-0 mt-0.5'
                         }
                       />
                       <span
-                        className={`text-sm ${plan.comingSoon ? 'text-gray-600' : 'text-gray-300'}`}
+                        className={`text-sm ${plan.comingSoon ? 'text-gray-400' : 'text-gray-300'}`}
                       >
                         {f}
                       </span>
@@ -373,26 +378,34 @@ export const Landing = () => {
                 </Button>
               </div>
             ))}
+          </PlanCarousel>
+          <div className="text-center mt-5">
+            <Link
+              to="/pricing"
+              className="inline-flex min-h-11 items-center text-brand hover:underline"
+            >
+              Compare all plans →
+            </Link>
           </div>
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="py-20 px-5">
+      <section className="py-12 sm:py-20 px-5">
         <div className="max-w-2xl mx-auto text-center">
           <img src="/icon.png" alt="Vezrin" className="w-16 h-16 rounded-2xl mx-auto mb-6" />
-          <h2 className="font-display font-bold text-white text-4xl mb-4">
+          <h2 className="font-display font-bold text-white text-3xl sm:text-4xl mb-4">
             Ready to automate your growth?
           </h2>
-          <p className="text-gray-500 mb-8">
-            Join hundreds of creators using Vezrin to save 6 hours a day.
+          <p className="text-gray-400 mb-8">
+            Bring your channel, content and audience into one workspace.
           </p>
           <Button
             size="xl"
             onClick={() => navigate('/signup')}
             iconRight={<ArrowRight size={18} />}
           >
-            Start for Free — No Card Needed
+            Get Started Free
           </Button>
         </div>
       </section>
@@ -403,8 +416,8 @@ export const Landing = () => {
           <img src="/icon.png" alt="Vezrin" className="w-6 h-6 rounded-md" />
           <span className="font-display font-bold text-white">Vezrin</span>
         </div>
-        <p className="text-gray-600 text-sm">© 2026 Vezrin. Built for YouTube creators. 🇮🇳</p>
-        <div className="flex items-center justify-center gap-4 mt-3 text-xs text-gray-500">
+        <p className="text-gray-400 text-sm">© 2026 Vezrin. Built for YouTube creators. 🇮🇳</p>
+        <div className="flex items-center justify-center gap-4 mt-3 text-xs text-gray-400">
           <Link to="/privacy" className="hover:text-white transition-colors">
             Privacy Policy
           </Link>

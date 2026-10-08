@@ -24,7 +24,7 @@ plugins {
 def twaManifest = [
     applicationId: 'com.vezrin.app',
     hostName: 'vezrin.com', // The domain being opened in the TWA.
-    launchUrl: '/', // The start path for the TWA. Must be relative to the domain.
+    launchUrl: '/app', // The start path for the TWA. Must be relative to the domain.
     name: 'Vezrin', // The application name.
     launcherName: 'Vezrin', // The name shown on the Android Launcher.
     themeColor: '#06060A', // The color used for the status bar.
@@ -58,8 +58,8 @@ android {
         applicationId 'com.vezrin.app'
         minSdkVersion 24
         targetSdkVersion 36
-        versionCode providers.gradleProperty('releaseVersionCode').orElse('3').get().toInteger()
-        versionName providers.gradleProperty('releaseVersionName').orElse('1.0.1').get()
+        versionCode providers.gradleProperty('releaseVersionCode').orElse('4').get().toInteger()
+        versionName providers.gradleProperty('releaseVersionName').orElse('1.0.2').get()
 
         // The name for the application
         resValue "string", "appName", twaManifest.name

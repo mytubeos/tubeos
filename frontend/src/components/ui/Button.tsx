@@ -14,7 +14,7 @@ export const Button = ({
   type = 'button' as 'button' | 'submit' | 'reset',
   fullWidth = false,
 }) => {
-  const base = `inline-flex items-center justify-center gap-2 font-body font-medium
+  const base = `inline-flex items-center justify-center gap-2 font-body font-medium min-w-0 max-w-full shrink-0 text-center leading-snug
                 transition-all duration-200 active:scale-95 select-none
                 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100`
 
@@ -33,11 +33,11 @@ export const Button = ({
   }
 
   const sizes = {
-    xs: 'h-7 px-2.5 text-xs rounded-md',
-    sm: 'h-8 px-3.5 text-sm rounded-lg',
-    md: 'h-10 px-5 text-sm rounded-lg',
-    lg: 'h-12 px-6 text-base rounded-xl',
-    xl: 'h-14 px-8 text-lg rounded-xl',
+    xs: 'min-h-7 py-1 px-2.5 text-xs rounded-md',
+    sm: 'min-h-9 py-2 px-3.5 text-sm rounded-lg',
+    md: 'min-h-11 py-2.5 px-5 text-sm rounded-lg',
+    lg: 'min-h-12 py-3 px-6 text-base rounded-xl',
+    xl: 'min-h-14 py-3 px-6 sm:px-8 text-lg rounded-xl',
   }
 
   if (variant === 'link') {
@@ -64,7 +64,7 @@ export const Button = ({
     >
       {loading ? <Spinner size="sm" color="white" /> : Icon && <Icon size={16} />}
       {children}
-      {iconRight && !loading && <span className="ml-1">{iconRight}</span>}
+      {iconRight && !loading && <span className="ml-1 shrink-0">{iconRight}</span>}
     </button>
   )
 }

@@ -119,7 +119,35 @@ const touchActivity = async (userId) => {
   return newStreak;
 };
 
+// Operational notices are independent of mascot nudges and must never break an upload.
+const notifyVideo = async (userId, type, title) => {
+  try {
+    const user = await User.findById(userId).select('preferences');
+    if (
+      !user ||
+      (type === 'upload_failed'
+        ? user.preferences?.uploadAlerts
+        : user.preferences?.publishAlerts) === false
+    )
+      return;
+    if (!['upload_failed', 'video_published'].includes(type)) return;
+    const name = String(title || 'Your video').slice(0, 180);
+    await Notification.create({
+      userId,
+      type,
+      mood: type === 'upload_failed' ? 'nudge' : 'celebrate',
+      message:
+        type === 'upload_failed'
+          ? `Upload failed: ${name}. Open Videos for details and retry.`
+          : `Published: ${name}. Your video is ready to view on YouTube.`,
+    });
+  } catch (err) {
+    require('../config/logger').warn('[notification] Video notice failed', { error: err.message });
+  }
+};
+
 module.exports = {
+  notifyVideo,
   getNotifications,
   markAsRead,
   markAllRead,

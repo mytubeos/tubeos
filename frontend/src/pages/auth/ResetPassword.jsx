@@ -1,14 +1,15 @@
 // src/pages/auth/ResetPassword.jsx
 // Reset password page - change password with reset token from email link
 import { useState, useEffect } from 'react'
-import { useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import useAuth from '../../hooks/useAuth'
+import { useAuthStore } from '../../store/authStore'
+import { useChannelStore } from '../../store/channelStore'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Toast } from '../../components/ui/Toast'
 
 export const ResetPassword = () => {
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { resetPassword, loading } = useAuth()
 
@@ -57,13 +58,12 @@ export const ResetPassword = () => {
     const result = await resetPassword(token, formData.password)
 
     if (result.success) {
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('refreshToken')
+      useAuthStore.setState({ user: null, accessToken: null, isAuthenticated: false })
+      useChannelStore.getState().clearChannels()
       setSuccessMsg(result.message)
       setFormData({ password: '', confirmPassword: '' })
-
-      // Redirect to login after 2 seconds
-      setTimeout(() => {
-        navigate('/login')
-      }, 2000)
     } else {
       setLocalError(result.error || 'Failed to reset password')
     }
@@ -72,7 +72,7 @@ export const ResetPassword = () => {
   // ==================== INVALID TOKEN STATE ====================
   if (tokenError || !token) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+      <div className="auth-page">
         <div className="w-full max-w-md">
           {/* Error Header */}
           <div className="text-center mb-8">
@@ -96,7 +96,7 @@ export const ResetPassword = () => {
           </div>
 
           {/* Info Card */}
-          <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 shadow-2xl">
+          <div className="auth-card">
             <p className="text-slate-300 mb-6">
               Reset links expire after 15 minutes for security. If your link has expired, you can
               request a new one.
@@ -104,7 +104,7 @@ export const ResetPassword = () => {
 
             <Link
               to="/forgot-password"
-              className="block w-full text-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition mb-4"
+              className="block w-full text-center px-4 py-2 bg-brand hover:bg-brand-light text-white rounded-lg font-medium transition mb-4"
             >
               Request New Reset Link
             </Link>
@@ -124,7 +124,7 @@ export const ResetPassword = () => {
   // ==================== SUCCESS STATE ====================
   if (successMsg) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+      <div className="auth-page">
         <div className="w-full max-w-md">
           {/* Success Header */}
           <div className="text-center mb-8">
@@ -148,18 +148,16 @@ export const ResetPassword = () => {
           </div>
 
           {/* Info Card */}
-          <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 shadow-2xl">
-            <Toast type="success" message={successMsg} className="mb-6" />
-
+          <div className="auth-card">
             <p className="text-slate-300 mb-6">
-              You can now login with your new password. Redirecting to login page...
+              Sign in with your new password when you are ready.
             </p>
 
             <Link
               to="/login"
-              className="block w-full text-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition"
+              className="block w-full text-center px-4 py-2 bg-brand hover:bg-brand-light text-white rounded-lg font-medium transition"
             >
-              Go to Login
+              Continue to Sign In
             </Link>
           </div>
         </div>
@@ -169,7 +167,7 @@ export const ResetPassword = () => {
 
   // ==================== FORM STATE ====================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+    <div className="auth-page">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -178,10 +176,7 @@ export const ResetPassword = () => {
         </div>
 
         {/* Form Card */}
-        <form
-          onSubmit={handleSubmit}
-          className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 shadow-2xl"
-        >
+        <form onSubmit={handleSubmit} className="auth-card">
           {/* Password Input */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-slate-200 mb-2">
@@ -190,6 +185,8 @@ export const ResetPassword = () => {
             <Input
               type="password"
               name="password"
+              autoComplete="new-password"
+              aria-label="New Password"
               value={formData.password}
               onChange={handleChange}
               placeholder="••••••••"
@@ -205,6 +202,8 @@ export const ResetPassword = () => {
             <Input
               type="password"
               name="confirmPassword"
+              autoComplete="new-password"
+              aria-label="Confirm Password"
               value={formData.confirmPassword}
               onChange={handleChange}
               placeholder="••••••••"
@@ -222,7 +221,7 @@ export const ResetPassword = () => {
 
           {/* Back to Login */}
           <p className="text-center text-slate-400">
-            <Link to="/login" className="text-purple-400 hover:text-purple-300">
+            <Link to="/login" className="text-brand hover:text-brand-light">
               Back to login
             </Link>
           </p>

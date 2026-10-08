@@ -102,7 +102,30 @@
     </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div
+        style="
+          min-height: 100dvh;
+          display: grid;
+          place-items: center;
+          background: #06060a;
+          text-align: center;
+        "
+        role="status"
+      >
+        <div>
+          <img
+            src="/icon.png"
+            width="64"
+            height="64"
+            alt=""
+            style="border-radius: 16px; margin-bottom: 16px"
+          />
+          <p style="font-size: 22px; font-weight: 700">Vezrin</p>
+          <p style="color: #9ca3af; font-size: 14px; margin-top: 8px">Opening your workspace…</p>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

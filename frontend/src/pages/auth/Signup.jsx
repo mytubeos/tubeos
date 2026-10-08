@@ -112,17 +112,14 @@ export const Signup = () => {
   // ==================== SIGNUP FORM ====================
   if (step === 'signup') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+      <div className="auth-page">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-white mb-2">Vezrin</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Vezrin</h1>
             <p className="text-slate-400">Create your account</p>
           </div>
 
-          <form
-            onSubmit={handleSignupSubmit}
-            className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 shadow-2xl"
-          >
+          <form onSubmit={handleSignupSubmit} className="auth-card">
             <div className="mb-4">
               <label className="block text-sm font-medium text-slate-200 mb-2">Full Name</label>
               <Input
@@ -209,18 +206,18 @@ export const Signup = () => {
 
             <p className="text-center text-slate-500 text-xs mb-4">
               By signing up, you agree to our{' '}
-              <Link to="/terms" className="text-purple-400 hover:text-purple-300">
+              <Link to="/terms" className="text-brand hover:text-brand-light">
                 Terms of Service
               </Link>{' '}
               and{' '}
-              <Link to="/privacy" className="text-purple-400 hover:text-purple-300">
+              <Link to="/privacy" className="text-brand hover:text-brand-light">
                 Privacy Policy
               </Link>
             </p>
 
             <p className="text-center text-slate-400">
               Already have an account?{' '}
-              <Link to="/login" className="text-purple-400 hover:text-purple-300">
+              <Link to="/login" className="text-brand hover:text-brand-light">
                 Sign in
               </Link>
             </p>
@@ -239,17 +236,14 @@ export const Signup = () => {
 
   // ==================== OTP VERIFICATION FORM ====================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+    <div className="auth-page">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Verify Email</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Verify Email</h1>
           <p className="text-slate-400">Enter the 6-digit OTP sent to {formData.email}</p>
         </div>
 
-        <form
-          onSubmit={handleOtpSubmit}
-          className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 shadow-2xl"
-        >
+        <form onSubmit={handleOtpSubmit} className="auth-card">
           <div className="mb-6">
             <label className="block text-sm font-medium text-slate-200 mb-4 text-center">
               Verification Code
@@ -284,7 +278,7 @@ export const Signup = () => {
                 type="button"
                 onClick={handleResendOTP}
                 disabled={loading || resending}
-                className="text-purple-400 hover:text-purple-300 disabled:opacity-50 font-medium"
+                className="text-brand hover:text-brand-light disabled:opacity-50 font-medium"
               >
                 {resending ? 'Sending...' : 'Resend OTP'}
               </button>

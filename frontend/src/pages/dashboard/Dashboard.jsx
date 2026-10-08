@@ -22,7 +22,7 @@ import toast from 'react-hot-toast'
 export const Dashboard = () => {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const { activeChannel, fetchChannels } = useChannelStore()
+  const { activeChannel, fetchChannels, isLoading: channelsLoading } = useChannelStore()
   const [period, setPeriod] = useState('30d')
   const [syncing, setSyncing] = useState(false)
   const [upcoming, setUpcoming] = useState([])
@@ -128,6 +128,20 @@ export const Dashboard = () => {
   }
 
   const handleSync = () => doSync(false)
+
+  if (!activeChannel && channelsLoading) {
+    return (
+      <div role="status" aria-label="Loading your workspace" className="space-y-5">
+        <p className="text-sm text-gray-300">Loading your workspace…</p>
+        <div className="shimmer h-16 rounded-xl" />
+        <div className="grid grid-cols-2 gap-4">
+          {[0, 1, 2, 3].map((key) => (
+            <div key={key} className="shimmer h-32 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   // No channel connected state
   if (!activeChannel) {

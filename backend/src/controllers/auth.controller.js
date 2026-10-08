@@ -1,6 +1,7 @@
 // src/controllers/auth.controller.js
 // FIXED: All auth endpoints - register, OTP verify, login, forgot password, reset password
 const authService = require('../services/auth.service');
+const sessionService = require('../services/session.service');
 const { successResponse, errorResponse } = require('../utils/response.utils');
 const { getRefreshTokenCookieOptions } = require('../utils/jwt.utils');
 
@@ -54,6 +55,8 @@ const verifyEmail = async (req, res) => {
 
     const result = await authService.verifyEmail(otp, userId);
 
+    await sessionService.remember(result.tokens.refreshToken, req.get('user-agent'));
+
     // Set refresh token cookie (works for same-origin)
     res.cookie('refreshToken', result.tokens.refreshToken, getRefreshTokenCookieOptions());
 
@@ -101,6 +104,8 @@ const login = async (req, res) => {
 
     const ip = req.ip || req.connection?.remoteAddress || 'unknown';
     const result = await authService.login({ email, password, ip });
+
+    await sessionService.remember(result.refreshToken, req.get('user-agent'));
 
     // Set refresh token cookie (same-origin)
     res.cookie('refreshToken', result.refreshToken, getRefreshTokenCookieOptions());
@@ -187,6 +192,8 @@ const refresh = async (req, res) => {
     }
 
     const result = await authService.refreshToken(token);
+
+    await sessionService.remember(result.refreshToken, req.get('user-agent'));
 
     // Set new refresh token cookie
     res.cookie('refreshToken', result.refreshToken, getRefreshTokenCookieOptions());
@@ -280,6 +287,8 @@ const updatePreferences = async (req, res) => {
     const User = require('../models/user.model');
     const allowed = [
       'emailNotifications',
+      'uploadAlerts',
+      'publishAlerts',
       'marketingEmails',
       'weeklyReport',
       'reportFrequency',
@@ -289,6 +298,19 @@ const updatePreferences = async (req, res) => {
       'chingariEnabled',
       'maxNudgesPerDay',
     ];
+    if (req.body.timezone !== undefined) {
+      if (typeof req.body.timezone !== 'string' || req.body.timezone.length > 100)
+        return errorResponse(res, 400, 'Invalid timezone');
+      try {
+        new Intl.DateTimeFormat('en', { timeZone: req.body.timezone });
+      } catch {
+        return errorResponse(res, 400, 'Invalid timezone');
+      }
+    }
+    for (const key of ['uploadAlerts', 'publishAlerts']) {
+      if (req.body[key] !== undefined && typeof req.body[key] !== 'boolean')
+        return errorResponse(res, 400, 'Invalid notification preference');
+    }
     const updates = {};
     allowed.forEach((key) => {
       if (req.body[key] !== undefined) updates[`preferences.${key}`] = req.body[key];
@@ -324,7 +346,37 @@ const updateBranding = async (req, res) => {
   }
 };
 
+const listSessions = async (req, res) => {
+  try {
+    return successResponse(res, 200, 'Sessions fetched', {
+      sessions: await sessionService.list(req.user.id, req.user.sessionId),
+    });
+  } catch (err) {
+    return errorResponse(res, err.statusCode || 500, 'Could not load sessions');
+  }
+};
+
+const logoutOtherSessions = async (req, res) => {
+  try {
+    const tokens = await sessionService.logoutOthers(
+      req.user.id,
+      req.user.sessionId,
+      req.get('user-agent')
+    );
+    res.cookie('refreshToken', tokens.refreshToken, getRefreshTokenCookieOptions());
+    return successResponse(res, 200, 'Other devices signed out', tokens);
+  } catch (err) {
+    return errorResponse(
+      res,
+      err.statusCode || 500,
+      'Could not sign out other devices. Please sign in again if this device was signed out.'
+    );
+  }
+};
+
 module.exports = {
+  listSessions,
+  logoutOtherSessions,
   register,
   verifyEmail,
   resendOTP,

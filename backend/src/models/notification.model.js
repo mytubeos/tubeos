@@ -14,6 +14,8 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       enum: [
         'upload_reminder',
+        'upload_failed',
+        'video_published',
         'content_idea_nudge',
         'comment_backlog',
         'growth_win',

@@ -17,16 +17,14 @@ export const Spinner = ({ size = 'md', color = 'brand' }) => {
 }
 
 export const PageLoader = () => (
-  <div className="fixed inset-0 bg-base-900 flex items-center justify-center z-50">
+  <div
+    role="status"
+    aria-live="polite"
+    className="fixed inset-0 bg-base-900 flex items-center justify-center z-50"
+  >
     <div className="flex flex-col items-center gap-4">
-      <div className="relative">
-        <div className="w-16 h-16 border-2 border-white/5 rounded-full" />
-        <div className="w-16 h-16 border-2 border-brand border-t-transparent rounded-full animate-spin absolute inset-0" />
-        <div
-          className="w-16 h-16 border-2 border-cyan/30 border-b-transparent rounded-full animate-spin absolute inset-0"
-          style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}
-        />
-      </div>
+      <img src="/icon.png" alt="" className="w-16 h-16 rounded-2xl" />
+      <Spinner />
       <div className="text-center">
         <p className="font-display font-bold text-white text-lg">Vezrin</p>
         <p className="text-gray-500 text-sm">Loading your command center...</p>

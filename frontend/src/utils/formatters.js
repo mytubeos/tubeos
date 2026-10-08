@@ -42,14 +42,30 @@ export const formatDuration = (seconds) => {
 export const formatDate = (date, format = 'short') => {
   if (!date) return '—'
   const d = new Date(date)
+  let timeZone
+  try {
+    const preferences = JSON.parse(localStorage.getItem('tubeos-auth') || '{}').state?.user
+      ?.preferences
+    if (preferences?.timezone) {
+      new Intl.DateTimeFormat('en', { timeZone: preferences.timezone })
+      timeZone = preferences.timezone
+    }
+  } catch {
+    /* Use the device timezone if storage or a saved timezone is unavailable. */
+  }
   if (format === 'short') {
-    return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })
+    return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', timeZone })
   }
   if (format === 'medium') {
-    return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })
+    return d.toLocaleDateString('en-IN', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone,
+    })
   }
   if (format === 'time') {
-    return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+    return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone })
   }
   if (format === 'datetime') {
     return `${formatDate(date, 'short')} · ${formatDate(date, 'time')}`

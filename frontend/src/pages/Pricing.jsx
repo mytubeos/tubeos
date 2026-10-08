@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, X, Zap, ArrowLeft, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { PlanCarousel } from '../components/ui/PlanCarousel'
 import { Button } from '../components/ui/Button'
 import pricingAPI from '../api/pricing.api'
 import { useAuthStore } from '../store/authStore'
@@ -196,84 +197,89 @@ export const Pricing = () => {
           </div>
 
           {/* Mobile: stacked plan cards (grid-cols-5 comparison table is unusable under ~640px) */}
-          <div className="md:hidden space-y-5">
-            {plans.map((plan) => (
-              <div
-                key={plan}
-                className={`rounded-2xl p-5 ${plan === 'creator' ? 'bg-brand/10 border border-brand/30' : 'glass'}`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <p className="font-display font-bold text-white text-lg">
-                    {PLAN_NAMES[plan]?.name || plan}
-                  </p>
-                  <p className={`text-2xl font-display font-bold text-${planColors[plan]}`}>
-                    {getPlanDisplay(plan).price}
-                    <span className="text-sm text-gray-500 font-normal">/mo</span>
-                  </p>
-                </div>
-                <p className="text-xs text-gray-600 mb-4">{getPlanDisplay(plan).note}</p>
-
-                {user?.plan === plan ? (
-                  <div className="w-full py-2 text-sm text-center text-emerald font-semibold">
-                    Current Plan
+          <div className="md:hidden">
+            <PlanCarousel
+              labels={plans.map((plan) => PLAN_NAMES[plan]?.name || plan)}
+              desktopGrid={false}
+            >
+              {plans.map((plan) => (
+                <div
+                  key={plan}
+                  className={`rounded-2xl p-5 ${plan === 'creator' ? 'bg-brand/10 border border-brand/30' : 'glass'}`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="font-display font-bold text-white text-lg">
+                      {PLAN_NAMES[plan]?.name || plan}
+                    </p>
+                    <p className={`text-2xl font-display font-bold text-${planColors[plan]}`}>
+                      {getPlanDisplay(plan).price}
+                      <span className="text-sm text-gray-500 font-normal">/mo</span>
+                    </p>
                   </div>
-                ) : plan === 'free' ? (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="w-full"
-                    onClick={() => navigate('/signup')}
-                  >
-                    Get Free
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant={plan === 'creator' ? 'brand' : 'ghost'}
-                    className="w-full"
-                    disabled={loadingPlan === plan}
-                    onClick={() => handleUpgradeClick(plan)}
-                  >
-                    {loadingPlan === plan ? (
-                      <Loader2 size={16} className="animate-spin mx-auto" />
-                    ) : (
-                      'Upgrade'
-                    )}
-                  </Button>
-                )}
+                  <p className="text-xs text-gray-400 mb-4">{getPlanDisplay(plan).note}</p>
 
-                {/* What's included — only the features this plan actually has */}
-                <div className="mt-5 pt-4 border-t border-white/8 space-y-3">
-                  {FEATURES_TABLE.map(({ category, features }) => {
-                    const included = features.filter((f) => f[plan] !== false)
-                    if (included.length === 0) return null
-                    return (
-                      <div key={category}>
-                        <p className="text-2xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5">
-                          {category}
-                        </p>
-                        <ul className="space-y-1.5">
-                          {included.map((f) => (
-                            <li
-                              key={f.name}
-                              className="flex items-center gap-2 text-sm text-gray-300"
-                            >
-                              <Check size={13} className="text-emerald shrink-0" />
-                              <span>
-                                {f.name}
-                                {typeof f[plan] === 'string' && (
-                                  <span className="text-gray-500"> — {f[plan]}</span>
-                                )}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )
-                  })}
+                  {user?.plan === plan ? (
+                    <div className="w-full py-2 text-sm text-center text-emerald font-semibold">
+                      Current Plan
+                    </div>
+                  ) : plan === 'free' ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() => navigate('/signup')}
+                    >
+                      Get Free
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant={plan === 'creator' ? 'brand' : 'ghost'}
+                      className="w-full"
+                      disabled={loadingPlan === plan}
+                      onClick={() => handleUpgradeClick(plan)}
+                    >
+                      {loadingPlan === plan ? (
+                        <Loader2 size={16} className="animate-spin mx-auto" />
+                      ) : (
+                        'Upgrade'
+                      )}
+                    </Button>
+                  )}
+
+                  {/* What's included — only the features this plan actually has */}
+                  <div className="mt-5 pt-4 border-t border-white/8 space-y-3">
+                    {FEATURES_TABLE.map(({ category, features }) => {
+                      const included = features.filter((f) => f[plan] !== false)
+                      if (included.length === 0) return null
+                      return (
+                        <div key={category}>
+                          <p className="text-2xs font-semibold text-gray-500 uppercase tracking-widest mb-1.5">
+                            {category}
+                          </p>
+                          <ul className="space-y-1.5">
+                            {included.map((f) => (
+                              <li
+                                key={f.name}
+                                className="flex items-center gap-2 text-sm text-gray-300"
+                              >
+                                <Check size={13} className="text-emerald shrink-0" />
+                                <span>
+                                  {f.name}
+                                  {typeof f[plan] === 'string' && (
+                                    <span className="text-gray-500"> — {f[plan]}</span>
+                                  )}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </PlanCarousel>
           </div>
 
           {/* Desktop: full comparison table */}
@@ -297,7 +303,7 @@ export const Pricing = () => {
                     {getPlanDisplay(plan).price}
                     <span className="text-sm text-gray-500 font-normal">/mo</span>
                   </p>
-                  <p className="text-2xs text-gray-600 mt-0.5">{getPlanDisplay(plan).note}</p>
+                  <p className="text-2xs text-gray-400 mt-0.5">{getPlanDisplay(plan).note}</p>
 
                   {user?.plan === plan ? (
                     <div className="mt-3 w-full py-1.5 text-xs text-center text-emerald font-semibold">

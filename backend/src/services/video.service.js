@@ -10,7 +10,7 @@ const { getValidAccessToken } = require('./youtube.service');
 const { youtubeRequest, QUOTA_COSTS } = require('../config/youtube.config');
 const storageService = require('./storage.service');
 const logger = require('../config/logger');
-const { touchActivity, createNotification } = require('./notification.service');
+const { touchActivity, createNotification, notifyVideo } = require('./notification.service');
 
 // ==================== CREATE DRAFT ====================
 /**
@@ -66,7 +66,7 @@ const createDraft = async (userId, channelId, videoData) => {
  * @param {{message?: string, code?: string}} errInfo
  */
 const markUploadFailed = async (userId, videoId, errInfo) => {
-  await Video.findOneAndUpdate(
+  const failedVideo = await Video.findOneAndUpdate(
     { _id: videoId, userId, status: { $in: ['draft', 'uploading', 'failed'] } },
     {
       $set: {
@@ -80,6 +80,7 @@ const markUploadFailed = async (userId, videoId, errInfo) => {
       $inc: { retryCount: 1 },
     }
   );
+  if (failedVideo) await notifyVideo(userId, 'upload_failed', failedVideo.title);
 };
 
 // ==================== STAGE FILE (schedule-then-upload-later) ====================
@@ -282,6 +283,7 @@ const uploadVideo = async (userId, videoId, fileRef, mimeType) => {
       };
       video.retryCount += 1;
       await video.save();
+      await notifyVideo(userId, 'upload_failed', video.title);
 
       throw err;
     }
