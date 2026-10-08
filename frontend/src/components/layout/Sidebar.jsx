@@ -86,15 +86,11 @@ export const Sidebar = ({ collapsed = false, open = false, onClose }) => {
         {/* Logo */}
         <div className="p-4 border-b border-white/8 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img
-              src="/icon.png"
-              alt="Vezrin"
-              className="w-8 h-8 rounded-lg shrink-0 shadow-brand"
-            />
+            <img src="/icon.png" alt="Vezrin" className="w-8 h-8 rounded-lg shrink-0" />
             {!collapsed && (
               <div>
                 <p className="font-display font-bold text-white text-base leading-none">Vezrin</p>
-                <p className="text-gray-500 text-2xs mt-0.5">Command Center</p>
+                <p className="text-gray-400 text-xs mt-1">Command Center</p>
               </div>
             )}
           </div>

@@ -194,7 +194,7 @@ export const CommentInbox = () => {
   return (
     <div className="space-y-4">
       {/* Stats bar */}
-      <div className="grid grid-cols-6 gap-1.5 sm:gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 sm:gap-3">
         {[
           { label: 'Total', value: stats.total, color: 'gray' },
           { label: 'Unread', value: stats.unread, color: 'brand' },
@@ -251,7 +251,7 @@ export const CommentInbox = () => {
 
       {/* Filters */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap">
-        <div className="flex items-center glass rounded-xl p-1 overflow-x-auto">
+        <div className="flex items-center glass rounded-xl p-1 overflow-x-auto overscroll-x-contain">
           {STATUS_FILTERS.map((f) => (
             <button
               key={f.value}
@@ -259,7 +259,7 @@ export const CommentInbox = () => {
                 setStatusFilter(f.value)
                 setPage(1)
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all
+              className={`shrink-0 whitespace-nowrap px-3 py-2.5 rounded-lg text-xs font-medium transition-all
                           ${
                             statusFilter === f.value
                               ? 'bg-brand text-white'
@@ -276,7 +276,7 @@ export const CommentInbox = () => {
           ))}
         </div>
 
-        <div className="flex items-center glass rounded-xl p-1 overflow-x-auto">
+        <div className="flex items-center glass rounded-xl p-1 overflow-x-auto overscroll-x-contain">
           {SENTIMENT_FILTERS.map((f) => (
             <button
               key={f.value}
@@ -314,7 +314,7 @@ export const CommentInbox = () => {
           {selectedIds.length > 0 && (
             <span className="text-xs text-brand">{selectedIds.length} selected</span>
           )}
-          <span className="text-xs text-gray-600 ml-auto">{total} comments</span>
+          <span className="text-xs text-gray-400 ml-auto">{total} comments</span>
         </div>
       )}
 

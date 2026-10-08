@@ -88,7 +88,7 @@ describe('useAuth.login', () => {
 })
 
 describe('useAuth.forgotPassword', () => {
-  it('always reports success, even when the request fails, to avoid leaking account existence', async () => {
+  it('reports a generic transport error without leaking account existence', async () => {
     authAPI.forgotPassword.mockRejectedValueOnce(new Error('user not found'))
 
     const { result } = renderHook(() => useAuth())
@@ -98,7 +98,9 @@ describe('useAuth.forgotPassword', () => {
       response = await result.current.forgotPassword('nobody@example.com')
     })
 
-    expect(response.success).toBe(true)
+    expect(response.success).toBe(false)
+    expect(response.error).toContain('Check your connection')
+    expect(response.error).not.toContain('user not found')
   })
 })
 

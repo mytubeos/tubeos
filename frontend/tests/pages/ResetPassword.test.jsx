@@ -63,7 +63,7 @@ describe('ResetPassword page', () => {
     expect(resetPassword).not.toHaveBeenCalled()
   })
 
-  it('submits the token + new password and redirects to /login on success', async () => {
+  it('submits the token and keeps the confirmation until the user chooses to sign in', async () => {
     resetPassword.mockResolvedValueOnce({ success: true, message: 'Password reset successfully' })
     const user = userEvent.setup()
     renderPage()
@@ -76,7 +76,11 @@ describe('ResetPassword page', () => {
     expect(resetPassword).toHaveBeenCalledWith('abc123', 'newPassword123')
     expect(await screen.findByText('Password Reset')).toBeInTheDocument()
 
-    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/login'), { timeout: 3000 })
+    expect(screen.getByRole('link', { name: /continue to sign in/i })).toHaveAttribute(
+      'href',
+      '/login'
+    )
+    expect(mockNavigate).not.toHaveBeenCalled()
   })
 
   it('shows the backend error message when the reset fails', async () => {

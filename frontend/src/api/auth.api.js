@@ -35,6 +35,8 @@ const authAPI = {
 
   logout: () => api.post('/auth/logout'),
   logoutAll: () => api.post('/auth/logout-all'),
+  getSessions: () => api.get('/auth/sessions'),
+  logoutOthers: () => api.post('/auth/logout-others'),
 
   updatePreferences: (prefs) => api.patch('/auth/preferences', prefs),
 

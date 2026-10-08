@@ -421,3 +421,107 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Shared mobile surfaces: one page background, intrinsic height and keyboard-safe scrolling. */
+.auth-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(ellipse at top, #082334 0, #06060a 58%);
+}
+.auth-content {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px 32px;
+}
+.auth-page {
+  width: 100%;
+  max-width: 440px;
+  margin-inline: auto;
+  overflow-wrap: anywhere;
+}
+.auth-card {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 20px;
+  padding: 24px;
+}
+.auth-page button,
+.auth-page a.block {
+  min-height: 44px;
+}
+.auth-page input {
+  font-size: 16px;
+}
+.auth-page input[type='password'] {
+  padding-right: 44px;
+}
+.auth-page h1 {
+  line-height: 1.2;
+}
+@media (max-width: 380px) {
+  .auth-card {
+    padding: 20px 16px;
+  }
+  .auth-content {
+    padding-inline: 16px;
+  }
+}
+@media (max-height: 600px) {
+  .auth-content {
+    align-items: flex-start;
+    padding-top: 12px;
+  }
+}
+@layer base {
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:focus-visible,
+  a:focus-visible {
+    outline: 2px solid #00a0fd;
+    outline-offset: 3px;
+  }
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+}
+
+.plan-carousel {
+  display: flex;
+  position: relative;
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  padding: 16px 2px;
+  scrollbar-width: none;
+}
+.plan-carousel::-webkit-scrollbar {
+  display: none;
+}
+.plan-carousel-item {
+  flex: 0 0 88%;
+  min-width: 0;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+.plan-carousel-item > * {
+  height: 100%;
+}
+@media (min-width: 768px) {
+  .plan-carousel-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    overflow: visible;
+  }
+}

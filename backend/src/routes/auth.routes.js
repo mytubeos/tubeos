@@ -53,4 +53,7 @@ router.patch('/preferences', protect, authController.updatePreferences);
 // PATCH /api/v1/auth/branding — White-label report branding (Agency plan only)
 router.patch('/branding', protect, requirePlan('agency'), authController.updateBranding);
 
+router.get('/sessions', protect, authController.listSessions);
+router.post('/logout-others', protect, authLimiter, authController.logoutOtherSessions);
+
 module.exports = router;

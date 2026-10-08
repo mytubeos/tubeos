@@ -62,7 +62,7 @@ export const Login = () => {
       setUnverifiedUserId(result.userId)
       setShowOtp(true)
       setLocalError('')
-      setOtpMsg('Enter the OTP sent to your email. Check Render logs if email not received.')
+      setOtpMsg('Enter the OTP sent to your email. Check your spam folder if it has not arrived.')
     } else {
       setLocalError(result.message || 'Login failed')
     }
@@ -96,7 +96,7 @@ export const Login = () => {
     setLocalError('')
     try {
       await authApi.resendOTP(formData.email)
-      setOtpMsg('New OTP sent! Check Render logs or your email/spam folder.')
+      setOtpMsg('New OTP sent! Check your inbox or spam folder.')
     } catch (err) {
       setLocalError(err.response?.data?.message || 'Failed to resend OTP')
     } finally {
@@ -107,17 +107,14 @@ export const Login = () => {
   // ==================== OTP SCREEN (unverified user) ====================
   if (showOtp) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+      <div className="auth-page">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-white mb-2">Verify Email</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Verify Email</h1>
             <p className="text-slate-400">Enter the 6-digit OTP for {formData.email}</p>
           </div>
 
-          <form
-            onSubmit={handleOtpSubmit}
-            className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 shadow-2xl"
-          >
+          <form onSubmit={handleOtpSubmit} className="auth-card">
             <div className="mb-6">
               <label className="block text-sm font-medium text-slate-200 mb-4 text-center">
                 Verification Code
@@ -148,7 +145,7 @@ export const Login = () => {
                   type="button"
                   onClick={handleResendOTP}
                   disabled={resending || loading}
-                  className="text-purple-400 hover:text-purple-300 disabled:opacity-50 font-medium"
+                  className="text-brand hover:text-brand-light disabled:opacity-50 font-medium"
                 >
                   {resending ? 'Sending...' : 'Resend OTP'}
                 </button>
@@ -171,22 +168,21 @@ export const Login = () => {
 
   // ==================== LOGIN FORM ====================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+    <div className="auth-page">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Vezrin</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Vezrin</h1>
           <p className="text-slate-400">Sign in to your account</p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 shadow-2xl"
-        >
+        <form onSubmit={handleSubmit} className="auth-card">
           <div className="mb-4">
             <label className="block text-sm font-medium text-slate-200 mb-2">Email Address</label>
             <Input
               type="email"
               name="email"
+              autoComplete="email"
+              aria-label="Email Address"
               value={formData.email}
               onChange={handleChange}
               placeholder="john@example.com"
@@ -197,7 +193,7 @@ export const Login = () => {
           <div className="mb-6">
             <div className="flex justify-between items-center mb-2">
               <label className="block text-sm font-medium text-slate-200">Password</label>
-              <Link to="/forgot-password" className="text-xs text-purple-400 hover:text-purple-300">
+              <Link to="/forgot-password" className="text-xs text-brand hover:text-brand-light">
                 Forgot password?
               </Link>
             </div>
@@ -205,6 +201,8 @@ export const Login = () => {
               <Input
                 type={showPwd ? 'text' : 'password'}
                 name="password"
+                autoComplete="current-password"
+                aria-label="Password"
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="••••••••"
@@ -213,6 +211,7 @@ export const Login = () => {
               <button
                 type="button"
                 onClick={() => setShowPwd((v) => !v)}
+                aria-label={showPwd ? 'Hide password' : 'Show password'}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
               >
                 {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -229,7 +228,7 @@ export const Login = () => {
 
           <p className="text-center text-slate-400">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-purple-400 hover:text-purple-300">
+            <Link to="/signup" className="text-brand hover:text-brand-light">
               Create one
             </Link>
           </p>

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -50,8 +50,13 @@ describe('ForgotPassword page', () => {
     await user.type(screen.getByPlaceholderText('john@example.com'), 'raj@example.com')
     await user.click(screen.getByRole('button', { name: /send reset link/i }))
 
-    expect(await screen.findByText('Check Your Email')).toBeInTheDocument()
+    expect(screen.getByText('Check Your Email')).toBeInTheDocument()
     expect(forgotPassword).toHaveBeenCalledWith('raj@example.com')
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 3500))
+    })
+    expect(screen.getByText('Check Your Email')).toBeInTheDocument()
+    expect(mockNavigate).not.toHaveBeenCalled()
   })
 
   it('disables the submit button while the request is loading', () => {

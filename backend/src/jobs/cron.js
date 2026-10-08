@@ -3,6 +3,7 @@
 // blocks evalsha. Uses setInterval — fine for a single instance, but would
 // duplicate work (double emails/syncs) across multiple instances.
 
+const { notifyVideo } = require('../services/notification.service');
 const Schedule = require('../models/schedule.model');
 const Video = require('../models/video.model');
 const YoutubeChannel = require('../models/youtube-channel.model');
@@ -120,6 +121,7 @@ const reapPublishedSchedules = async () => {
       video.status = 'published';
       video.publishedAt = video.publishedAt || video.scheduledAt;
       await video.save();
+      await notifyVideo(video.userId, 'video_published', video.title);
       logger.info(`[cron] direct-scheduled video ${video._id} marked published`);
     }
 
@@ -168,6 +170,7 @@ const reapPublishedSchedules = async () => {
               video.status = 'published';
               video.publishedAt = video.publishedAt || new Date();
               await video.save();
+              await notifyVideo(video.userId, 'video_published', video.title);
               logger.info(`[cron] video ${video._id} finished processing, marked published`);
             } else if (uploadStatus === 'failed' || uploadStatus === 'rejected') {
               video.status = 'failed';
@@ -177,6 +180,7 @@ const reapPublishedSchedules = async () => {
                 occurredAt: new Date(),
               };
               await video.save();
+              await notifyVideo(video.userId, 'upload_failed', video.title);
               logger.error(`[cron] video ${video._id} ${uploadStatus} on YouTube`);
             }
             // 'uploaded' (still processing) or missing from the response —

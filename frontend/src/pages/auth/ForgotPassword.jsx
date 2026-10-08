@@ -1,20 +1,25 @@
 // src/pages/auth/ForgotPassword.jsx
 // Forgot password page - request password reset link
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import useAuth from '../../hooks/useAuth'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Toast } from '../../components/ui/Toast'
 
 export const ForgotPassword = () => {
-  const navigate = useNavigate()
   const { forgotPassword, loading } = useAuth()
 
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [localError, setLocalError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+  const [cooldown, setCooldown] = useState(0)
+  useEffect(() => {
+    if (!cooldown) return
+    const timer = setTimeout(() => setCooldown((value) => Math.max(0, value - 1)), 1000)
+    return () => clearTimeout(timer)
+  }, [cooldown])
 
   // Validate email
   const validateEmail = () => {
@@ -28,7 +33,7 @@ export const ForgotPassword = () => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!validateEmail()) return
+    if (loading || cooldown || !validateEmail()) return
 
     const result = await forgotPassword(email)
 
@@ -37,17 +42,16 @@ export const ForgotPassword = () => {
       setSubmitted(true)
       setLocalError('')
 
-      // Redirect to login after 3 seconds
-      setTimeout(() => {
-        navigate('/login')
-      }, 3000)
+      setCooldown(30)
+    } else {
+      setLocalError(result.error || 'Could not send the email. Please try again.')
     }
   }
 
   // ==================== SUBMITTED STATE ====================
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+      <div className="auth-page">
         <div className="w-full max-w-md">
           {/* Success Header */}
           <div className="text-center mb-8">
@@ -68,17 +72,17 @@ export const ForgotPassword = () => {
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">Check Your Email</h1>
             <p className="text-slate-400">
-              We've sent a password reset link to{' '}
-              <span className="font-medium text-slate-200">{email}</span>
+              If an account exists, a reset link will arrive at{' '}
+              <span className="font-medium text-slate-200 break-all">{email}</span>
             </p>
           </div>
 
           {/* Info Card */}
-          <div className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 shadow-2xl">
+          <div className="auth-card">
             {/* Steps */}
             <div className="space-y-4 mb-6">
               <div className="flex gap-4">
-                <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-purple-500 text-white text-sm font-medium">
+                <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-brand text-white text-sm font-medium">
                   1
                 </div>
                 <div>
@@ -88,7 +92,7 @@ export const ForgotPassword = () => {
               </div>
 
               <div className="flex gap-4">
-                <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-purple-500 text-white text-sm font-medium">
+                <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-brand text-white text-sm font-medium">
                   2
                 </div>
                 <div>
@@ -98,7 +102,7 @@ export const ForgotPassword = () => {
               </div>
 
               <div className="flex gap-4">
-                <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-purple-500 text-white text-sm font-medium">
+                <div className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded-full bg-brand text-white text-sm font-medium">
                   3
                 </div>
                 <div>
@@ -110,11 +114,12 @@ export const ForgotPassword = () => {
 
             {/* Success Message */}
             <Toast type="success" message={successMsg} className="mb-6" />
+            {localError && <Toast type="error" message={localError} className="mb-4" />}
 
             {/* Back to Login */}
             <Link
               to="/login"
-              className="block w-full text-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition"
+              className="block w-full text-center px-4 py-2 bg-brand hover:bg-brand-light text-white rounded-lg font-medium transition"
             >
               Back to Login
             </Link>
@@ -123,12 +128,23 @@ export const ForgotPassword = () => {
             <p className="text-center text-slate-400 text-sm mt-4">
               Didn't receive the email?{' '}
               <button
-                onClick={() => setSubmitted(false)}
-                className="text-purple-400 hover:text-purple-300 font-medium"
+                onClick={handleSubmit}
+                disabled={loading || cooldown > 0}
+                className="text-brand hover:text-brand-light font-medium"
               >
-                Try again
+                {loading ? 'Sending...' : cooldown ? `Resend in ${cooldown}s` : 'Resend Email'}
               </button>
             </p>
+            <button
+              type="button"
+              className="block mx-auto mt-4 min-h-11 text-sm text-gray-300"
+              onClick={() => {
+                setSubmitted(false)
+                setLocalError('')
+              }}
+            >
+              Change Email
+            </button>
           </div>
 
           {/* Tips */}
@@ -144,7 +160,7 @@ export const ForgotPassword = () => {
 
   // ==================== FORM STATE ====================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+    <div className="auth-page">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -155,15 +171,15 @@ export const ForgotPassword = () => {
         </div>
 
         {/* Form Card */}
-        <form
-          onSubmit={handleSubmit}
-          className="bg-slate-800/50 backdrop-blur-xl border border-slate-700 rounded-2xl p-8 shadow-2xl"
-        >
+        <form onSubmit={handleSubmit} className="auth-card">
           {/* Email Input */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-slate-200 mb-2">Email Address</label>
             <Input
               type="email"
+              name="email"
+              autoComplete="email"
+              aria-label="Email Address"
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value)
@@ -178,14 +194,18 @@ export const ForgotPassword = () => {
           {localError && <Toast type="error" message={localError} className="mb-4" />}
 
           {/* Submit Button */}
-          <Button type="submit" disabled={loading || !email} className="w-full mb-4">
-            {loading ? 'Sending...' : 'Send Reset Link'}
+          <Button
+            type="submit"
+            disabled={loading || !email || cooldown > 0}
+            className="w-full mb-4"
+          >
+            {loading ? 'Sending...' : cooldown ? `Send again in ${cooldown}s` : 'Send Reset Link'}
           </Button>
 
           {/* Back to Login */}
           <p className="text-center text-slate-400">
             Remembered your password?{' '}
-            <Link to="/login" className="text-purple-400 hover:text-purple-300">
+            <Link to="/login" className="text-brand hover:text-brand-light">
               Sign in
             </Link>
           </p>

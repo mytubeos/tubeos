@@ -73,7 +73,7 @@ export const MetricCard = ({
     return (
       <div className="glass p-4 sm:p-5">
         <div className="shimmer h-4 w-24 rounded mb-4" />
-        <div className="shimmer h-8 w-32 rounded mb-2" />
+        <div className="shimmer h-8 w-32 max-w-full rounded mb-2" />
         <div className="shimmer h-3 w-20 rounded" />
       </div>
     )
@@ -82,10 +82,10 @@ export const MetricCard = ({
   return (
     <div className="glass p-4 sm:p-5 hover:border-white/12 transition-all duration-300 group">
       <div className="flex items-start justify-between mb-3 sm:mb-4">
-        <p className="text-gray-400 text-sm font-medium">{label}</p>
+        <p className="text-gray-400 text-sm font-medium min-w-0 break-words">{label}</p>
         {Icon && (
           <div
-            className={`w-9 h-9 rounded-xl flex items-center justify-center
+            className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center
                           transition-transform duration-300 group-hover:scale-110 ${iconColors[iconColor]}`}
           >
             <Icon size={17} />
@@ -97,14 +97,19 @@ export const MetricCard = ({
         <p className="font-display font-bold text-2xl text-white tracking-tight">{value}</p>
         {subtitle && <p className="text-gray-500 text-xs">{subtitle}</p>}
         {change !== undefined && (
-          <div className="flex items-center gap-1.5 pt-1">
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
             <span className={`text-xs font-medium ${isPositive ? 'text-emerald' : 'text-rose'}`}>
               {isPositive ? '↑' : '↓'}{' '}
               {changeUnit === '%' ? Math.abs(change).toFixed(1) : Math.round(Math.abs(change))}
               {changeUnit}
             </span>
-            <span className="text-gray-600 text-xs">vs last period</span>
+            <span className="text-gray-400 text-xs">vs last period</span>
           </div>
+        )}
+        {changeUnit === '%' && Number.isFinite(change) && Math.abs(change) >= 1000 && (
+          <p className="text-xs text-gray-400 leading-relaxed">
+            Large changes can reflect a small previous-period total.
+          </p>
         )}
       </div>
     </div>
