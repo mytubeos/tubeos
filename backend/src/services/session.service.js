@@ -24,19 +24,25 @@ const remember = async (refreshToken, userAgent = '') => {
         : /safari/i.test(userAgent)
           ? 'Safari'
           : 'Browser';
-  await Session.updateOne(
-    { _id: token.sid },
-    {
-      $set: {
-        userId: token.id,
-        version: token.version || 0,
-        device: `${os} · ${browser}`,
-        lastSeenAt: new Date(),
-        expiresAt: new Date(token.exp * 1000),
+  try {
+    await Session.updateOne(
+      { _id: token.sid },
+      {
+        $set: {
+          userId: token.id,
+          version: token.version || 0,
+          device: `${os} · ${browser}`,
+          lastSeenAt: new Date(),
+          expiresAt: new Date(token.exp * 1000),
+        },
       },
-    },
-    { upsert: true }
-  );
+      { upsert: true }
+    );
+  } catch (err) {
+    require('../config/logger').warn('[sessions] Device history could not be recorded', {
+      error: err.message,
+    });
+  }
 };
 
 const list = async (userId, currentSessionId) => {

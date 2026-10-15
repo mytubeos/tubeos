@@ -363,22 +363,15 @@ Return ONLY valid JSON:
 }`;
 
   let result;
+  let analysisMode = 'title_only';
   if (thumbnailUrl && /^https?:\/\//i.test(thumbnailUrl)) {
     // Fetch the image and pass to a vision model
     try {
-      const imgRes = await fetch(thumbnailUrl);
-      if (!imgRes.ok) throw new Error(`image fetch ${imgRes.status}`);
-      const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
-      if (!/^image\//.test(contentType)) throw new Error('URL did not return an image');
-
-      const arrayBuf = await imgRes.arrayBuffer();
-      // Cap at 4 MB to protect the AI provider
-      if (arrayBuf.byteLength > 4 * 1024 * 1024) {
-        throw new Error('Thumbnail image is larger than 4 MB');
-      }
-      const base64 = Buffer.from(arrayBuf).toString('base64');
+      const { base64, mimeType: contentType } =
+        await require('../utils/thumbnail-fetch').fetchThumbnail(thumbnailUrl);
 
       const prompt = `Title: ${title}\nNiche: ${niche || 'general'}\nAnalyze the attached thumbnail.`;
+      analysisMode = 'image';
       result = await callAIVision(user.plan, 'thumbnail_analysis', {
         prompt,
         systemPrompt,
@@ -386,6 +379,7 @@ Return ONLY valid JSON:
         mimeType: contentType,
       });
     } catch (visionErr) {
+      analysisMode = 'title_only';
       logger.warn('[scoreThumbnail] vision failed, falling back to text-only', {
         error: visionErr.message,
       });
@@ -417,7 +411,7 @@ Return ONLY valid JSON:
 
   const clean = result.replace(/```json|```/g, '').trim();
   await User.findByIdAndUpdate(userId, { $inc: { 'usage.aiContentUsed': 1 } });
-  return JSON.parse(clean);
+  return { ...JSON.parse(clean), analysisMode };
 };
 
 // ==================== GENERATE THUMBNAIL IMAGE ====================

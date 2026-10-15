@@ -70,6 +70,7 @@ const getAuthUrl = (state) => {
 const exchangeCodeForTokens = async (code) => {
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
+    signal: AbortSignal.timeout(20000),
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       client_id: config.youtube.clientId,
@@ -112,6 +113,7 @@ const refreshAccessToken = async (refreshToken) => {
 
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
+    signal: AbortSignal.timeout(20000),
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       client_id: config.youtube.clientId,
@@ -143,6 +145,7 @@ const youtubeRequest = async (endpoint, options = {}) => {
   const url = `${baseUrl}${endpoint}`;
 
   const response = await fetch(url, {
+    signal: AbortSignal.timeout(20000),
     ...options,
     headers: {
       'Content-Type': 'application/json',

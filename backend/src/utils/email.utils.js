@@ -14,8 +14,9 @@ const isBrevoConfigured = () => !!BREVO_API_KEY;
 // ==================== SEND OTP EMAIL ====================
 const sendOTPEmail = async (recipientEmail, recipientName, otp) => {
   if (!isBrevoConfigured()) {
-    logger.warn('[sendOTPEmail] Brevo not configured, skipping email');
-    return;
+    const err = new Error('Email delivery is temporarily unavailable. Please try again later.');
+    err.statusCode = 503;
+    throw err;
   }
 
   if (!recipientEmail || !otp) {
@@ -92,8 +93,9 @@ const sendOTPEmail = async (recipientEmail, recipientName, otp) => {
 // ==================== SEND PASSWORD RESET EMAIL ====================
 const sendPasswordResetEmail = async (recipientEmail, recipientName, resetToken) => {
   if (!isBrevoConfigured()) {
-    logger.warn('[sendPasswordResetEmail] Brevo not configured, skipping email');
-    return;
+    const err = new Error('Email delivery is temporarily unavailable. Please try again later.');
+    err.statusCode = 503;
+    throw err;
   }
 
   if (!recipientEmail || !resetToken) {

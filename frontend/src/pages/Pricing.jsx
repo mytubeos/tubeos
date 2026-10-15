@@ -184,16 +184,12 @@ export const Pricing = () => {
 
           {/* Header */}
           <div className="text-center mb-12">
-            <h1 className="font-display font-bold text-white text-5xl mb-4">Pricing</h1>
-            <p className="text-gray-500 text-lg">
-              Lock in founders pricing — increases as spots fill up.
+            <p role="status" className="text-sm text-amber mb-4">
+              New paid purchases are temporarily unavailable. Existing plans continue until their
+              expiry.
             </p>
-            <div className="inline-flex items-center gap-2 mt-4 px-4 py-2 glass rounded-full border border-emerald/20">
-              <span className="w-2 h-2 rounded-full bg-emerald animate-pulse" />
-              <span className="text-sm text-gray-300">
-                Founders offer active — <span className="text-emerald">88 Creator spots left</span>
-              </span>
-            </div>
+            <h1 className="font-display font-bold text-white text-5xl mb-4">Pricing</h1>
+            <p className="text-gray-400 text-lg">Compare features and your current plan.</p>
           </div>
 
           {/* Mobile: stacked plan cards (grid-cols-5 comparison table is unusable under ~640px) */}
@@ -236,13 +232,13 @@ export const Pricing = () => {
                       size="sm"
                       variant={plan === 'creator' ? 'brand' : 'ghost'}
                       className="w-full"
-                      disabled={loadingPlan === plan}
+                      disabled={true}
                       onClick={() => handleUpgradeClick(plan)}
                     >
                       {loadingPlan === plan ? (
                         <Loader2 size={16} className="animate-spin mx-auto" />
                       ) : (
-                        'Upgrade'
+                        'Purchases paused'
                       )}
                     </Button>
                   )}
@@ -323,13 +319,13 @@ export const Pricing = () => {
                       size="xs"
                       variant={plan === 'creator' ? 'brand' : 'ghost'}
                       className="mt-3 w-full"
-                      disabled={loadingPlan === plan}
+                      disabled={true}
                       onClick={() => handleUpgradeClick(plan)}
                     >
                       {loadingPlan === plan ? (
                         <Loader2 size={14} className="animate-spin mx-auto" />
                       ) : (
-                        'Upgrade'
+                        'Purchases paused'
                       )}
                     </Button>
                   )}

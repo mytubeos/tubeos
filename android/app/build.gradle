@@ -58,8 +58,8 @@ android {
         applicationId 'com.vezrin.app'
         minSdkVersion 24
         targetSdkVersion 36
-        versionCode providers.gradleProperty('releaseVersionCode').orElse('4').get().toInteger()
-        versionName providers.gradleProperty('releaseVersionName').orElse('1.0.2').get()
+        versionCode providers.gradleProperty('releaseVersionCode').orElse('5').get().toInteger()
+        versionName providers.gradleProperty('releaseVersionName').orElse('1.0.3').get()
 
         // The name for the application
         resValue "string", "appName", twaManifest.name

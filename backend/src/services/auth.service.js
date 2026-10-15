@@ -62,6 +62,7 @@ const calculateReferralTierFromCount = (count) => {
 
 // ==================== REGISTER (OTP FLOW) ====================
 const register = async ({ name, email, password, referralCode }) => {
+  email = typeof email === 'string' ? email.trim().toLowerCase() : '';
   // Check if email already exists
   const existingUser = await User.findOne({ email });
   if (existingUser) {
@@ -126,8 +127,11 @@ const register = async ({ name, email, password, referralCode }) => {
       error: emailError.message,
       brevoError: emailError.response?.data,
     });
-    // Log OTP for testing when email fails (remove before full production)
-    logger.debug(`[register] OTP for ${user.email}: ${otp}`);
+    const err = new Error(
+      'Email delivery is temporarily unavailable. Please try again or use Resend OTP.'
+    );
+    err.statusCode = 503;
+    throw err;
   }
 
   // Update referrer's referral count
@@ -161,7 +165,7 @@ const verifyEmail = async (otp, userId) => {
 
   // Get OTP
   const storedOtp = await getTempToken(`email_otp:${userId}`);
-  logger.debug('[verifyEmail] OTP lookup', { userId, storedOtp, inputOtp: otp });
+  logger.debug('[verifyEmail] OTP lookup', { userId, found: !!storedOtp });
   if (!storedOtp) {
     const error = new Error('OTP expired or not found. Click "Resend OTP" to get a new one.');
     error.statusCode = 400;
@@ -206,6 +210,7 @@ const verifyEmail = async (otp, userId) => {
 
 // ==================== RESEND OTP ====================
 const resendOTP = async (email) => {
+  email = typeof email === 'string' ? email.trim().toLowerCase() : '';
   if (!email) {
     const error = new Error('Email is required');
     error.statusCode = 400;
@@ -240,8 +245,11 @@ const resendOTP = async (email) => {
       error: emailError.message,
       brevoError: emailError.response?.data,
     });
-    // Log OTP for testing when email fails (remove before full production)
-    logger.debug(`[resendOTP] OTP for ${user.email}: ${otp}`);
+    const err = new Error(
+      'Email delivery is temporarily unavailable. Please try again or use Resend OTP.'
+    );
+    err.statusCode = 503;
+    throw err;
   }
 
   return {
@@ -252,6 +260,7 @@ const resendOTP = async (email) => {
 
 // ==================== LOGIN ====================
 const login = async ({ email, password, ip }) => {
+  email = typeof email === 'string' ? email.trim().toLowerCase() : '';
   if (!email || !password) {
     const error = new Error('Email and password are required');
     error.statusCode = 400;
@@ -319,6 +328,7 @@ const login = async ({ email, password, ip }) => {
 
 // ==================== FORGOT PASSWORD ====================
 const forgotPassword = async (email) => {
+  email = typeof email === 'string' ? email.trim().toLowerCase() : '';
   if (!email) {
     const error = new Error('Email is required');
     error.statusCode = 400;
@@ -341,12 +351,6 @@ const forgotPassword = async (email) => {
   await setTempToken(`pwd_reset:${hashedToken}`, user._id.toString(), 15 * 60);
   logger.debug('[forgotPassword] Reset token stored', { email: user.email });
 
-  // Reset link logged at debug level only — contains the plaintext token
-  const clientUrl = process.env.CLIENT_URL || 'https://vezrin.com';
-  logger.debug(
-    `[forgotPassword] RESET LINK for ${user.email}: ${clientUrl}/reset-password?token=${resetToken}`
-  );
-
   // Send reset email
   try {
     await sendPasswordResetEmail(user.email, user.name, resetToken);
@@ -356,7 +360,9 @@ const forgotPassword = async (email) => {
       error: emailError.message,
       brevoError: emailError.response?.data,
     });
-    // Don't throw — the token is already stored, user can retry "Resend"
+    const err = new Error('Email delivery is temporarily unavailable. Please try again later.');
+    err.statusCode = 503;
+    throw err;
   }
 
   return {

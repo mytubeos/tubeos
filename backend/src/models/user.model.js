@@ -19,7 +19,8 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Email is required'],
       unique: true,
       lowercase: true,
-      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Invalid email format'],
+      trim: true,
+      match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Invalid email format'],
     },
     password: {
       type: String,
@@ -77,7 +78,9 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
     // Soft-delete marker for the account-deletion Privacy Policy promise
-    // (90 days after this is set, cron.purgeExpiredData hard-deletes the doc).
+    // (30 days after this is set, cron.purgeExpiredData hard-deletes the doc).
+    deletionDueAt: { type: Date, default: null },
+    deletionProcessingAt: { type: Date, default: null },
     deletedAt: {
       type: Date,
       default: null,

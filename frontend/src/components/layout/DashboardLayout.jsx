@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from 'react'
 import { Sidebar } from './Sidebar'
 import { Navbar } from './Navbar'
 import { PlanActivatedModal } from '../features/PlanActivatedModal'
+import { ContentReportButton } from '../features/ContentReportButton'
+import { Link } from 'react-router-dom'
 import notificationAPI from '../../api/notification.api'
 
 // Map path to page title
@@ -74,6 +76,20 @@ export const DashboardLayout = () => {
         {/* Page Content */}
         <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto">
           <div key={pathname} className="p-3 sm:p-5 max-w-screen-xl mx-auto route-enter">
+            {['/ai', '/comments', '/videos/upload', '/growth'].some((path) =>
+              pathname.startsWith(path)
+            ) && (
+              <aside className="mb-4 rounded-xl border border-white/10 p-3 flex flex-wrap justify-between items-center gap-2">
+                <p className="text-xs text-gray-400">
+                  AI tools send your submitted text, images or selected channel/comment data to AI
+                  providers. Review outputs before publishing.{' '}
+                  <Link to="/privacy#ai-data" className="text-brand underline">
+                    Data details
+                  </Link>
+                </p>
+                <ContentReportButton />
+              </aside>
+            )}
             <Outlet />
           </div>
         </main>

@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import paymentAPI from '../api/payment.api'
 import { useAuthStore } from '../store/authStore'
 
 const PENDING_PLAN_KEY = 'dodo_pending_plan'
@@ -18,31 +17,15 @@ const POLL_ATTEMPTS = 8 // ~16s — generous for a webhook that's usually near-i
 // after redirect-back this polls the user's own profile until the
 // webhook-driven activation (dodo.service.js) shows up as a real plan change.
 export const useDodoCheckout = ({ onSuccess } = {}) => {
-  const [loadingPlan, setLoadingPlan] = useState(null)
+  const loadingPlan = null
   const [verifying, setVerifying] = useState(false)
   const { refreshUser } = useAuthStore()
   const [searchParams, setSearchParams] = useSearchParams()
   const pollTimer = useRef(null)
 
   const startDodoCheckout = async (plan) => {
-    if (loadingPlan) return
-    setLoadingPlan(plan)
-    try {
-      const res = await paymentAPI.createDodoCheckout(plan)
-      sessionStorage.setItem(
-        BASELINE_KEY,
-        JSON.stringify({
-          plan: useAuthStore.getState().user?.plan,
-          expiresAt: useAuthStore.getState().user?.subscriptionExpiresAt,
-        })
-      )
-      sessionStorage.setItem(PENDING_PLAN_KEY, plan)
-      window.location.href = res.data.data.url
-      // Do NOT clear loadingPlan here — this tab is navigating away to Dodo.
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Something went wrong')
-      setLoadingPlan(null)
-    }
+    void plan
+    toast.error('New purchases are temporarily unavailable. Existing plan access is unchanged.')
   }
 
   useEffect(() => {

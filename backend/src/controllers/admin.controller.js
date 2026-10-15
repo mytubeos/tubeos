@@ -142,29 +142,32 @@ const toggleBanUser = async (req, res) => {
 
 // PATCH /api/v1/admin/users/:id/delete
 // Soft-delete: marks deletedAt (cron purges the doc + disconnects their
-// YouTube channels after the 90-day retention window in the Privacy Policy).
+// YouTube channels after the 30-day retention window in the Privacy Policy).
 // Calling again on an already soft-deleted user restores it (clears deletedAt).
 const toggleDeleteUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('name email deletedAt');
+    const user = await User.findById(req.params.id).select(
+      'name email deletedAt isActive sessionVersion'
+    );
     if (!user) return errorResponse(res, 404, 'User not found');
 
     if (user.deletedAt) {
-      user.deletedAt = null;
-      await user.save();
+      const restored = await User.findOneAndUpdate(
+        { _id: user._id, deletedAt: { $ne: null }, deletionProcessingAt: null },
+        { deletedAt: null, deletionDueAt: null, isActive: true },
+        { new: true }
+      );
+      if (!restored)
+        return errorResponse(res, 409, 'Deletion is already processing and cannot be cancelled');
       return successResponse(res, 200, 'Account deletion cancelled', { deletedAt: null });
     }
 
     user.deletedAt = new Date();
+    user.deletionDueAt = new Date(Date.now() + 29 * 86400000);
+    user.isActive = false;
+    user.sessionVersion = (user.sessionVersion || 0) + 1;
     await user.save();
-
-    // Disconnect their channels now — the existing 30-day channel purge job
-    // then cleans those up on its own schedule, so we don't need separate
-    // cascade-delete logic here.
-    await YoutubeChannel.updateMany(
-      { userId: user._id, connectionStatus: { $ne: 'disconnected' } },
-      { connectionStatus: 'disconnected', isActive: false }
-    );
+    await require('../services/account-deletion.service').stopAccountActivity(user._id);
 
     return successResponse(res, 200, 'Account marked for deletion', {
       deletedAt: user.deletedAt,

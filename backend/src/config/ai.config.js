@@ -1,4 +1,12 @@
+const { addSafetyInstructions } = require('../services/ai-safety.service');
 // src/config/ai.config.js
+
+const GEMINI_SAFETY_SETTINGS = [
+  'HARM_CATEGORY_HATE_SPEECH',
+  'HARM_CATEGORY_HARASSMENT',
+  'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+  'HARM_CATEGORY_DANGEROUS_CONTENT',
+].map((category) => ({ category, threshold: 'BLOCK_MEDIUM_AND_ABOVE' }));
 
 const AI_MODELS = {
   // gemini-2.0-flash was hard-shut-down by Google on 2026-06-01 — every Free
@@ -106,6 +114,7 @@ const getModelForPlan = (plan, task = 'default') => {
 };
 
 const callAI = async (plan, task, messages, systemPrompt) => {
+  systemPrompt = addSafetyInstructions(systemPrompt);
   const model = getModelForPlan(plan, task);
 
   if (model.provider === 'google') {
@@ -127,11 +136,12 @@ const callAI = async (plan, task, messages, systemPrompt) => {
 // imageData: { base64, mimeType }
 // Anthropic & Gemini both support vision; Groq llama-3.3 does not — falls back to Gemini.
 const callAIVision = async (plan, task, { prompt, systemPrompt, base64, mimeType }) => {
+  systemPrompt = addSafetyInstructions(systemPrompt);
   const model = getModelForPlan(plan, task);
 
   // Groq vision not available — route to Gemini
   if (model.provider === 'groq') {
-    return callGeminiVision('gemini-2.0-flash', prompt, systemPrompt, base64, mimeType);
+    return callGeminiVision(AI_MODELS.gemini.name, prompt, systemPrompt, base64, mimeType);
   }
 
   if (model.provider === 'google') {
@@ -153,6 +163,7 @@ const callClaudeVision = async (
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
+    signal: AbortSignal.timeout(45000),
     headers: {
       'Content-Type': 'application/json',
       'x-api-key': process.env.ANTHROPIC_API_KEY,
@@ -196,6 +207,7 @@ const callGeminiVision = async (modelName, prompt, systemPrompt, base64, mimeTyp
 
   const response = await fetch(url, {
     method: 'POST',
+    signal: AbortSignal.timeout(45000),
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       system_instruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
@@ -205,6 +217,7 @@ const callGeminiVision = async (modelName, prompt, systemPrompt, base64, mimeTyp
           parts: [{ inline_data: { mime_type: mimeType, data: base64 } }, { text: prompt }],
         },
       ],
+      safetySettings: GEMINI_SAFETY_SETTINGS,
       generationConfig: { maxOutputTokens: 1000, temperature: 0.7 },
     }),
   });
@@ -224,6 +237,7 @@ const callClaude = async (modelName, messages, systemPrompt, maxTokens = 1000) =
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
+    signal: AbortSignal.timeout(45000),
     headers: {
       'Content-Type': 'application/json',
       'x-api-key': process.env.ANTHROPIC_API_KEY,
@@ -259,6 +273,7 @@ const callGroq = async (modelName, messages, systemPrompt, maxTokens = 1000) => 
 
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
+    signal: AbortSignal.timeout(45000),
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
@@ -290,6 +305,7 @@ const callDeepSeek = async (modelName, messages, systemPrompt, maxTokens = 1000)
 
   const response = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
+    signal: AbortSignal.timeout(45000),
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
@@ -322,6 +338,7 @@ const callDeepSeek = async (modelName, messages, systemPrompt, maxTokens = 1000)
 const CLOUDFLARE_IMAGE_MODEL = '@cf/black-forest-labs/flux-1-schnell';
 
 const callCloudflareImageGen = async (prompt) => {
+  prompt = addSafetyInstructions(prompt);
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const apiToken = process.env.CLOUDFLARE_API_TOKEN;
   if (!accountId || !apiToken) {
@@ -332,6 +349,7 @@ const callCloudflareImageGen = async (prompt) => {
 
   const response = await fetch(url, {
     method: 'POST',
+    signal: AbortSignal.timeout(45000),
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiToken}`,
@@ -383,10 +401,12 @@ const callGemini = async (modelName, messages, systemPrompt) => {
 
   const response = await fetch(url, {
     method: 'POST',
+    signal: AbortSignal.timeout(45000),
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       system_instruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
       contents,
+      safetySettings: GEMINI_SAFETY_SETTINGS,
       generationConfig: { maxOutputTokens: 1000, temperature: 0.7 },
     }),
   });

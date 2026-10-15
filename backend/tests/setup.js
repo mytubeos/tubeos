@@ -20,6 +20,13 @@ process.env.STRIPE_WEBHOOK_SECRET = 'test_stripe_webhook_secret';
 import { beforeAll, afterEach } from 'vitest';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
+import { createRequire } from 'module';
+// Explicit fake delivery for service tests; production auth must not silently
+// claim mail was sent when no sender is configured. No real mail leaves tests.
+const emailUtils = createRequire(import.meta.url)('../src/utils/email.utils');
+emailUtils.sendOTPEmail = async () => {};
+emailUtils.sendPasswordResetEmail = async () => {};
+emailUtils.sendWelcomeEmail = async () => {};
 
 // Note: this file only handles env vars + connecting to the shared in-memory
 // Mongo instance. Redis mocking (tests/mocks/redis.mock.js) is NOT

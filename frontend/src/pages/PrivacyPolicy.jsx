@@ -1,421 +1,168 @@
-// src/pages/PrivacyPolicy.jsx
-// Privacy Policy page for Vezrin
+import { Link } from 'react-router-dom'
 
 export function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto bg-slate-800/50 rounded-lg p-8 border border-slate-700">
-        <h1 className="text-4xl font-bold text-white mb-2">Privacy Policy</h1>
-        <p className="text-slate-400 mb-8">Last Updated: July 2026</p>
-
-        <div className="prose prose-invert max-w-none space-y-8 text-slate-300">
-          {/* Introduction */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">Introduction</h2>
-            <p>
-              Vezrin ("we", "us", "our", or "Company") operates the Vezrin website and application.
-              This page informs you of our policies regarding the collection, use, and disclosure of
-              personal data when you use our Service and the choices you have associated with that
-              data.
-            </p>
-            <p>
-              We use your data to provide and improve the Service. By using Vezrin, you agree to the
-              collection and use of information in accordance with this policy.
-            </p>
-          </section>
-
-          {/* 1. Information Collection */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">1. Information We Collect</h2>
-
-            <h3 className="text-xl font-semibold text-white mt-6 mb-3">Personal Information</h3>
-            <p>When you register for Vezrin, we collect:</p>
-            <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>Name</li>
-              <li>Email address</li>
-              <li>Password (encrypted)</li>
-              <li>Avatar/Profile picture (optional)</li>
-              <li>Bio/Description (optional)</li>
-            </ul>
-
-            <h3 className="text-xl font-semibold text-white mt-6 mb-3">YouTube Data</h3>
-            <p>When you connect your YouTube channel, we collect:</p>
-            <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>YouTube Channel ID</li>
-              <li>Channel name and description</li>
-              <li>Subscriber count and analytics</li>
-              <li>Video metadata and performance data</li>
-              <li>Audience demographics (anonymized)</li>
-              <li>YouTube OAuth refresh token (encrypted)</li>
-            </ul>
-
-            <h3 className="text-xl font-semibold text-white mt-6 mb-3">Usage Data</h3>
-            <p>We automatically collect usage data including:</p>
-            <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>Pages visited and features used</li>
-              <li>Time spent on the platform</li>
-              <li>Device information (OS, browser type)</li>
-              <li>IP address</li>
-              <li>Referral source</li>
-              <li>Cookies and tracking technology data</li>
-            </ul>
-
-            <h3 className="text-xl font-semibold text-white mt-6 mb-3">Communication Data</h3>
-            <p>When you contact us:</p>
-            <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>Email messages</li>
-              <li>Support tickets</li>
-              <li>Feedback and suggestions</li>
-              <li>Chat interactions</li>
-            </ul>
-          </section>
-
-          {/* 2. How We Use Information */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">2. How We Use Your Information</h2>
-            <p>Vezrin uses the collected data for various purposes:</p>
-            <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>To provide and maintain the Service</li>
-              <li>To notify you about changes to the Service</li>
-              <li>To provide customer support</li>
-              <li>To gather analysis or valuable information to improve the Service</li>
-              <li>To monitor the usage of the Service</li>
-              <li>To detect, prevent, and address technical issues</li>
-              <li>To send promotional emails (with your consent)</li>
-              <li>To provide personalized recommendations</li>
-              <li>To generate anonymous analytics and reports</li>
-            </ul>
-          </section>
-
-          {/* 3. Legal Basis */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">3. Legal Basis for Processing</h2>
-            <p>We process your personal data based on:</p>
-            <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>Your explicit consent (for marketing communications)</li>
-              <li>Performance of contract (to provide the Service)</li>
-              <li>Legitimate interests (to improve the Service, prevent fraud)</li>
-              <li>Compliance with legal obligations</li>
-            </ul>
-          </section>
-
-          {/* 4. Data Retention */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">4. Data Retention</h2>
-            <p>
-              Vezrin will retain your Personal Data only for as long as necessary for the purposes
-              set out in this Privacy Policy. We will retain and use your Personal Data to the
-              extent necessary to comply with our legal obligations.
-            </p>
-            <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>Account data: Retained while account is active + 90 days after deletion</li>
-              <li>YouTube data: Retained while connected + 30 days after disconnection</li>
-              <li>
-                Server request/error logs: Retained per our hosting and monitoring providers' own
-                log-retention windows, not by Vezrin directly
-              </li>
-              <li>Backup data: Retained for disaster recovery purposes</li>
-            </ul>
-          </section>
-
-          {/* 5. Data Security */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">5. Data Security</h2>
-            <p>
-              The security of your data is important to us. We use industry-standard security
-              measures to protect your information:
-            </p>
-            <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>SSL/TLS encryption for data in transit</li>
-              <li>Bcrypt hashing for passwords</li>
-              <li>Encrypted storage for sensitive data at rest</li>
-              <li>Secure OAuth token handling</li>
-              <li>Access controls and authentication</li>
-              <li>Provider-level firewall and DDoS protection (Cloudflare/Render/Vercel)</li>
-            </ul>
-            <p className="mt-4">
-              However, no method of transmission over the Internet is 100% secure. While we strive
-              to use commercially acceptable means to protect your Personal Data, we cannot
-              guarantee its absolute security.
-            </p>
-          </section>
-
-          {/* 6. Sharing of Data */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">6. Sharing of Your Data</h2>
-            <p>
-              We do NOT sell, trade, or rent your personal information. We may share your data in
-              the following cases:
-            </p>
-            <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>
-                <strong>Service Providers:</strong> Third parties that help us operate the Service
-                (hosting, analytics, payment processing)
-              </li>
-              <li>
-                <strong>YouTube API:</strong> We share only necessary data to provide YouTube
-                integration features
-              </li>
-              <li>
-                <strong>Legal Requirements:</strong> If required by law or to protect our rights
-              </li>
-              <li>
-                <strong>Business Transfer:</strong> In case of merger, acquisition, or sale of
-                assets
-              </li>
-              <li>
-                <strong>Aggregated Data:</strong> Anonymous, aggregated data for analytics and
-                research
-              </li>
-            </ul>
-          </section>
-
-          {/* 7. Third-Party Links */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">7. Third-Party Links</h2>
-            <p>
-              Vezrin may contain links to external websites that are not operated by us. This
-              Privacy Policy does not apply to third-party websites. We strongly advise you to
-              review the privacy policies of any third-party website before providing your personal
-              information.
-            </p>
-            <p className="mt-4">
-              We are not responsible for the privacy practices of third-party websites.
-            </p>
-          </section>
-
-          {/* 8. Cookies */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">8. Cookies</h2>
-            <p>
-              Vezrin uses cookies to enhance your experience. Cookies are small files stored on your
-              device.
-            </p>
-            <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>
-                <strong>Session Cookies:</strong> Temporary cookies that expire when you close your
-                browser
-              </li>
-              <li>
-                <strong>Persistent Cookies:</strong> Stored for longer periods to remember your
-                preferences
-              </li>
-              <li>
-                <strong>Third-party Cookies:</strong> From analytics and advertising services
-              </li>
-            </ul>
-            <p className="mt-4">
-              You can control cookies through your browser settings. Disabling cookies may affect
-              the functionality of Vezrin.
-            </p>
-          </section>
-
-          {/* 9. Your Rights */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">9. Your Data Rights</h2>
-            <p>Under applicable data protection laws, you have the right to:</p>
-            <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>
-                <strong>Access:</strong> Request a copy of your personal data
-              </li>
-              <li>
-                <strong>Rectification:</strong> Correct inaccurate personal data
-              </li>
-              <li>
-                <strong>Erasure:</strong> Request deletion of your data (with exceptions)
-              </li>
-              <li>
-                <strong>Restrict Processing:</strong> Limit how we use your data
-              </li>
-              <li>
-                <strong>Data Portability:</strong> Receive your data in a structured format
-              </li>
-              <li>
-                <strong>Withdraw Consent:</strong> Opt-out of marketing communications
-              </li>
-              <li>
-                <strong>Object:</strong> Object to certain types of processing
-              </li>
-            </ul>
-            <p className="mt-4">To exercise any of these rights, contact us at hello@vezrin.com</p>
-          </section>
-
-          {/* 10. How to Delete Your Account */}
-          <section id="account-deletion">
-            <h2 className="text-2xl font-bold text-white mb-4">10. How to Delete Your Account</h2>
-            <p>
-              You can request deletion of your Vezrin account and all associated data at any time:
-            </p>
-            <ol className="list-decimal list-inside space-y-2 ml-4">
-              <li>
-                Email{' '}
-                <a
-                  href="mailto:hello@vezrin.com?subject=Account%20Deletion%20Request"
-                  className="text-blue-400 underline"
-                >
-                  hello@vezrin.com
-                </a>{' '}
-                with the subject "Account Deletion Request" from your registered email address.
-              </li>
-              <li>
-                Your account and personal data are permanently deleted within 90 days of your
-                request.
-              </li>
-            </ol>
-            <p className="mt-4">
-              To delete only your YouTube data without deleting your whole account, disconnect the
-              channel from the Channels page — that channel's data is deleted 30 days after
-              disconnection.
-            </p>
-
-            <h3 className="text-xl font-semibold text-white mt-6 mb-3">What gets deleted</h3>
-            <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>Your profile: name, email, password, avatar, bio</li>
-              <li>Connected YouTube channel data: analytics, video metadata, synced comments</li>
-              <li>AI-generated content history and usage records</li>
-              <li>Referral wallet and payout history</li>
-            </ul>
-
-            <h3 className="text-xl font-semibold text-white mt-6 mb-3">What we retain, and why</h3>
-            <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>
-                Payment and transaction records — retained as required by Indian tax and accounting
-                law
-              </li>
-              <li>
-                Server request/error logs — retained per our hosting and monitoring providers' own
-                log-retention windows, not tied to your account
-              </li>
-            </ul>
-          </section>
-
-          {/* 11. Children's Privacy */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">11. Children's Privacy</h2>
-            <p>
-              Vezrin is not intended for children under 13 years of age. We do not knowingly collect
-              personal data from children under 13. If we become aware that a child under 13 has
-              provided us with personal data, we will delete such information immediately.
-            </p>
-            <p className="mt-4">
-              If you believe a child has provided their information to Vezrin, please contact us
-              immediately at hello@vezrin.com
-            </p>
-          </section>
-
-          {/* 11. California Privacy Rights */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">
-              12. California Privacy Rights (CCPA)
-            </h2>
-            <p>
-              If you are a California resident, you have additional rights under the California
-              Consumer Privacy Act (CCPA):
-            </p>
-            <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>Right to know what personal information is collected</li>
-              <li>Right to know whether your personal information is sold or disclosed</li>
-              <li>Right to say no to the sale of personal information</li>
-              <li>Right to delete personal information collected from you</li>
-              <li>Right to non-discrimination for exercising your CCPA rights</li>
-            </ul>
-          </section>
-
-          {/* 12. GDPR Compliance */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">13. GDPR Compliance (EU Users)</h2>
-            <p>
-              For EU residents, Vezrin complies with the General Data Protection Regulation (GDPR):
-            </p>
-            <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>
-                We process data based on legal basis (consent, contract, or legitimate interest)
-              </li>
-              <li>We implement Privacy by Design principles</li>
-              <li>You have rights to access, rectify, erase, restrict, and port your data</li>
-              <li>
-                Our Data Protection Officer, Raj Yadav, is available at hello@vezrin.com for any
-                GDPR-related inquiries
-              </li>
-            </ul>
-          </section>
-
-          {/* 13. International Data Transfers */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">14. International Data Transfers</h2>
-            <p>
-              Your data may be transferred to, and maintained in, computers located outside your
-              state, province, country, or other governmental jurisdiction where privacy laws may
-              differ. If you are located outside India and choose to provide information to us, you
-              consent to the transfer of your data to India and its processing there.
-            </p>
-          </section>
-
-          {/* 14. Data Breach Notification */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">15. Data Breach Notification</h2>
-            <p>
-              If we discover a data breach that compromises your personal information, we will
-              notify you by email as soon as reasonably possible, and notify relevant authorities if
-              required by law.
-            </p>
-          </section>
-
-          {/* 15. Marketing Communications */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">16. Marketing Communications</h2>
-            <p>We may send you marketing emails if you opt-in. You can:</p>
-            <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>Opt-out via the "Unsubscribe" link in emails</li>
-              <li>Change preferences in your account settings</li>
-              <li>Request complete removal from our mailing list</li>
-            </ul>
-          </section>
-
-          {/* 16. Policy Updates */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">
-              17. Changes to This Privacy Policy
-            </h2>
-            <p>
-              We may update this Privacy Policy from time to time. We will notify you of any changes
-              by posting the new Privacy Policy on this page and updating the "Last Updated" date
-              above.
-            </p>
-            <p className="mt-4">
-              Your continued use of Vezrin after such modifications constitutes your acceptance of
-              the updated Privacy Policy.
-            </p>
-          </section>
-
-          {/* 17. Contact Us */}
-          <section>
-            <h2 className="text-2xl font-bold text-white mb-4">18. Contact Information</h2>
-            <p>If you have questions about this Privacy Policy or our privacy practices:</p>
-            <p className="mt-4">
-              <strong>Email:</strong> hello@vezrin.com
-              <br />
-              <strong>Website:</strong> vezrin.com
-              <br />
-              <strong>Address:</strong> India
-            </p>
-            <p className="mt-4">
-              <strong>Data Protection Officer:</strong> Raj Yadav — hello@vezrin.com
-              <br />
-              (For GDPR-related queries)
-            </p>
-          </section>
-
-          {/* Footer */}
-          <section className="pt-8 border-t border-slate-700">
-            <p className="text-sm text-slate-400">
-              By using Vezrin, you acknowledge that you have read, understood, and agree to this
-              Privacy Policy.
-            </p>
-            <p className="text-sm text-slate-400 mt-4">© 2024-2026 Vezrin. All rights reserved.</p>
-          </section>
-        </div>
+    <main className="min-h-screen bg-base-900 text-gray-300 px-5 py-10">
+      <div className="max-w-3xl mx-auto space-y-7 leading-relaxed">
+        <Link to="/" className="text-brand">
+          Vezrin · VibeCore Technologies
+        </Link>
+        <h1 className="text-3xl text-white font-bold">Privacy Policy</h1>
+        <p className="text-sm text-gray-400">Last updated: October 16, 2026</p>
+        <p>
+          VibeCore Technologies operates Vezrin, a creator workspace for YouTube analytics,
+          scheduling and AI tools. Contact hello@vezrin.com for privacy, access, correction,
+          deletion or support requests.
+        </p>
+        <section className="space-y-3">
+          <h2 className="text-xl text-white font-semibold">Data we process</h2>
+          <ul className="list-disc pl-5 space-y-2">
+            <li>
+              Account: name, email, password hash, optional profile photo and bio, preferences and
+              plan/usage records.
+            </li>
+            <li>
+              Connected YouTube channels: channel identifiers, metadata, video and comment data,
+              analytics and OAuth credentials needed to perform actions you authorize.
+            </li>
+            <li>
+              Files you submit: videos staged for upload, thumbnails, AI prompts and images.
+              Publishing sends the selected content to YouTube.
+            </li>
+            <li>
+              Operational data: IP address, request/error logs, approximate browser/OS session
+              information, and limited performance/error diagnostics when monitoring is configured.
+            </li>
+            <li>
+              Support and safety reports you send, and payment/referral transaction or payout
+              information where applicable.
+            </li>
+          </ul>
+        </section>
+        <section className="space-y-3">
+          <h2 className="text-xl text-white font-semibold">Why and with whom</h2>
+          <p>
+            We use data to authenticate accounts, connect your channels, provide requested tools,
+            track plan limits, deliver opted-in notifications/reports, process existing payments and
+            investigate errors or abuse. We do not sell personal data.
+          </p>
+          <p>
+            Our infrastructure and delivery providers may include Render, Vercel, Cloudflare,
+            MongoDB, Redis/Upstash, Google Cloud Storage, Cloudinary, Brevo and Sentry, depending on
+            the configured feature. Historical payments are handled by Dodo Payments and, for older
+            transactions, Stripe or Razorpay. Providers process data needed for their function under
+            their applicable terms.
+          </p>
+        </section>
+        <section id="ai-data" className="space-y-3 scroll-mt-5">
+          <h2 className="text-xl text-white font-semibold">AI data and your choices</h2>
+          <p>
+            When you request AI features, submitted text/images and relevant selected channel
+            metadata or comments may be sent to DeepSeek, Google Gemini, Groq or Anthropic.
+            Thumbnail image generation uses Cloudflare Workers AI; generated images may be stored on
+            Cloudinary. Routing depends on the task and configured provider.
+          </p>
+          <p>
+            AI outputs can be inaccurate or offensive. Review and edit them before publishing. Avoid
+            submitting secrets or information you lack permission to share. You can use non-AI
+            features without generating AI content. Use “Report AI content” in AI-related screens to
+            report unsafe output within Vezrin.
+          </p>
+          <p>
+            Provider retention and data-use practices depend on their terms and the service/account
+            configuration. Contact us for details or help with a provider deletion request. We do
+            not promise zero retention or that every configured provider excludes all processing for
+            model improvement.
+          </p>
+        </section>
+        <section className="space-y-3">
+          <h2 className="text-xl text-white font-semibold">YouTube permissions</h2>
+          <p>
+            Channel access is optional and uses Google's consent flow. You can disconnect a channel
+            in Vezrin and revoke authorization through{' '}
+            <a className="text-brand underline" href="https://myaccount.google.com/permissions">
+              Google account permissions
+            </a>
+            . Disconnecting stops Vezrin access; it does not delete videos or comments already on
+            YouTube. Data already held by YouTube remains governed by Google's policies.
+          </p>
+        </section>
+        <section id="account-deletion" className="space-y-3 scroll-mt-5">
+          <h2 className="text-xl text-white font-semibold">Delete your account and data</h2>
+          <p>
+            <Link className="text-brand underline" to="/delete-account">
+              Open Vezrin account deletion
+            </Link>
+            . This page works in a browser without reinstalling the app. Signed-in users can confirm
+            with their current password. If you cannot sign in, email{' '}
+            <a
+              className="text-brand underline"
+              href="mailto:hello@vezrin.com?subject=Vezrin%20account%20deletion%20request"
+            >
+              hello@vezrin.com
+            </a>{' '}
+            from your registered address; we may verify ownership. Never send your password.
+          </p>
+          <p>
+            After a confirmed in-app request, access is deactivated and future Vezrin-managed jobs
+            stop. Account profile, stored channel/video/comment metadata, analytics, AI history,
+            session and notification records and retained upload/thumbnail files are scheduled for
+            deletion within 30 days. For email requests the window starts after ownership
+            verification.
+          </p>
+          <p>
+            Disconnecting only a YouTube channel schedules that channel's stored data for deletion
+            after 30 days. Published content and schedules already sent to YouTube must be managed
+            on YouTube.
+          </p>
+          <p>
+            Minimal payment/referral transactions may be retained for tax, accounting, dispute or
+            fraud obligations. Payout destination details are removed during account cleanup.
+            Hosting logs, AI-provider records and backup copies have provider-specific retention
+            windows; contact us for assistance requesting their deletion. Provider failures may
+            require support intervention and retry; please contact us if a request is not completed
+            within the stated period.
+          </p>
+        </section>
+        <section className="space-y-3">
+          <h2 className="text-xl text-white font-semibold">Storage and security</h2>
+          <p>
+            We use HTTPS, bcrypt password hashing and authenticated access controls. OAuth
+            credentials are kept server-side and excluded from ordinary API responses.
+            Authentication tokens and preferences may be kept in local storage or secure server
+            cookies. Sign out on shared devices. Hosting/database encryption, backups and retention
+            depend on provider settings; no system is completely secure.
+          </p>
+          <p>
+            We do not use an advertising SDK in this application. Optional Sentry monitoring records
+            errors and sampled performance diagnostics. We avoid sending passwords, authorization
+            headers and token query parameters to monitoring.
+          </p>
+        </section>
+        <section className="space-y-3">
+          <h2 className="text-xl text-white font-semibold">Other rights and children</h2>
+          <p>
+            You may request access, correction, export or deletion by contacting us. Marketing email
+            is opt-in and preferences can be changed in Settings. Data may be processed
+            internationally by our providers. Legal rights depend on your location.
+          </p>
+          <p>
+            Vezrin is not intended for children under 13. If you believe a child supplied personal
+            information, contact us so we can investigate and remove it.
+          </p>
+        </section>
+        <section className="space-y-3">
+          <h2 className="text-xl text-white font-semibold">Contact and changes</h2>
+          <p>
+            VibeCore Technologies, India ·{' '}
+            <a className="text-brand underline" href="mailto:hello@vezrin.com">
+              hello@vezrin.com
+            </a>
+            . Material changes will be reflected on this page with an updated date and additional
+            notice where required.
+          </p>
+        </section>
       </div>
-    </div>
+    </main>
   )
 }
