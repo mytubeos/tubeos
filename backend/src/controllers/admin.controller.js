@@ -154,7 +154,7 @@ const toggleDeleteUser = async (req, res) => {
     if (user.deletedAt) {
       const restored = await User.findOneAndUpdate(
         { _id: user._id, deletedAt: { $ne: null }, deletionProcessingAt: null },
-        { deletedAt: null, isActive: true },
+        { deletedAt: null, deletionDueAt: null, isActive: true },
         { new: true }
       );
       if (!restored)
@@ -163,6 +163,7 @@ const toggleDeleteUser = async (req, res) => {
     }
 
     user.deletedAt = new Date();
+    user.deletionDueAt = new Date(Date.now() + 29 * 86400000);
     user.isActive = false;
     user.sessionVersion = (user.sessionVersion || 0) + 1;
     await user.save();

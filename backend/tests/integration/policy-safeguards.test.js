@@ -76,7 +76,11 @@ describe('policy safeguards', () => {
     const other = await createUser('other@example.com');
     await User.updateOne(
       { _id: user._id },
-      { deletedAt: new Date(Date.now() - 31 * 86400000), isActive: false }
+      {
+        deletedAt: new Date(Date.now() - 31 * 86400000),
+        deletionDueAt: new Date(Date.now() - 86400000),
+        isActive: false,
+      }
     );
     await Video.collection.insertOne({ userId: user._id, title: 'Deleted video' });
     await Video.collection.insertOne({ userId: other.user._id, title: 'Other video' });
@@ -94,9 +98,17 @@ describe('policy safeguards', () => {
     const { user } = await createUser();
     await deletion.purgeAccountData(user._id);
     expect(await User.findById(user._id)).not.toBeNull();
+    await User.updateOne({ _id: user._id }, { deletedAt: new Date(Date.now() - 31 * 86400000) });
+    await deletion.purgeAccountData(user._id);
+    expect(await User.findById(user._id)).not.toBeNull(); // Legacy 90-day requests are not accelerated.
+
     await User.updateOne(
       { _id: user._id },
-      { deletedAt: new Date(Date.now() - 31 * 86400000), isActive: false }
+      {
+        deletedAt: new Date(Date.now() - 31 * 86400000),
+        deletionDueAt: new Date(Date.now() - 86400000),
+        isActive: false,
+      }
     );
     await Video.collection.insertOne({
       userId: user._id,

@@ -25,7 +25,12 @@ const requestDeletion = async (userId, password) => {
   await User.updateOne(
     { _id: userId },
     {
-      $set: { deletedAt, isActive: false, oauth: {} },
+      $set: {
+        deletedAt,
+        deletionDueAt: new Date(Date.now() + 29 * 86400000),
+        isActive: false,
+        oauth: {},
+      },
       $inc: { sessionVersion: 1 },
     }
   );
@@ -100,10 +105,20 @@ const purgeAccountData = async (userId) => {
   const user = await User.findOneAndUpdate(
     {
       _id: userId,
-      deletedAt: { $ne: null, $lte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-      $or: [
-        { deletionProcessingAt: null },
-        { deletionProcessingAt: { $lt: new Date(Date.now() - 60 * 60 * 1000) } },
+      deletedAt: { $ne: null },
+      $and: [
+        {
+          $or: [
+            { deletionDueAt: { $ne: null, $lte: new Date() } },
+            { deletionDueAt: null, deletedAt: { $lte: new Date(Date.now() - 90 * 86400000) } },
+          ],
+        },
+        {
+          $or: [
+            { deletionProcessingAt: null },
+            { deletionProcessingAt: { $lt: new Date(Date.now() - 60 * 60 * 1000) } },
+          ],
+        },
       ],
     },
     { $set: { isActive: false, deletionProcessingAt: new Date() } },

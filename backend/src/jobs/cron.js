@@ -547,7 +547,13 @@ const purgeExpiredData = async () => {
 
     const deletion = require('../services/account-deletion.service');
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const users = await User.find({ deletedAt: { $ne: null, $lte: thirtyDaysAgo } }).select('_id');
+    const users = await User.find({
+      deletedAt: { $ne: null },
+      $or: [
+        { deletionDueAt: { $ne: null, $lte: new Date() } },
+        { deletionDueAt: null, deletedAt: { $lte: new Date(Date.now() - 90 * 86400000) } },
+      ],
+    }).select('_id');
     for (const user of users) {
       try {
         await deletion.purgeAccountData(user._id);
