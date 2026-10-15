@@ -15,6 +15,7 @@ export const initSentry = () => {
     integrations: [Sentry.browserTracingIntegration()],
     sendDefaultPii: false,
     beforeSend: sanitizeMonitoringEvent,
+    beforeSendTransaction: sanitizeMonitoringEvent,
     tracesSampleRate: 0.1,
   })
 }

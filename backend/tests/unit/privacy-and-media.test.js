@@ -14,6 +14,12 @@ describe('diagnostic and image-fetch privacy', () => {
       },
       user: { email: 'test@example.com' },
       extra: { token: 'secret' },
+      spans: [
+        {
+          description: 'POST https://api.example.com/reset?token=secret',
+          data: { password: 'secret' },
+        },
+      ],
       breadcrumbs: [
         { data: { url: 'https://api.example.com/reset?token=secret', body: 'secret' } },
       ],

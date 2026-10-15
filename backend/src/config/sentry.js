@@ -24,6 +24,7 @@ const init = () => {
     environment: process.env.NODE_ENV || 'development',
     sendDefaultPii: false,
     beforeSend: sanitizeMonitoringEvent,
+    beforeSendTransaction: sanitizeMonitoringEvent,
     tracesSampleRate: 0.1, // light perf sampling, keep free-tier quota in check
   });
   logger.info('Sentry error tracking initialized');

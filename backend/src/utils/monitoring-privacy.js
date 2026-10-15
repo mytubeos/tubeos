@@ -2,6 +2,11 @@ const stripQuery = (value) => (typeof value === 'string' ? value.split(/[?#]/)[0
 const sanitizeMonitoringEvent = (event) => {
   if (event.request)
     event.request = { method: event.request.method, url: stripQuery(event.request.url) };
+  if (event.transaction) event.transaction = stripQuery(event.transaction);
+  for (const span of event.spans || []) {
+    if (span.description) span.description = stripQuery(span.description);
+    delete span.data;
+  }
   delete event.user;
   delete event.extra;
   for (const breadcrumb of event.breadcrumbs || []) {
