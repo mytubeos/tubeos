@@ -44,7 +44,7 @@ let failedQueue = []
 // network call — we're already mid-auth-failure, tokens are already gone.
 const clearPersistedAuth = () => {
   import('../store/authStore').then((m) =>
-    m.useAuthStore.setState({ user: null, isAuthenticated: false })
+    m.useAuthStore.setState({ user: null, accessToken: null, isAuthenticated: false })
   )
   // Same reasoning as authStore.js's logout() — channelStore persists to its
   // own localStorage key and survives a plain auth-state reset otherwise,
@@ -66,58 +66,67 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      const isAuthRoute =
-        originalRequest?.url?.includes('/auth/login') ||
-        originalRequest?.url?.includes('/auth/register') ||
-        originalRequest?.url?.includes('/auth/refresh')
+    // Rejected public auth requests must stay on the form with their error.
+    // They do not represent an expired signed-in session.
+    const authPath = originalRequest?.url?.split('?')[0]
+    const isPublicAuthRoute = [
+      '/auth/login',
+      '/auth/register',
+      '/auth/verify-email',
+      '/auth/resend-otp',
+      '/auth/forgot-password',
+      '/auth/reset-password',
+      '/auth/refresh',
+    ].includes(authPath)
 
-      if (!isAuthRoute) {
-        if (isRefreshing) {
-          return new Promise((resolve, reject) => {
-            failedQueue.push({ resolve, reject })
-          }).then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`
-            return api(originalRequest)
-          })
-        }
+    if (error.response?.status === 401 && originalRequest && !isPublicAuthRoute) {
+      if (originalRequest._retry) return Promise.reject(error)
+      originalRequest._retry = true
 
-        originalRequest._retry = true
-        isRefreshing = true
-
-        try {
-          // FIX: refreshToken body mein bhejo — cookie nahi kaam karega cross-origin
-          const refreshToken = localStorage.getItem('refreshToken')
-          if (!refreshToken) throw new Error('No refresh token')
-
-          const res = await axios.post(
-            `${API_URL}/auth/refresh`,
-            { refreshToken },
-            { withCredentials: false }
-          )
-          const { accessToken, refreshToken: newRefreshToken } = res.data.data
-          localStorage.setItem('accessToken', accessToken)
-          if (newRefreshToken) localStorage.setItem('refreshToken', newRefreshToken)
-          api.defaults.headers.common.Authorization = `Bearer ${accessToken}`
-          processQueue(null, accessToken)
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject })
+        }).then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`
           return api(originalRequest)
-        } catch (refreshError) {
-          processQueue(refreshError, null)
+        })
+      }
+
+      const refreshToken = localStorage.getItem('refreshToken')
+      if (!refreshToken) {
+        localStorage.removeItem('accessToken')
+        clearPersistedAuth()
+        window.location.href = '/login'
+        return Promise.reject(error)
+      }
+
+      isRefreshing = true
+      try {
+        // Bound refresh too: otherwise every queued request can wait forever.
+        const res = await axios.post(
+          `${API_URL}/auth/refresh`,
+          { refreshToken },
+          { withCredentials: false, timeout: 60000 }
+        )
+        const { accessToken, refreshToken: newRefreshToken } = res.data.data
+        localStorage.setItem('accessToken', accessToken)
+        if (newRefreshToken) localStorage.setItem('refreshToken', newRefreshToken)
+        processQueue(null, accessToken)
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`
+        return api(originalRequest)
+      } catch (refreshError) {
+        processQueue(refreshError, null)
+        // Network/timeout/5xx failures don't prove the session is invalid.
+        if ([401, 403].includes(refreshError.response?.status)) {
           localStorage.removeItem('accessToken')
           localStorage.removeItem('refreshToken')
           clearPersistedAuth()
           window.location.href = '/login'
-          return Promise.reject(refreshError)
-        } finally {
-          isRefreshing = false
         }
+        return Promise.reject(refreshError)
+      } finally {
+        isRefreshing = false
       }
-
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
-      clearPersistedAuth()
-      window.location.href = '/login'
     }
 
     if (error.response?.status >= 500) {
