@@ -256,6 +256,7 @@ const syncChannelStats = async (channelId, userId) => {
   channel.thumbnail = ytChannel.snippet?.thumbnails?.high?.url || channel.thumbnail;
 
   await channel.save();
+  await YoutubeChannel.updateOne({ _id: channel._id }, { $unset: { oauth: 1 } });
   await invalidateChannelCache(userId);
 
   return { channel: sanitizeChannel(channel) };
@@ -285,6 +286,7 @@ const disconnectChannel = async (channelId, userId) => {
   channel.isPrimary = false;
   channel.isDefault = false;
   await channel.save();
+  await YoutubeChannel.updateOne({ _id: channel._id }, { $unset: { oauth: 1 } });
   await invalidateChannelCache(userId);
 
   // Remove from user's channel list

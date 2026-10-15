@@ -5,6 +5,10 @@ import { useAuthStore } from './store/authStore'
 
 import { PageLoader } from './components/ui/Spinner'
 import { AppWelcome } from './pages/AppWelcome'
+import { DeleteAccount } from './pages/DeleteAccount'
+const AdminContentReports = lazy(() =>
+  import('./pages/admin/AdminContentReports').then((m) => ({ default: m.AdminContentReports }))
+)
 
 // Layouts
 import { AuthLayout } from './components/layout/AuthLayout'
@@ -153,6 +157,7 @@ export default function App() {
         />
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/delete-account" element={<DeleteAccount />} />
         <Route path="/terms" element={<TermsAndConditions />} />
 
         <Route element={<AuthLayout />}>
@@ -197,6 +202,7 @@ export default function App() {
           }
         >
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/content-reports" element={<AdminContentReports />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/coupons" element={<AdminCoupons />} />
           <Route path="/admin/pricing" element={<AdminPricing />} />

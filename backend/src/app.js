@@ -47,10 +47,7 @@ app.use(
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      // FIX: Vercel preview URLs allow karo (*.vercel.app)
-      if (origin.endsWith('.vercel.app') || origin.endsWith('.onrender.com')) {
-        return callback(null, true);
-      }
+      // Preview deployments must be explicitly listed in CORS_EXTRA_ORIGINS.
       return callback(new Error(`CORS: ${origin} not allowed`));
     },
     credentials: true,
@@ -124,9 +121,9 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     const status = res.statusCode;
     const level = status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info';
-    logger.log(level, `${req.method} ${req.originalUrl} ${status} - ${duration}ms`, {
+    logger.log(level, `${req.method} ${req.path} ${status} - ${duration}ms`, {
       method: req.method,
-      url: req.originalUrl,
+      url: req.path,
       status,
       durationMs: duration,
       ip: req.ip,

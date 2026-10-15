@@ -6,7 +6,7 @@ export function TermsAndConditions() {
     <div className="min-h-screen bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto bg-slate-800/50 rounded-lg p-8 border border-slate-700">
         <h1 className="text-4xl font-bold text-white mb-2">Terms & Conditions</h1>
-        <p className="text-slate-400 mb-8">Last Updated: July 2026</p>
+        <p className="text-slate-400 mb-8">Last Updated: October 16, 2026</p>
 
         <div className="prose prose-invert max-w-none space-y-8 text-slate-300">
           {/* 1. Agreement */}
@@ -28,13 +28,12 @@ export function TermsAndConditions() {
           <section>
             <h2 className="text-2xl font-bold text-white mb-4">2. Use License</h2>
             <p>
-              Permission is granted to temporarily download one copy of the materials (information
-              or software) on Vezrin for personal, non-commercial transitory viewing only. This is
-              the grant of a license, not a transfer of title, and under this license you may not:
+              You may use Vezrin creator tools and your own content for personal or commercial
+              channel work, subject to your plan and applicable law. You may not:
             </p>
             <ul className="list-disc list-inside space-y-2 ml-4">
               <li>Modify or copy the materials</li>
-              <li>Use the materials for any commercial purpose or for any public display</li>
+
               <li>Attempt to decompile or reverse engineer any software contained on the site</li>
               <li>Remove any copyright or other proprietary notations from the materials</li>
               <li>
@@ -80,6 +79,16 @@ export function TermsAndConditions() {
             </p>
           </section>
 
+          <section className="space-y-3">
+            <h2 className="text-2xl font-bold text-white">AI safety and acceptable use</h2>
+            <p>
+              Do not use Vezrin to generate or distribute child sexual exploitation, hateful
+              harassment, threats, scams, illegal instructions or deceptive impersonation. You must
+              hold the rights needed to upload or publish content. AI outputs are suggestions, not
+              verified facts or guaranteed growth or earnings. Review every output before publishing
+              and report unsafe content using the in-app reporting option.
+            </p>
+          </section>
           {/* 5. User Content & Responsibility */}
           <section>
             <h2 className="text-2xl font-bold text-white mb-4">5. User Content & Responsibility</h2>
@@ -176,10 +185,21 @@ export function TermsAndConditions() {
             <h2 className="text-2xl font-bold text-white mb-4">12. Subscription & Payment</h2>
             <ul className="list-disc list-inside space-y-2 ml-4">
               <li>Vezrin offers different subscription plans (Free, Creator, Pro, Max)</li>
-              <li>Payments are processed securely through Dodo Payments</li>
-              <li>Subscriptions renew automatically unless cancelled</li>
-              <li>You can cancel your subscription anytime from your account settings</li>
-              <li>No refunds for partial months or cancellations</li>
+              <li>
+                New paid purchases are temporarily paused. Previously purchased access remains
+                subject to its stated expiry.
+              </li>
+              <li>
+                Existing plans are manual access-period purchases and do not renew automatically
+                through Vezrin.
+              </li>
+              <li>
+                You can downgrade in Settings. Downgrading ends paid feature access immediately.
+              </li>
+              <li>
+                Contact hello@vezrin.com for payment or refund support. Applicable consumer rights
+                and processor rules remain in effect.
+              </li>
               <li>We reserve the right to change pricing with 30 days notice</li>
             </ul>
           </section>

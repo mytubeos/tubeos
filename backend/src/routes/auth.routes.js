@@ -34,6 +34,23 @@ router.post('/refresh', authController.refresh);
 
 // GET /api/v1/auth/me — Get current user profile
 router.get('/me', protect, authController.getMe);
+router.post('/delete-account', protect, authLimiter, async (req, res) => {
+  try {
+    const result = await require('../services/account-deletion.service').requestDeletion(
+      req.user.id,
+      req.body.password
+    );
+    res.clearCookie('refreshToken', { path: '/api/v1/auth' });
+    return res.json({ success: true, data: result, message: result.message });
+  } catch (err) {
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.statusCode
+        ? err.message
+        : 'Could not complete the request. Contact hello@vezrin.com if your account is now inactive.',
+    });
+  }
+});
 
 // PATCH /api/v1/auth/me — Update user profile
 router.patch('/me', protect, authController.updateMe);

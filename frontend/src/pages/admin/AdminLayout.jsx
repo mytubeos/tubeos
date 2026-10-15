@@ -18,6 +18,7 @@ import { useAuthStore } from '../../store/authStore'
 import { useState, useEffect } from 'react'
 
 const NAV = [
+  { to: '/admin/content-reports', label: 'AI Reports', icon: ShieldCheck },
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/users', label: 'Users', icon: Users },
   { to: '/admin/coupons', label: 'Coupons', icon: Tag },

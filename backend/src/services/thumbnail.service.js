@@ -145,4 +145,40 @@ const deleteThumbnail = async (userId, videoId) => {
   return { message: 'Thumbnail removed' };
 };
 
-module.exports = { uploadThumbnail, uploadGeneratedThumbnail, deleteThumbnail, isConfigured };
+const deleteStoredImages = async (ids) => {
+  if (!ids.length) return;
+  if (!isConfigured())
+    throw new Error('Image storage must be configured to delete retained images');
+  for (const id of new Set(ids)) {
+    const result = await cloudinary.uploader.destroy(id, { invalidate: true });
+    if (!['ok', 'not found'].includes(result.result))
+      throw new Error('Image deletion could not be confirmed');
+  }
+};
+
+const deleteUserImages = async (userId) => {
+  if (!isConfigured()) return; // Provider cleanup requires configured credentials.
+  for (const folder of ['thumbnails', 'ai-thumbnails']) {
+    let nextCursor;
+    do {
+      const result = await cloudinary.api.delete_resources_by_prefix(
+        `tubeos/${folder}/${userId}/`,
+        {
+          resource_type: 'image',
+          invalidate: true,
+          ...(nextCursor && { next_cursor: nextCursor }),
+        }
+      );
+      nextCursor = result.next_cursor;
+    } while (nextCursor);
+  }
+};
+
+module.exports = {
+  uploadThumbnail,
+  uploadGeneratedThumbnail,
+  deleteThumbnail,
+  isConfigured,
+  deleteStoredImages,
+  deleteUserImages,
+};

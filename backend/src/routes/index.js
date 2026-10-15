@@ -36,6 +36,7 @@ router.get('/ping', (req, res) => {
 
 // All routes
 router.use('/auth', authRoutes);
+router.use('/content-reports', require('./content-report.routes'));
 router.use('/youtube', youtubeRoutes);
 router.use('/videos', videoRoutes);
 router.use('/schedule', scheduleRoutes);

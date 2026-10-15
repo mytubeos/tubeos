@@ -39,54 +39,16 @@ beforeEach(() => {
   window.location = { href: '' }
 })
 
-describe('useDodoCheckout.startDodoCheckout', () => {
-  it('creates a session, stashes the pending plan, and redirects to the hosted checkout URL', async () => {
-    paymentAPI.createDodoCheckout.mockResolvedValueOnce({
-      data: {
-        data: { sessionId: 'cks_1', url: 'https://checkout.dodopayments.com/session/cks_1' },
-      },
-    })
-
+describe('useDodoCheckout purchase pause', () => {
+  it('does not contact a processor or redirect while purchases are paused', async () => {
     const { result } = renderHook(() => useDodoCheckout())
-
     await act(async () => {
       await result.current.startDodoCheckout('pro')
     })
-
-    expect(paymentAPI.createDodoCheckout).toHaveBeenCalledWith('pro')
-    expect(sessionStorage.getItem('dodo_pending_plan')).toBe('pro')
-    expect(window.location.href).toBe('https://checkout.dodopayments.com/session/cks_1')
-  })
-
-  it('ignores a second call while one is already loading', async () => {
-    paymentAPI.createDodoCheckout.mockImplementation(() => new Promise(() => {}))
-
-    const { result } = renderHook(() => useDodoCheckout())
-
-    act(() => {
-      result.current.startDodoCheckout('pro')
-    })
-    expect(result.current.loadingPlan).toBe('pro')
-
-    act(() => {
-      result.current.startDodoCheckout('pro')
-    })
-
-    expect(paymentAPI.createDodoCheckout).toHaveBeenCalledTimes(1)
-  })
-
-  it('shows an error toast and clears loading state when session creation fails', async () => {
-    paymentAPI.createDodoCheckout.mockRejectedValueOnce({
-      response: { data: { message: 'Dodo not configured' } },
-    })
-
-    const { result } = renderHook(() => useDodoCheckout())
-
-    await act(async () => {
-      await result.current.startDodoCheckout('pro')
-    })
-
-    expect(toast.error).toHaveBeenCalledWith('Dodo not configured')
+    expect(paymentAPI.createDodoCheckout).not.toHaveBeenCalled()
+    expect(window.location.href).toBe('')
+    expect(sessionStorage.getItem('dodo_pending_plan')).toBeNull()
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('temporarily unavailable'))
     expect(result.current.loadingPlan).toBeNull()
   })
 })

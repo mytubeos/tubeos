@@ -3,6 +3,7 @@
 // here becomes a no-op so local dev works without a Sentry account.
 
 const logger = require('./logger');
+const { sanitizeMonitoringEvent } = require('../utils/monitoring-privacy');
 
 let Sentry = null;
 try {
@@ -21,6 +22,8 @@ const init = () => {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     environment: process.env.NODE_ENV || 'development',
+    sendDefaultPii: false,
+    beforeSend: sanitizeMonitoringEvent,
     tracesSampleRate: 0.1, // light perf sampling, keep free-tier quota in check
   });
   logger.info('Sentry error tracking initialized');

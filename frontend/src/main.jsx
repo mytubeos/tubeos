@@ -40,7 +40,9 @@ registerSW({
     )
   },
   onOfflineReady() {
-    toast.success('App ready for offline use', { id: 'pwa-offline' })
+    toast.success('App interface saved. Sign-in and live data still need internet.', {
+      id: 'pwa-offline',
+    })
   },
 })
 

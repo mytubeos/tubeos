@@ -52,4 +52,31 @@ router.get('/report-settings', getReportSettings);
 router.put('/report-settings', updateReportSettings);
 router.post('/report-settings/test-send', sendTestReport);
 
+// Reports are visible to real admins only. Never include them in public analytics.
+router.get('/content-reports', async (_req, res) => {
+  try {
+    const reports = await require('../models/content-report.model')
+      .find({ status: 'open' })
+      .sort({ createdAt: 1 })
+      .limit(100)
+      .lean();
+    return res.json({ success: true, data: reports });
+  } catch {
+    return res.status(503).json({ success: false, message: 'Reports could not be loaded' });
+  }
+});
+router.patch('/content-reports/:id', async (req, res) => {
+  if (!['open', 'reviewed'].includes(req.body.status))
+    return res.status(400).json({ success: false, message: 'Invalid status' });
+  try {
+    const report = await require('../models/content-report.model').findByIdAndUpdate(
+      req.params.id,
+      { status: req.body.status },
+      { new: true }
+    );
+    return res.status(report ? 200 : 404).json({ success: !!report, data: report });
+  } catch {
+    return res.status(400).json({ success: false, message: 'Invalid report' });
+  }
+});
 module.exports = router;

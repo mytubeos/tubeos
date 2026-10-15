@@ -3,6 +3,7 @@
 // initSentry() is a no-op so local dev works without a Sentry account.
 
 import * as Sentry from '@sentry/react'
+import { sanitizeMonitoringEvent } from './monitoringPrivacy'
 
 export const initSentry = () => {
   const dsn = import.meta.env.VITE_SENTRY_DSN
@@ -12,6 +13,8 @@ export const initSentry = () => {
     dsn,
     environment: import.meta.env.MODE,
     integrations: [Sentry.browserTracingIntegration()],
+    sendDefaultPii: false,
+    beforeSend: sanitizeMonitoringEvent,
     tracesSampleRate: 0.1,
   })
 }

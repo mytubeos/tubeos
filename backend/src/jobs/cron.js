@@ -42,6 +42,13 @@ const reapPublishedSchedules = async () => {
 
     for (const s of due) {
       try {
+        const owner = await require('../models/user.model')
+          .findById(s.userId)
+          .select('isActive deletedAt');
+        if (!owner || !owner.isActive || owner.deletedAt) {
+          await Schedule.updateOne({ _id: s._id, status: 'pending' }, { status: 'cancelled' });
+          continue;
+        }
         // Atomic claim: cancellation/rescheduling and other workers must not race an upload.
         const claimed = await Schedule.findOneAndUpdate(
           { _id: s._id, status: 'pending', scheduledAt: { $lte: now } },
@@ -208,7 +215,7 @@ const reapPublishedSchedules = async () => {
 // the dashboard boxes showed "total" instead of "gained in this period".
 //
 // Runs once/day. 180-day window keeps every tab correct: the 90d tab compares
-// against the previous 90 days, so it needs 180 days present. An Analytics API
+// against the previous 30 days, so it needs 180 days present. An Analytics API
 // report call costs the same quota regardless of date range (a wider range just
 // returns more rows), so 180 is effectively free vs 90. Channels are synced one
 // at a time with a small gap to spread quota. Errors are isolated per channel so
@@ -530,7 +537,7 @@ const downgradeExpiredSubscriptions = async () => {
 
 // ---------- Data retention purge ----------
 // Enforces the specific windows promised in the Privacy Policy (section 4):
-// YouTube channel data 30 days after disconnect, account data 90 days after
+// YouTube channel data 30 days after disconnect, account data 30 days after
 // deletion. Both fields already exist independent of this job (disconnect
 // already soft-deletes a channel; admin delete already sets User.deletedAt) —
 // this job's only role is the final hard-delete once the window has passed.
@@ -538,22 +545,29 @@ const purgeExpiredData = async () => {
   try {
     const User = require('../models/user.model');
 
+    const deletion = require('../services/account-deletion.service');
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const channelResult = await YoutubeChannel.deleteMany({
+    const users = await User.find({ deletedAt: { $ne: null, $lte: thirtyDaysAgo } }).select('_id');
+    for (const user of users) {
+      try {
+        await deletion.purgeAccountData(user._id);
+      } catch (err) {
+        logger.error('[cron] account purge needs retry', { userId: user._id, error: err.message });
+      }
+    }
+    const channels = await YoutubeChannel.find({
       connectionStatus: 'disconnected',
       updatedAt: { $lte: thirtyDaysAgo },
-    });
-
-    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-    const userResult = await User.deleteMany({
-      deletedAt: { $ne: null, $lte: ninetyDaysAgo },
-    });
-
-    if (channelResult.deletedCount || userResult.deletedCount) {
-      logger.info('[cron] data-retention purge', {
-        channelsPurged: channelResult.deletedCount,
-        usersPurged: userResult.deletedCount,
-      });
+    }).select('_id');
+    for (const channel of channels) {
+      try {
+        await deletion.purgeChannelData(channel._id);
+      } catch (err) {
+        logger.error('[cron] channel purge needs retry', {
+          channelId: channel._id,
+          error: err.message,
+        });
+      }
     }
   } catch (err) {
     logger.error('[cron] purgeExpiredData error', { error: err.message });

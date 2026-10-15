@@ -7,7 +7,7 @@ const logger = require('../config/logger');
 
 // 404 handler — route not found
 const notFound = (req, res, next) => {
-  const error = new Error(`Route not found: ${req.method} ${req.originalUrl}`);
+  const error = new Error(`Route not found: ${req.method} ${req.path}`);
   error.statusCode = 404;
   next(error);
 };
@@ -58,7 +58,7 @@ const globalErrorHandler = (err, req, res, next) => {
   } else if (statusCode === 500) {
     logger.error('Server Error', {
       message: err.message,
-      path: req.originalUrl,
+      path: req.path,
       method: req.method,
     });
   }
@@ -66,7 +66,7 @@ const globalErrorHandler = (err, req, res, next) => {
   // Only real server errors go to Sentry — 4xx (bad input, auth, not found)
   // is expected user-facing noise, not something to page on.
   if (statusCode >= 500) {
-    sentry.captureException(err, { path: req.originalUrl, method: req.method });
+    sentry.captureException(err, { path: req.path, method: req.method });
   }
 
   return errorResponse(res, statusCode, message, errors);

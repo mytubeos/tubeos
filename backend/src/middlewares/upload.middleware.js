@@ -22,6 +22,12 @@ GcsStorageEngine.prototype._handleFile = function (req, file, cb) {
   const destination = `staging/${userId}/${randomUUID()}-${safeName}`;
 
   let uploaded = 0;
+  let finished = false;
+  const complete = (error, result) => {
+    if (finished) return;
+    finished = true;
+    cb(error, result);
+  };
   const writeStream = storageService.createWriteStream(destination, file.mimetype);
 
   file.stream.on('data', (chunk) => {
@@ -32,14 +38,14 @@ GcsStorageEngine.prototype._handleFile = function (req, file, cb) {
       writeStream.destroy();
       const err = new Error('Video exceeds 2 GB limit');
       err.code = 'LIMIT_FILE_SIZE';
-      cb(err);
+      complete(err);
     }
   });
 
-  file.stream.on('error', cb);
-  writeStream.on('error', cb);
+  file.stream.on('error', complete);
+  writeStream.on('error', complete);
   writeStream.on('finish', () => {
-    cb(null, {
+    complete(null, {
       gcsPath: destination,
       bucket: storageService.bucketName(),
       size: uploaded,
@@ -63,9 +69,18 @@ if (!storageService.isConfigured()) {
   logger.warn('[upload] GCS not configured — videos buffered in RAM (dev only)');
 }
 
-const uploadVideoFile = multer({
+const parseVideoFile = multer({
   storage: videoStorage,
-  limits: { fileSize: MAX_VIDEO_BYTES },
+  limits: { fileSize: storageService.isConfigured() ? MAX_VIDEO_BYTES : 50 * 1024 * 1024 },
 }).single('video');
 
+const uploadVideoFile = (req, res, next) => {
+  if (process.env.NODE_ENV === 'production' && !storageService.isConfigured()) {
+    return res.status(503).json({
+      success: false,
+      message: 'Video uploads are temporarily unavailable. Please try again later.',
+    });
+  }
+  return parseVideoFile(req, res, next);
+};
 module.exports = { uploadVideoFile, MAX_VIDEO_BYTES };

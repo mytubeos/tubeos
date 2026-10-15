@@ -551,7 +551,7 @@ export const AIContent = () => {
                 [
                   {
                     tip: 'Numbers work',
-                    desc: '"5 ways to..." gets 3x more clicks than generic titles',
+                    desc: 'Specific numbered titles can make the topic easier to understand',
                   },
                   { tip: 'Use brackets', desc: '"[2026 Guide]" adds credibility and context' },
                   { tip: 'Create curiosity', desc: 'Leave a question unanswered in the title' },

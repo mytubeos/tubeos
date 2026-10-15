@@ -10,10 +10,17 @@ const { getRefreshTokenCookieOptions } = require('../utils/jwt.utils');
 // Body: { name, email, password, referralCode? }
 const register = async (req, res) => {
   try {
-    const { name, email, password, referralCode } = req.body;
+    const { name, password, referralCode } = req.body;
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
 
     // Validation
-    if (!name || !email || !password) {
+    if (
+      typeof name !== 'string' ||
+      typeof password !== 'string' ||
+      !name.trim() ||
+      !email ||
+      !password
+    ) {
       return errorResponse(res, 400, 'Name, email, and password are required');
     }
 
@@ -98,7 +105,7 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
       return errorResponse(res, 400, 'Email and password are required');
     }
 
@@ -116,7 +123,7 @@ const login = async (req, res) => {
       refreshToken: result.refreshToken, // Also in body for cross-origin
     });
   } catch (err) {
-    const status = err.statusCode || 401;
+    const status = err.statusCode || 500;
     // When user is unverified (403), return userId so frontend can show OTP screen
     if (status === 403 && err.userId) {
       return res.status(403).json({
@@ -125,7 +132,11 @@ const login = async (req, res) => {
         data: { userId: err.userId, requiresVerification: true },
       });
     }
-    return errorResponse(res, status, err.message);
+    return errorResponse(
+      res,
+      status,
+      status >= 500 ? 'Sign in is temporarily unavailable. Please try again.' : err.message
+    );
   }
 };
 

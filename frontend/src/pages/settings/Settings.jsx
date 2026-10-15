@@ -722,7 +722,11 @@ export const Settings = () => {
             {/* Upgrade CTA */}
             {plan !== 'agency' && (
               <Card>
-                <CardHeader title="Upgrade Your Plan" icon={CreditCard} iconColor="amber" />
+                <CardHeader title="Plan Options" icon={CreditCard} iconColor="amber" />
+                <p className="text-sm text-gray-400 mb-4">
+                  New purchases are temporarily unavailable. Your existing plan remains available
+                  until its expiry.
+                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {Object.entries(PLANS)
                     .filter(([key]) => key !== 'free' && key !== plan)
@@ -767,13 +771,13 @@ export const Settings = () => {
                           fullWidth
                           className="mt-4"
                           variant={key === 'pro' ? 'brand' : 'ghost'}
-                          disabled={loadingPlan === key}
+                          disabled={true}
                           onClick={() => startDodoCheckout(key)}
                         >
                           {loadingPlan === key ? (
                             <Loader2 size={14} className="animate-spin mx-auto" />
                           ) : (
-                            'Upgrade'
+                            'Purchases paused'
                           )}
                         </Button>
                       </div>
@@ -1004,6 +1008,9 @@ export const Settings = () => {
         confirmLabel="Sign out other devices"
       />
       <div className="flex items-center justify-center gap-4 pt-2 text-xs text-gray-400">
+        <Link to="/delete-account" className="text-rose underline">
+          Delete account
+        </Link>
         <Link to="/privacy" className="hover:text-gray-400 transition-colors">
           Privacy Policy
         </Link>

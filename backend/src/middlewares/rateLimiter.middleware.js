@@ -6,7 +6,7 @@ const rateLimit = require('express-rate-limit');
 // General API rate limiter
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 600, // Allow ordinary dashboard polling; auth keeps its own strict limiter.
   standardHeaders: true,
   legacyHeaders: false,
   message: {

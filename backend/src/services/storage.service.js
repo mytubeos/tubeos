@@ -77,12 +77,17 @@ const getSize = async (gcsPath) => {
 
 // ==================== DELETE ====================
 // Best-effort delete of a staged object (video already lives on YouTube).
-const deleteFile = async (gcsPath) => {
-  if (!isConfigured() || !gcsPath) return;
+const deleteFile = async (gcsPath, strict = false) => {
+  if (!gcsPath) return;
+  if (!isConfigured()) {
+    if (strict) throw new Error('Storage must be configured to delete retained video files');
+    return;
+  }
   try {
     await getBucket().file(gcsPath).delete({ ignoreNotFound: true });
   } catch (err) {
     logger.warn('[storage] delete failed', { error: err.message });
+    if (strict) throw err;
   }
 };
 
