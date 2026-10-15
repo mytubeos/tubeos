@@ -23,6 +23,14 @@ export const Login = () => {
   const [localError, setLocalError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
   const [showPwd, setShowPwd] = useState(false)
+  const [slowLogin, setSlowLogin] = useState(false)
+
+  useEffect(() => {
+    setSlowLogin(false)
+    if (!loading) return
+    const timer = setTimeout(() => setSlowLogin(true), 8000)
+    return () => clearTimeout(timer)
+  }, [loading])
 
   // OTP flow when user is registered but not verified
   const [showOtp, setShowOtp] = useState(false)
@@ -53,7 +61,7 @@ export const Login = () => {
     e.preventDefault()
     if (!validateForm()) return
 
-    const result = await login(formData.email, formData.password)
+    const result = await login(formData.email.trim(), formData.password)
 
     if (result.success) {
       navigate('/dashboard')
@@ -85,7 +93,7 @@ export const Login = () => {
       setOtp('')
       setLocalError('')
       setOtpMsg('')
-      setSuccessMsg('Email verified! Now sign in with your password.')
+      navigate('/dashboard')
     } else {
       setLocalError(result.message || 'OTP verification failed')
     }
@@ -219,6 +227,11 @@ export const Login = () => {
             </div>
           </div>
 
+          {slowLogin && (
+            <p role="status" className="mb-4 text-sm text-slate-300">
+              Connecting is taking longer than usual. Please keep this screen open.
+            </p>
+          )}
           {successMsg && <Toast type="success" message={successMsg} className="mb-4" />}
           {localError && <Toast type="error" message={localError} className="mb-4" />}
 

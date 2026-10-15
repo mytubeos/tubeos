@@ -75,6 +75,19 @@ describe('authStore.login', () => {
   })
 })
 
+describe('authStore.login connection failures', () => {
+  it.each([
+    [{ code: 'ECONNABORTED' }, 'Sign in took too long'],
+    [new Error('Network Error'), 'Could not connect'],
+  ])('explains retryable failures and releases loading state', async (error, message) => {
+    authApi.login.mockRejectedValueOnce(error)
+    const result = await useAuthStore.getState().login('review-test@example.com', 'test-password')
+    expect(result.success).toBe(false)
+    expect(result.message).toContain(message)
+    expect(useAuthStore.getState().isLoading).toBe(false)
+  })
+})
+
 describe('authStore.verifyEmail', () => {
   it('authenticates the user once OTP is verified', async () => {
     authApi.verifyEmail.mockResolvedValueOnce({

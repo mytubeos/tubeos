@@ -4,6 +4,15 @@ import { persist } from 'zustand/middleware'
 import authApi from '../api/auth.api'
 import { useChannelStore } from './channelStore'
 
+const loginErrorMessage = (err) => {
+  if (err.response?.data?.message) return err.response.data.message
+  if (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT') {
+    return 'Sign in took too long. Please try again; your details are still here.'
+  }
+  if (!err.response) return 'Could not connect. Check your internet connection and try again.'
+  return 'Could not sign in. Please try again.'
+}
+
 export const useAuthStore = create(
   persist(
     (set, get) => ({
@@ -34,7 +43,7 @@ export const useAuthStore = create(
               userId: data.data.userId,
             }
           }
-          return { success: false, message: data?.message || 'Login failed' }
+          return { success: false, message: loginErrorMessage(err) }
         }
       },
 
