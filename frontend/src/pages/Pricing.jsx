@@ -7,7 +7,8 @@ import { PlanCarousel } from '../components/ui/PlanCarousel'
 import { Button } from '../components/ui/Button'
 import pricingAPI from '../api/pricing.api'
 import { useAuthStore } from '../store/authStore'
-import { useDodoCheckout } from '../hooks/useDodoCheckout'
+import { useBilling } from '../hooks/useBilling'
+import { BillingControls } from '../components/features/BillingControls'
 import { PLANS as PLAN_NAMES } from '../utils/constants'
 import { formatPrice } from '../utils/currency'
 
@@ -99,9 +100,10 @@ export const Pricing = () => {
   const navigate = useNavigate()
   const { user, isAuthenticated } = useAuthStore()
   const [pricesByPlan, setPricesByPlan] = useState({})
-  const { startDodoCheckout, loadingPlan, verifying } = useDodoCheckout({
+  const billing = useBilling({
     onSuccess: () => navigate('/dashboard'),
   })
+  const { startCheckout, loadingPlan, verifying } = billing
 
   useEffect(() => {
     pricingAPI
@@ -124,6 +126,8 @@ export const Pricing = () => {
   // same price worldwide via Dodo Payments (Merchant of Record).
   const getPlanDisplay = (plan) => {
     if (plan === 'free') return { price: formatPrice(0, 'USD'), note: 'Free forever' }
+    if (billing.mode === 'play')
+      return { price: billing.price(plan) || '—', note: 'Monthly subscription via Google Play' }
     const p = pricesByPlan[plan]?.USD
     if (!p) return { price: '—', note: '' }
     return {
@@ -145,7 +149,7 @@ export const Pricing = () => {
       toast("You're already on this plan.")
       return
     }
-    startDodoCheckout(plan)
+    startCheckout(plan)
   }
 
   return (
@@ -173,6 +177,7 @@ export const Pricing = () => {
 
       <div className="pt-28 pb-20 px-5">
         <div className="max-w-7xl mx-auto">
+          <BillingControls billing={billing} user={user} />
           {verifying && (
             <div className="mb-8 flex items-center justify-center gap-2 px-4 py-3 glass rounded-xl border border-brand/20">
               <Loader2 size={16} className="animate-spin text-brand" />
@@ -232,13 +237,13 @@ export const Pricing = () => {
                       size="sm"
                       variant={plan === 'creator' ? 'brand' : 'ghost'}
                       className="w-full"
-                      disabled={true}
+                      disabled={!billing.canPurchase(plan)}
                       onClick={() => handleUpgradeClick(plan)}
                     >
                       {loadingPlan === plan ? (
                         <Loader2 size={16} className="animate-spin mx-auto" />
                       ) : (
-                        'Purchases paused'
+                        billing.label(plan)
                       )}
                     </Button>
                   )}
@@ -319,13 +324,13 @@ export const Pricing = () => {
                       size="xs"
                       variant={plan === 'creator' ? 'brand' : 'ghost'}
                       className="mt-3 w-full"
-                      disabled={true}
+                      disabled={!billing.canPurchase(plan)}
                       onClick={() => handleUpgradeClick(plan)}
                     >
                       {loadingPlan === plan ? (
                         <Loader2 size={14} className="animate-spin mx-auto" />
                       ) : (
-                        'Purchases paused'
+                        billing.label(plan)
                       )}
                     </Button>
                   )}

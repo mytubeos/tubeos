@@ -13,7 +13,7 @@ vi.mock('../../src/hooks/useRazorpay', () => ({
 }))
 
 vi.mock('../../src/api/payment.api', () => ({
-  default: { getHistory: vi.fn() },
+  default: { getHistory: vi.fn(), getBillingConfig: vi.fn() },
 }))
 
 vi.mock('../../src/api/auth.api', () => ({
@@ -36,6 +36,9 @@ describe('Settings — White-Label Reports card', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     paymentAPI.getHistory.mockResolvedValue({ data: { data: { history: [] } } })
+    paymentAPI.getBillingConfig.mockResolvedValue({
+      data: { data: { playEnabled: false, webEnabled: false } },
+    })
     authApi.updateBranding.mockResolvedValue({
       data: { data: { branding: { enabled: true, companyName: 'Acme Media', primaryColor: '' } } },
     })

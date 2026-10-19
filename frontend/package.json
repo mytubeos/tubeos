@@ -1,6 +1,6 @@
 {
   "name": "vezrin-frontend",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Vezrin — Creator Command Center",
   "type": "module",
   "scripts": {

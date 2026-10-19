@@ -300,6 +300,14 @@ const getPaymentHistory = async (userId, { page = 1, limit = 20 } = {}) => {
  * @param {string} userId
  */
 const downgradeToFree = async (userId) => {
+  const current = await User.findById(userId);
+  if (current?.subscriptionProvider === 'google-play') {
+    const err = new Error(
+      'Manage or cancel your Google Play subscription in Google Play. Access continues until its paid expiry.'
+    );
+    err.statusCode = 409;
+    throw err;
+  }
   const user = await User.findByIdAndUpdate(
     userId,
     { plan: 'free', subscriptionExpiresAt: null },

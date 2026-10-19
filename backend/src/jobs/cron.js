@@ -502,6 +502,7 @@ const downgradeExpiredSubscriptions = async () => {
 
     const expiredUsers = await User.find({
       plan: { $ne: 'free' },
+      subscriptionProvider: { $ne: 'google-play' },
       subscriptionExpiresAt: { $ne: null, $lte: new Date() },
     })
       .select('_id plan')
@@ -582,6 +583,14 @@ const purgeExpiredData = async () => {
 
 const startCron = () => {
   logger.info('In-process cron started');
+  const reconcilePlay = () =>
+    require('../services/play-billing.service')
+      .reconcile()
+      .catch(() => {
+        logger.warn('[play-billing] reconciliation interrupted; retry required');
+      });
+  timers.push(setInterval(reconcilePlay, 60 * 60 * 1000));
+  setTimeout(reconcilePlay, 40000);
 
   // Every 60s: publish reaper
   timers.push(setInterval(reapPublishedSchedules, 60 * 1000));

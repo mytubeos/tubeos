@@ -2,6 +2,10 @@
 import api from './axios'
 
 const paymentAPI = {
+  getBillingConfig: () => api.get('/billing/play/config'),
+  verifyPlayPurchase: (purchaseToken) => api.post('/billing/play/verify', { purchaseToken }),
+  syncPlayPurchase: () => api.post('/billing/play/sync'),
+  getPlayPurchases: () => api.get('/billing/play/purchases'),
   getHistory: (page = 1, limit = 10) => api.get('/payment/history', { params: { page, limit } }),
   downgradeToFree: () => api.post('/payment/downgrade'),
   // Discount codes are now entered on Dodo's own hosted checkout page —

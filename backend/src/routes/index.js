@@ -43,6 +43,7 @@ router.use('/schedule', scheduleRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/ai', aiRoutes);
 router.use('/payment', paymentRoutes);
+router.use('/billing/play', require('./play-billing.routes'));
 router.use('/admin', adminRoutes);
 router.use('/referral', referralRoutes);
 router.use('/webhooks', webhookRoutes);

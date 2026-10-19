@@ -40,6 +40,32 @@ beforeEach(() => {
 })
 
 describe('useDodoCheckout purchase pause', () => {
+  it('opens only a validated Dodo checkout and remembers the account baseline when enabled', async () => {
+    window.location.assign = vi.fn()
+    paymentAPI.createDodoCheckout.mockResolvedValue({
+      data: { data: { url: 'https://checkout.dodopayments.com/session/example' } },
+    })
+    const { result } = renderHook(() => useDodoCheckout({ enabled: true }))
+    await act(async () => {
+      await result.current.startDodoCheckout('pro')
+    })
+    expect(window.location.assign).toHaveBeenCalledWith(
+      'https://checkout.dodopayments.com/session/example'
+    )
+    expect(sessionStorage.getItem('dodo_pending_plan')).toBe('pro')
+  })
+  it('rejects an unexpected redirect host without storing a pending purchase', async () => {
+    window.location.assign = vi.fn()
+    paymentAPI.createDodoCheckout.mockResolvedValue({
+      data: { data: { url: 'https://attacker.example.com/' } },
+    })
+    const { result } = renderHook(() => useDodoCheckout({ enabled: true }))
+    await act(async () => {
+      await result.current.startDodoCheckout('pro')
+    })
+    expect(window.location.assign).not.toHaveBeenCalled()
+    expect(sessionStorage.getItem('dodo_pending_plan')).toBeNull()
+  })
   it('does not contact a processor or redirect while purchases are paused', async () => {
     const { result } = renderHook(() => useDodoCheckout())
     await act(async () => {
