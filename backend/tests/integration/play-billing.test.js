@@ -144,6 +144,8 @@ describe('Google Play entitlements', () => {
     expect((await service.verifyPurchase(user._id, token)).active).toBe(false);
     expect((await User.findById(user._id)).plan).toBe('free');
     expect(provider).toHaveBeenCalledTimes(1);
+    provider.mockResolvedValue({ data: fixture() });
+    expect((await service.syncAccount(user._id)).active).toBe(true);
   });
   it('reconciles renewal, cancellation before expiry, on-hold and refund/expiry', async () => {
     const user = await createUser();

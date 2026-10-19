@@ -100,7 +100,8 @@ const verifyPurchase = async (userId, token, { background = false } = {}) => {
       const hasPaidTime =
         (user.plan !== 'free' && !user.subscriptionExpiresAt) ||
         (user.subscriptionExpiresAt && user.subscriptionExpiresAt > new Date());
-      const superseded = existing?.superseded || (different && !replacesCurrent && background);
+      const superseded =
+        existing?.superseded || (different && !replacesCurrent && background && hasPaidTime);
       if (
         state.active &&
         !superseded &&
@@ -141,6 +142,15 @@ const verifyPurchase = async (userId, token, { background = false } = {}) => {
       } else if (account.currentTokenHash === hash && user.subscriptionProvider === 'google-play') {
         user.plan = 'free';
         user.subscriptionExpiresAt = state.expiry;
+      }
+      if (!hasPaidTime && !superseded && state.state === 'SUBSCRIPTION_STATE_PENDING') {
+        // Pending orders need reconciliation too, even if the app is closed and
+        // their first approval notification is missed. This grants no access.
+        await PlayBillingAccount.updateOne(
+          { _id: userId },
+          { currentTokenHash: hash },
+          { session }
+        );
       }
       await user.save({ session });
       return {

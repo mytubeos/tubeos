@@ -102,13 +102,20 @@ const createCheckoutSession = async (userId, plan) => {
     err.statusCode = 409;
     throw err;
   }
-  const { PlayBillingAccount, PlayPurchase } = /** @type {any} */ (
-    require('../models/play-purchase.model')
-  );
-  const playAccount = await PlayBillingAccount.findById(userId);
-  const playPurchase = playAccount?.currentTokenHash
-    ? await PlayPurchase.findById(playAccount.currentTokenHash)
-    : null;
+  const { PlayPurchase } = /** @type {any} */ (require('../models/play-purchase.model'));
+  const playPurchase = await PlayPurchase.findOne({
+    userId,
+    superseded: { $ne: true },
+    state: {
+      $in: [
+        'SUBSCRIPTION_STATE_ACTIVE',
+        'SUBSCRIPTION_STATE_IN_GRACE_PERIOD',
+        'SUBSCRIPTION_STATE_PENDING',
+        'SUBSCRIPTION_STATE_ON_HOLD',
+        'SUBSCRIPTION_STATE_PAUSED',
+      ],
+    },
+  });
   if (
     playPurchase &&
     [
