@@ -129,7 +129,7 @@ const createCheckoutSession = async (userId, plan) => {
     })
     .catch((err) => {
       logger.error('[dodo] checkout session creation failed', {
-        error: err.response?.data || err.message,
+        status: err.response?.status || 'unavailable',
       });
       const wrapped = new Error('Could not start checkout — please try again.');
       wrapped.statusCode = 502;
@@ -137,7 +137,7 @@ const createCheckoutSession = async (userId, plan) => {
     });
 
   if (!data.checkout_url) {
-    logger.error('[dodo] checkout response missing checkout_url', { data });
+    logger.error('[dodo] checkout response missing checkout_url');
     throw notConfiguredError();
   }
   if (!data.session_id) throw notConfiguredError();

@@ -99,7 +99,12 @@ const verifyPurchase = async (userId, token, { background = false } = {}) => {
       const paidElsewhere = user.plan !== 'free' && user.subscriptionProvider !== 'google-play';
       const hasPaidTime = user.subscriptionExpiresAt && user.subscriptionExpiresAt > new Date();
       const superseded = existing?.superseded || (different && !replacesCurrent && background);
-      if (state.active && hasPaidTime && (paidElsewhere || (different && !replacesCurrent)))
+      if (
+        state.active &&
+        !superseded &&
+        hasPaidTime &&
+        (paidElsewhere || (different && !replacesCurrent))
+      )
         throw failure(
           'An existing paid plan is still active. Contact support before buying another plan.',
           409
