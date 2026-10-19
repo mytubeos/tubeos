@@ -3,15 +3,18 @@ const router = express.Router();
 const { protect } = require('../middlewares/auth.middleware');
 const controller = require('../controllers/payment.controller');
 router.post('/dodo/webhook', controller.dodoWebhook);
-// Purchases are paused for every client while Play-compliant billing is prepared.
-// Keep webhooks/history working for existing purchases; do not gate by reviewer,
-// user agent or account. Old installed clients must not bypass the pause.
-router.post('/dodo/create-checkout-session', protect, (_req, res) =>
-  res.status(403).json({
+// Only the separate web storefront may start Dodo checkout. The TWA host never
+// links to that storefront, even when DGAPI is unavailable. Origin is a browser
+// channel boundary, not an authentication mechanism; protect remains mandatory.
+router.post('/dodo/create-checkout-session', protect, (req, res, next) => {
+  const { webReady, webOrigin } = require('../services/billing-config');
+  if (webReady() && req.headers.origin === webOrigin())
+    return controller.createDodoCheckoutSession(req, res, next);
+  return res.status(403).json({
     success: false,
     message: 'New purchases are temporarily unavailable. Existing plan access is unchanged.',
-  })
-);
+  });
+});
 router.get('/history', protect, controller.getPaymentHistory);
 router.post('/downgrade', protect, controller.downgradeToFree);
 // Explicit retirement prevents old clients from activating plans via legacy processors.

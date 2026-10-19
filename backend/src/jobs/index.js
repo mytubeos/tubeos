@@ -28,6 +28,7 @@ const JOB_SCHEDULES = [
   { id: 'chingari-nudges', pattern: '0 */6 * * *' }, // every 6h
   { id: 'purge-expired-data', pattern: '0 4 * * *' }, // daily 4am
   { id: 'downgrade-expired-subscriptions', pattern: '0 5 * * *' }, // daily 5am
+  { id: 'reconcile-play-billing', pattern: '15 * * * *' },
 ];
 
 // Registers (or re-registers) the two report-email jobs using whatever
@@ -152,6 +153,8 @@ const startWorkers = async () => {
           return cron.purgeExpiredData();
         case 'downgrade-expired-subscriptions':
           return cron.downgradeExpiredSubscriptions();
+        case 'reconcile-play-billing':
+          return require('../services/play-billing.service').reconcile();
         default:
           logger.warn(`[bullmq] unknown job name: ${job.name}`);
       }

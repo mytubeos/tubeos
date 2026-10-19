@@ -63,6 +63,19 @@ export const DeleteAccount = () => {
               retention terms. For provider deletion assistance or pending payouts, contact
               hello@vezrin.com.
             </p>
+            <p className="text-sm">
+              Account deletion does not cancel a Google Play subscription. To stop future charges,
+              cancel it in{' '}
+              <a
+                className="text-brand underline"
+                href="https://play.google.com/store/account/subscriptions?package=com.vezrin.app"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Google Play subscriptions
+              </a>{' '}
+              before deleting your account. You can still request deletion without canceling first.
+            </p>
             {isAuthenticated ? (
               <form onSubmit={submit} className="space-y-4 border border-white/10 rounded-xl p-5">
                 <p className="text-sm">Account: {user?.email}</p>

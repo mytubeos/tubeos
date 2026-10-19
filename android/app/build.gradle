@@ -58,8 +58,8 @@ android {
         applicationId 'com.vezrin.app'
         minSdkVersion 24
         targetSdkVersion 36
-        versionCode providers.gradleProperty('releaseVersionCode').orElse('5').get().toInteger()
-        versionName providers.gradleProperty('releaseVersionName').orElse('1.0.3').get()
+        versionCode providers.gradleProperty('releaseVersionCode').orElse('6').get().toInteger()
+        versionName providers.gradleProperty('releaseVersionName').orElse('1.0.4').get()
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -208,6 +208,7 @@ repositories {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.google.androidbrowserhelper:billing:1.2.0'
 
         implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.7.3'
 

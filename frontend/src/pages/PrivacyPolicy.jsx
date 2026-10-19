@@ -49,9 +49,11 @@ export function PrivacyPolicy() {
           <p>
             Our infrastructure and delivery providers may include Render, Vercel, Cloudflare,
             MongoDB, Redis/Upstash, Google Cloud Storage, Cloudinary, Brevo and Sentry, depending on
-            the configured feature. Historical payments are handled by Dodo Payments and, for older
-            transactions, Stripe or Razorpay. Providers process data needed for their function under
-            their applicable terms.
+            the configured feature. Website payments use Dodo Payments and supported Android
+            purchases use Google Play Billing; older transactions may involve Stripe or Razorpay. We
+            store encrypted Google Play purchase tokens and subscription status to verify access,
+            renewals and refunds. Providers process data needed for their function under their
+            applicable terms.
           </p>
         </section>
         <section id="ai-data" className="space-y-3 scroll-mt-5">

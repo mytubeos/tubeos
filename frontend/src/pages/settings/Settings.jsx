@@ -27,7 +27,8 @@ import { Badge, PlanBadge } from '../../components/ui/Badge'
 import { PLANS } from '../../utils/constants'
 import { formatNumber, formatDate, isSubscriptionExpired } from '../../utils/formatters'
 import { formatPrice } from '../../utils/currency'
-import { useDodoCheckout } from '../../hooks/useDodoCheckout'
+import { useBilling } from '../../hooks/useBilling'
+import { BillingControls } from '../../components/features/BillingControls'
 import toast from 'react-hot-toast'
 
 const TABS = [
@@ -74,9 +75,10 @@ export const Settings = () => {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('profile')
   const [mobileDetail, setMobileDetail] = useState(false)
-  const { startDodoCheckout, loadingPlan, verifying } = useDodoCheckout({
+  const billing = useBilling({
     onSuccess: () => navigate('/dashboard'),
   })
+  const { loadingPlan, verifying } = billing
   const [pricesByPlan, setPricesByPlan] = useState({})
 
   useEffect(() => {
@@ -574,6 +576,12 @@ export const Settings = () => {
                   <p className="text-sm text-gray-400">
                     {plan === 'free' ? (
                       'Free forever'
+                    ) : user?.subscriptionProvider === 'google-play' ? (
+                      billing.price(plan) ? (
+                        `${billing.price(plan)}/month · Google Play`
+                      ) : (
+                        'Google Play subscription'
+                      )
                     ) : currentPlanPayment &&
                       currentPlanPayment.amount !== currentPlanPayment.originalAmount ? (
                       <>
@@ -640,7 +648,7 @@ export const Settings = () => {
                 />
               </div>
 
-              {plan !== 'free' && (
+              {plan !== 'free' && user?.subscriptionProvider !== 'google-play' && (
                 <button
                   onClick={() => setShowDowngradeConfirm(true)}
                   className="w-full text-center text-2xs text-gray-400 hover:text-rose transition-colors mt-4"
@@ -724,7 +732,7 @@ export const Settings = () => {
               <Card>
                 <CardHeader title="Plan Options" icon={CreditCard} iconColor="amber" />
                 <p className="text-sm text-gray-400 mb-4">
-                  New purchases are temporarily unavailable. Your existing plan remains available
+                  Available purchase options depend on your platform. Existing paid access remains
                   until its expiry.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -749,9 +757,12 @@ export const Settings = () => {
                           )}
                         </div>
                         <p className="text-2xl font-display font-bold text-white mb-1">
-                          {pricesByPlan[key]?.USD
-                            ? formatPrice(pricesByPlan[key].USD.amount, 'USD')
-                            : '—'}
+                          {billing.price(key) ||
+                            (billing.mode === 'play'
+                              ? '—'
+                              : pricesByPlan[key]?.USD
+                                ? formatPrice(pricesByPlan[key].USD.amount, 'USD')
+                                : '—')}
                           <span className="text-sm text-gray-400 font-normal">/mo</span>
                         </p>
                         <div className="space-y-1.5 mt-3">
@@ -771,13 +782,13 @@ export const Settings = () => {
                           fullWidth
                           className="mt-4"
                           variant={key === 'pro' ? 'brand' : 'ghost'}
-                          disabled={true}
-                          onClick={() => startDodoCheckout(key)}
+                          disabled={!billing.canPurchase(key)}
+                          onClick={() => billing.startCheckout(key)}
                         >
                           {loadingPlan === key ? (
                             <Loader2 size={14} className="animate-spin mx-auto" />
                           ) : (
-                            'Purchases paused'
+                            billing.label(key)
                           )}
                         </Button>
                       </div>
@@ -787,6 +798,7 @@ export const Settings = () => {
             )}
 
             {/* Billing History */}
+            <BillingControls billing={billing} user={user} />
             <Card>
               <CardHeader title="Billing History" icon={CreditCard} />
               {loadingHistory ? (

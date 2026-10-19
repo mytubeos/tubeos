@@ -22,6 +22,8 @@
 // activation shows up — see useDodoCheckout.js.
 
 const axios = require('axios');
+const crypto = require('crypto');
+const CheckoutIntent = /** @type {any} */ (require('../models/checkout-intent.model'));
 const { Webhook } = require('standardwebhooks');
 const { config } = require('../config/env');
 // Cast to any: mongoose v8 Model<any> union overloads cause TS2349 in @ts-check JS files.
@@ -90,11 +92,59 @@ const createCheckoutSession = async (userId, plan) => {
     err.statusCode = 404;
     throw err;
   }
+  if (!user.isActive || user.deletedAt || user.isBanned) {
+    const err = new Error('Account is unavailable for purchases');
+    err.statusCode = 403;
+    throw err;
+  }
+  if (user.subscriptionProvider === 'google-play' && user.subscriptionExpiresAt > new Date()) {
+    const err = new Error('Manage your existing Google Play plan before buying another plan.');
+    err.statusCode = 409;
+    throw err;
+  }
+  const { PlayPurchase } = /** @type {any} */ (require('../models/play-purchase.model'));
+  const playPurchase = await PlayPurchase.findOne({
+    userId,
+    superseded: { $ne: true },
+    state: {
+      $in: [
+        'SUBSCRIPTION_STATE_ACTIVE',
+        'SUBSCRIPTION_STATE_IN_GRACE_PERIOD',
+        'SUBSCRIPTION_STATE_PENDING',
+        'SUBSCRIPTION_STATE_ON_HOLD',
+        'SUBSCRIPTION_STATE_PAUSED',
+      ],
+    },
+  });
+  if (
+    playPurchase &&
+    [
+      'SUBSCRIPTION_STATE_ACTIVE',
+      'SUBSCRIPTION_STATE_IN_GRACE_PERIOD',
+      'SUBSCRIPTION_STATE_PENDING',
+      'SUBSCRIPTION_STATE_ON_HOLD',
+      'SUBSCRIPTION_STATE_PAUSED',
+    ].includes(playPurchase.state)
+  ) {
+    const err = new Error(
+      'Manage your existing Google Play subscription before buying another plan.'
+    );
+    err.statusCode = 409;
+    throw err;
+  }
 
   const { amount: listAmount } = await pricingService.getPrice(plan, 'USD');
+  const intent = await CheckoutIntent.create({
+    _id: crypto.randomUUID(),
+    userId,
+    plan,
+    productId,
+    amount: listAmount,
+    expiresAt: new Date(Date.now() + 90 * 86400000),
+  });
 
   const label = PLAN_LABELS[plan];
-  const clientUrl = config.cors.clientUrl;
+  const clientUrl = require('./billing-config').webOrigin() || config.cors.clientUrl;
 
   const { data } = await client
     .post('/checkouts', {
@@ -103,12 +153,13 @@ const createCheckoutSession = async (userId, plan) => {
       metadata: {
         userId: userId.toString(),
         plan,
+        checkoutIntentId: intent._id,
       },
       return_url: `${clientUrl}/pricing?dodo_return=1`,
     })
     .catch((err) => {
       logger.error('[dodo] checkout session creation failed', {
-        error: err.response?.data || err.message,
+        status: err.response?.status || 'unavailable',
       });
       const wrapped = new Error('Could not start checkout — please try again.');
       wrapped.statusCode = 502;
@@ -116,9 +167,11 @@ const createCheckoutSession = async (userId, plan) => {
     });
 
   if (!data.checkout_url) {
-    logger.error('[dodo] checkout response missing checkout_url', { data });
+    logger.error('[dodo] checkout response missing checkout_url');
     throw notConfiguredError();
   }
+  if (!data.session_id) throw notConfiguredError();
+  await CheckoutIntent.updateOne({ _id: intent._id }, { sessionId: data.session_id });
 
   // label kept for parity with stripe.service.js's request shape/comments —
   // Dodo's product name itself is set in their dashboard, not passed here.
@@ -166,8 +219,34 @@ const activatePlanFromPayload = async (payload, paymentId) => {
           throw new Error('Payment ownership mismatch');
         return User.findById(userId).session(session);
       }
+      let originalAmount = listAmount;
+      if (process.env.DODO_REQUIRE_CHECKOUT_INTENT === 'true') {
+        const intent =
+          typeof payload.metadata?.checkoutIntentId === 'string'
+            ? await CheckoutIntent.findById(payload.metadata.checkoutIntentId).session(session)
+            : null;
+        if (
+          !intent ||
+          String(intent.userId) !== userId ||
+          intent.plan !== plan ||
+          !intent.sessionId ||
+          payload.checkout_session_id !== intent.sessionId ||
+          intent.expiresAt <= new Date() ||
+          payload.subscription_id ||
+          payload.product_cart?.length !== 1 ||
+          payload.product_cart[0].product_id !== intent.productId ||
+          payload.product_cart[0].quantity !== 1
+        ) {
+          throw new Error('Checkout intent mismatch; payment requires manual review');
+        }
+        originalAmount = intent.amount;
+      }
       const user = await User.findById(userId).session(session);
       if (!user) throw new Error('Payment user not found');
+      if (!user.isActive || user.deletedAt || user.isBanned)
+        throw new Error('Payment account is unavailable; manual refund review required');
+      if (user.subscriptionProvider === 'google-play' && user.subscriptionExpiresAt > new Date())
+        throw new Error('Conflicting Google Play access; manual refund review required');
       // Preserve paid time on renewal, and do not let a delayed older payment downgrade the plan.
       const now = new Date();
       const expiresAt = new Date(
@@ -187,6 +266,7 @@ const activatePlanFromPayload = async (payload, paymentId) => {
       }
       user.subscriptionStartedAt = user.subscriptionStartedAt || now;
       user.subscriptionExpiresAt = expiresAt;
+      user.subscriptionProvider = 'dodo';
       await user.save({ session });
       await PaymentHistory.create(
         [
@@ -194,7 +274,7 @@ const activatePlanFromPayload = async (payload, paymentId) => {
             user: userId,
             plan,
             amount: payload.total_amount,
-            originalAmount: listAmount,
+            originalAmount,
             currency: 'USD',
             couponCode: payload.discounts?.[0]?.code || null,
             gateway: 'dodo',

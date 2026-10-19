@@ -96,6 +96,7 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    subscriptionProvider: { type: String, enum: ['dodo', 'google-play', null], default: null },
     subscriptionExpiresAt: {
       type: Date,
       default: null,

@@ -186,15 +186,19 @@ export function TermsAndConditions() {
             <ul className="list-disc list-inside space-y-2 ml-4">
               <li>Vezrin offers different subscription plans (Free, Creator, Pro, Max)</li>
               <li>
-                New paid purchases are temporarily paused. Previously purchased access remains
-                subject to its stated expiry.
+                Purchases are available only where the relevant payment method is enabled. Google
+                Play purchases use Google Play Billing; separate website purchases use Dodo
+                Payments.
               </li>
               <li>
-                Existing plans are manual access-period purchases and do not renew automatically
-                through Vezrin.
+                Dodo website purchases provide one month of access without automatic renewal. Google
+                Play monthly subscriptions renew automatically until canceled through Google Play;
+                the Play purchase screen shows the applicable price and renewal terms.
               </li>
               <li>
-                You can downgrade in Settings. Downgrading ends paid feature access immediately.
+                Manual website plans can be downgraded in Settings. Google Play subscriptions must
+                be managed or canceled in Google Play; canceled plans keep access until the paid
+                expiry.
               </li>
               <li>
                 Contact hello@vezrin.com for payment or refund support. Applicable consumer rights

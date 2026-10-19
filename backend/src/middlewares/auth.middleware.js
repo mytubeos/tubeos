@@ -67,6 +67,24 @@ const protect = async (req, res, next) => {
     // enforcing a stale plan for up to the token's full TTL after any
     // upgrade/downgrade (including the expired-subscription cron job's own
     // downgrades) even though `user` here already has the current value.
+    // An unavailable notification worker must not leave a Google subscription
+    // entitled forever after its last verified expiry. Renewal/restore can grant
+    // it again, but this conditional update cannot overwrite a concurrent renewal.
+    if (
+      user.subscriptionProvider === 'google-play' &&
+      user.subscriptionExpiresAt &&
+      user.subscriptionExpiresAt <= new Date()
+    ) {
+      const expired = await User.updateOne(
+        {
+          _id: user._id,
+          subscriptionProvider: 'google-play',
+          subscriptionExpiresAt: user.subscriptionExpiresAt,
+        },
+        { plan: 'free' }
+      );
+      if (expired.modifiedCount) user.plan = 'free';
+    }
     req.user = {
       id: decoded.id,
       sessionId: decoded.sid,

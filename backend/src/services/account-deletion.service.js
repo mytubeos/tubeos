@@ -150,6 +150,10 @@ const purgeAccountData = async (userId) => {
   // details and unlink referrals from the profile being removed.
   await PayoutRequest.updateMany({ userId }, { $unset: { bankAccount: 1, upi: 1 } });
   await User.updateMany({ 'referral.referredBy': userId }, { 'referral.referredBy': null });
+  const { PlayPurchase, PlayBillingAccount } = require('../models/play-purchase.model');
+  await PlayPurchase.deleteMany({ userId });
+  await PlayBillingAccount.deleteOne({ _id: userId });
+  await require('../models/checkout-intent.model').deleteMany({ userId });
   await User.deleteOne({ _id: userId, deletedAt: { $ne: null } });
 };
 module.exports = { requestDeletion, stopAccountActivity, purgeAccountData, purgeChannelData };
