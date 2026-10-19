@@ -222,5 +222,15 @@ const reconcile = async () => {
       logger.warn('[play-billing] reconciliation needs retry', { userId: String(account._id) });
     }
   }
+  // Bound access to the last verified paid period even during a provider outage.
+  // Atomic date matching prevents a concurrent renewal from being overwritten.
+  await User.updateMany(
+    {
+      subscriptionProvider: 'google-play',
+      plan: { $ne: 'free' },
+      subscriptionExpiresAt: { $ne: null, $lte: new Date() },
+    },
+    { plan: 'free' }
+  );
 };
 module.exports = { verifyPurchase, syncAccount, handleNotification, reconcile };

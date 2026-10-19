@@ -4,7 +4,7 @@ const require = createRequire(import.meta.url);
 const { GoogleAuth, OAuth2Client } = require('google-auth-library');
 const service = require('../../src/services/play-billing.service');
 const rules = require('../../src/services/play-billing.rules');
-const { webOrigin } = require('../../src/services/billing-config');
+const { webOrigin, webReady } = require('../../src/services/billing-config');
 const { PlayPurchase, PlayBillingAccount } = require('../../src/models/play-purchase.model');
 const User = require('../../src/models/user.model');
 const paymentService = require('../../src/services/payment.service');
@@ -233,13 +233,45 @@ describe('Google Play entitlements', () => {
     const user = await createUser();
     vi.stubEnv('DODO_WEB_ENABLED', 'true');
     vi.stubEnv('DODO_WEB_ORIGIN', 'https://buy.vezrin.com');
+    vi.stubEnv('DODO_REQUIRE_CHECKOUT_INTENT', 'true');
+    vi.stubEnv('DODO_PAYMENTS_API_KEY', 'fake-key');
+    vi.stubEnv('DODO_WEBHOOK_SECRET', 'fake-secret');
+    for (const plan of ['CREATOR', 'PRO', 'MAX'])
+      vi.stubEnv(`DODO_PRODUCT_ID_${plan}`, `test-${plan}`);
+    expect(webReady()).toBe(true);
     const response = await request(app)
       .post('/payment/dodo/create-checkout-session')
       .set('Authorization', `Bearer ${generateTokenPair(user).accessToken}`)
       .set('Origin', 'https://vezrin.com')
       .send({ plan: 'pro' });
     expect(response.status).toBe(403);
+    vi.spyOn(dodoService, 'createCheckoutSession').mockResolvedValue({
+      sessionId: 'checkout-session',
+      url: 'https://checkout.dodopayments.com/session/test',
+    });
+    const webResponse = await request(app)
+      .post('/payment/dodo/create-checkout-session')
+      .set('Authorization', `Bearer ${generateTokenPair(user).accessToken}`)
+      .set('Origin', 'https://buy.vezrin.com')
+      .send({ plan: 'pro' });
+    expect(webResponse.status).toBe(200);
     vi.stubEnv('DODO_WEB_ORIGIN', 'https://vezrin.com');
     expect(webOrigin()).toBeNull();
+  });
+  it('does not authorize an expired Google plan when notifications have been missed', async () => {
+    const user = await createUser();
+    await User.updateOne(
+      { _id: user._id },
+      {
+        plan: 'pro',
+        subscriptionProvider: 'google-play',
+        subscriptionExpiresAt: new Date(Date.now() - 1000),
+      }
+    );
+    const response = await request(app)
+      .get('/billing/purchases')
+      .set('Authorization', `Bearer ${generateTokenPair(user).accessToken}`);
+    expect(response.status).toBe(200);
+    expect((await User.findById(user._id)).plan).toBe('free');
   });
 });

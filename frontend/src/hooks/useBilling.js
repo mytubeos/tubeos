@@ -108,6 +108,7 @@ export const useBilling = ({ onSuccess } = {}) => {
     !busy.current &&
     !verifying &&
     !loadingPlan &&
+    !dodo.loadingPlan &&
     (channel.mode === 'web'
       ? user?.subscriptionProvider !== 'google-play'
       : channel.mode === 'play' && !hasPaidAccess && !!channel.details[plan])

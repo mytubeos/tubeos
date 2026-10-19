@@ -130,7 +130,7 @@ encryption key must remain solely in the backend environment.
 
 Google cancellations keep access until the verified expiry. Active/grace/canceled
 states with future expiry retain access; pending/hold/paused/expired states do not.
-Transient Google verification errors preserve existing access and retry. Google
+Transient Google verification errors preserve access through the last verified expiry and retry. Google
 purchase tokens are stored encrypted; status/order references are shown in-app,
 but monetary receipts remain in Play order history, not fabricated local charges.
 Account deletion does not cancel Google subscriptions automatically; the deletion

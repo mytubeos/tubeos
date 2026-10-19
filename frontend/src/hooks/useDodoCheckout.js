@@ -23,13 +23,15 @@ export const useDodoCheckout = ({ onSuccess, enabled = false } = {}) => {
   const { refreshUser } = useAuthStore()
   const [searchParams, setSearchParams] = useSearchParams()
   const pollTimer = useRef(null)
+  const checkoutBusy = useRef(false)
 
   const startDodoCheckout = async (plan) => {
     if (!enabled)
       return toast.error(
         'New purchases are temporarily unavailable. Existing plan access is unchanged.'
       )
-    if (loadingPlan) return
+    if (checkoutBusy.current) return
+    checkoutBusy.current = true
     setLoadingPlan(plan)
     const user = useAuthStore.getState().user
     try {
@@ -51,6 +53,7 @@ export const useDodoCheckout = ({ onSuccess, enabled = false } = {}) => {
         err.response?.data?.message || err.message || 'Could not open checkout. Please retry.'
       )
     } finally {
+      checkoutBusy.current = false
       setLoadingPlan(null)
     }
   }

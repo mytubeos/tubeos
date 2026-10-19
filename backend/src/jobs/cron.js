@@ -502,7 +502,6 @@ const downgradeExpiredSubscriptions = async () => {
 
     const expiredUsers = await User.find({
       plan: { $ne: 'free' },
-      subscriptionProvider: { $ne: 'google-play' },
       subscriptionExpiresAt: { $ne: null, $lte: new Date() },
     })
       .select('_id plan')
