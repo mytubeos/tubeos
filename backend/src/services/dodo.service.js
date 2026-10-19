@@ -102,6 +102,29 @@ const createCheckoutSession = async (userId, plan) => {
     err.statusCode = 409;
     throw err;
   }
+  const { PlayBillingAccount, PlayPurchase } = /** @type {any} */ (
+    require('../models/play-purchase.model')
+  );
+  const playAccount = await PlayBillingAccount.findById(userId);
+  const playPurchase = playAccount?.currentTokenHash
+    ? await PlayPurchase.findById(playAccount.currentTokenHash)
+    : null;
+  if (
+    playPurchase &&
+    [
+      'SUBSCRIPTION_STATE_ACTIVE',
+      'SUBSCRIPTION_STATE_IN_GRACE_PERIOD',
+      'SUBSCRIPTION_STATE_PENDING',
+      'SUBSCRIPTION_STATE_ON_HOLD',
+      'SUBSCRIPTION_STATE_PAUSED',
+    ].includes(playPurchase.state)
+  ) {
+    const err = new Error(
+      'Manage your existing Google Play subscription before buying another plan.'
+    );
+    err.statusCode = 409;
+    throw err;
+  }
 
   const { amount: listAmount } = await pricingService.getPrice(plan, 'USD');
   const intent = await CheckoutIntent.create({

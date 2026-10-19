@@ -31,7 +31,7 @@ export const BillingControls = ({ billing, user }) => (
           : 'New purchases are temporarily unavailable here. Existing paid access continues until its expiry.'}
       </p>
     )}
-    {user?.subscriptionProvider === 'google-play' && (
+    {(user?.subscriptionProvider === 'google-play' || billing.playPurchases?.length > 0) && (
       <a
         className="block mt-3 underline text-brand"
         href="https://play.google.com/store/account/subscriptions?package=com.vezrin.app"

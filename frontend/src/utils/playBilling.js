@@ -1,4 +1,16 @@
 export const PLAY_METHOD = 'https://play.google.com/billing'
+export const hasOpenPlaySubscription = (purchases) =>
+  purchases.some(
+    (p) =>
+      [
+        'SUBSCRIPTION_STATE_ACTIVE',
+        'SUBSCRIPTION_STATE_IN_GRACE_PERIOD',
+        'SUBSCRIPTION_STATE_PENDING',
+        'SUBSCRIPTION_STATE_ON_HOLD',
+        'SUBSCRIPTION_STATE_PAUSED',
+      ].includes(p.state) ||
+      (p.state === 'SUBSCRIPTION_STATE_CANCELED' && new Date(p.expiresAt) > new Date())
+  )
 export const chooseBillingChannel = async (config, origin, browser = window) => {
   if (config.webEnabled && config.webOrigin === origin) return { mode: 'web', details: {} }
   if (

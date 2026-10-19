@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
-import { chooseBillingChannel, purchaseOnPlay, PLAY_METHOD } from '../../src/utils/playBilling'
+import {
+  chooseBillingChannel,
+  purchaseOnPlay,
+  PLAY_METHOD,
+  hasOpenPlaySubscription,
+} from '../../src/utils/playBilling'
 const item = { itemId: 'vezrin_pro_monthly', title: 'Pro', price: { currency: 'USD', value: '9' } }
 const config = {
   webEnabled: true,
@@ -8,6 +13,16 @@ const config = {
   products: [{ productId: item.itemId, plan: 'pro' }],
 }
 describe('platform payment routing', () => {
+  it('blocks duplicate sales while a purchase is pending or a subscription is on hold, but permits expired access to end', () => {
+    expect(hasOpenPlaySubscription([{ state: 'SUBSCRIPTION_STATE_PENDING' }])).toBe(true)
+    expect(
+      hasOpenPlaySubscription([{ state: 'SUBSCRIPTION_STATE_ON_HOLD', expiresAt: '2020-01-01' }])
+    ).toBe(true)
+    expect(hasOpenPlaySubscription([{ state: 'SUBSCRIPTION_STATE_EXPIRED' }])).toBe(false)
+    expect(
+      hasOpenPlaySubscription([{ state: 'SUBSCRIPTION_STATE_CANCELED', expiresAt: '2020-01-01' }])
+    ).toBe(false)
+  })
   it('only enables Dodo on the exact dedicated origin', async () => {
     expect((await chooseBillingChannel(config, 'https://buy.vezrin.com', {})).mode).toBe('web')
     for (const origin of ['https://vezrin.com', 'https://buy.vezrin.com.attacker.test'])

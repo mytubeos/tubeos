@@ -3,7 +3,12 @@ import toast from 'react-hot-toast'
 import paymentAPI from '../api/payment.api'
 import { useAuthStore } from '../store/authStore'
 import { useDodoCheckout } from './useDodoCheckout'
-import { chooseBillingChannel, formatPlayPrice, purchaseOnPlay } from '../utils/playBilling'
+import {
+  chooseBillingChannel,
+  formatPlayPrice,
+  purchaseOnPlay,
+  hasOpenPlaySubscription,
+} from '../utils/playBilling'
 
 export const useBilling = ({ onSuccess } = {}) => {
   const { user, refreshUser } = useAuthStore()
@@ -12,6 +17,7 @@ export const useBilling = ({ onSuccess } = {}) => {
   const [loadingPlan, setLoadingPlan] = useState(null)
   const [verifying, setVerifying] = useState(false)
   const [playPurchases, setPlayPurchases] = useState([])
+  const [playChecked, setPlayChecked] = useState(false)
   const busy = useRef(false)
   const dodo = useDodoCheckout({ onSuccess, enabled: channel.mode === 'web' })
   useEffect(() => {
@@ -31,6 +37,7 @@ export const useBilling = ({ onSuccess } = {}) => {
 
   useEffect(() => {
     let cancelled = false
+    setPlayChecked(false)
     paymentAPI
       .getBillingConfig()
       .then((r) => chooseBillingChannel(r.data.data, window.location.origin))
@@ -62,16 +69,25 @@ export const useBilling = ({ onSuccess } = {}) => {
       setVerifying(true)
       try {
         const purchases = await channel.service.listPurchases()
+        const isSameUser = () =>
+          (useAuthStore.getState().user?._id || useAuthStore.getState().user?.id) === userId
         let active = false
         for (const purchase of purchases) {
+          if (!isSameUser()) return
           if (Object.values(channel.details).some((p) => p.itemId === purchase.itemId)) {
             const result = await verify(purchase.purchaseToken)
             active = active || result.active
           }
         }
         // Also handles expired/refunded subscriptions which listPurchases omits.
+        if (!isSameUser()) return
         await paymentAPI.syncPlayPurchase()
+        if (!isSameUser()) return
         await refreshUser()
+        const history = await paymentAPI.getPlayPurchases()
+        if (!isSameUser()) return
+        setPlayPurchases(history.data.data || [])
+        setPlayChecked(true)
         if (manual)
           toast.success(
             active
@@ -79,6 +95,7 @@ export const useBilling = ({ onSuccess } = {}) => {
               : 'Purchase status updated. No active Google Play plan found.'
           )
       } catch (err) {
+        setPlayChecked(false)
         if (manual)
           toast.error(
             err.response?.data?.message ||
@@ -110,8 +127,13 @@ export const useBilling = ({ onSuccess } = {}) => {
     !loadingPlan &&
     !dodo.loadingPlan &&
     (channel.mode === 'web'
-      ? user?.subscriptionProvider !== 'google-play'
-      : channel.mode === 'play' && !hasPaidAccess && !!channel.details[plan])
+      ? !(user?.subscriptionProvider === 'google-play' && hasPaidAccess) &&
+        !hasOpenPlaySubscription(playPurchases)
+      : channel.mode === 'play' &&
+        (!userId || playChecked) &&
+        !hasPaidAccess &&
+        !hasOpenPlaySubscription(playPurchases) &&
+        !!channel.details[plan])
   const startCheckout = async (plan) => {
     if (!canPurchase(plan))
       return toast.error(
@@ -150,7 +172,7 @@ export const useBilling = ({ onSuccess } = {}) => {
     loadingPlan: loadingPlan || dodo.loadingPlan,
     verifying: verifying || dodo.verifying,
     label: (plan) =>
-      channel.mode === 'play' && hasPaidAccess
+      channel.mode === 'play' && (hasPaidAccess || hasOpenPlaySubscription(playPurchases))
         ? 'Manage current plan'
         : canPurchase(plan)
           ? channel.mode === 'play'

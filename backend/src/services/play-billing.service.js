@@ -97,7 +97,9 @@ const verifyPurchase = async (userId, token, { background = false } = {}) => {
       const different = account.currentTokenHash && account.currentTokenHash !== hash;
       const replacesCurrent = linked === account.currentTokenHash;
       const paidElsewhere = user.plan !== 'free' && user.subscriptionProvider !== 'google-play';
-      const hasPaidTime = user.subscriptionExpiresAt && user.subscriptionExpiresAt > new Date();
+      const hasPaidTime =
+        (user.plan !== 'free' && !user.subscriptionExpiresAt) ||
+        (user.subscriptionExpiresAt && user.subscriptionExpiresAt > new Date());
       const superseded = existing?.superseded || (different && !replacesCurrent && background);
       if (
         state.active &&
