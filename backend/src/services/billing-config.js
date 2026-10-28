@@ -4,6 +4,13 @@ const PRODUCTS = Object.freeze({
   vezrin_max_monthly: 'agency',
 });
 const PACKAGE = 'com.vezrin.app';
+const BASE_PLAN_ENV = Object.freeze({
+  vezrin_creator_monthly: 'PLAY_BASE_PLAN_ID_CREATOR',
+  vezrin_pro_monthly: 'PLAY_BASE_PLAN_ID_PRO',
+  vezrin_max_monthly: 'PLAY_BASE_PLAN_ID_MAX',
+});
+const expectedBasePlanId = (productId) =>
+  process.env[BASE_PLAN_ENV[productId]] || 'monthly';
 const webOrigin = () => {
   try {
     const url = new URL(process.env.DODO_WEB_ORIGIN);
@@ -41,4 +48,4 @@ const webReady = () =>
   !!process.env.DODO_PAYMENTS_API_KEY &&
   !!process.env.DODO_WEBHOOK_SECRET &&
   ['CREATOR', 'PRO', 'MAX'].every((p) => !!process.env[`DODO_PRODUCT_ID_${p}`]);
-module.exports = { PRODUCTS, PACKAGE, webOrigin, webReady, playReady, playConfigured };
+module.exports = { PRODUCTS, PACKAGE, expectedBasePlanId, webOrigin, webReady, playReady, playConfigured };
