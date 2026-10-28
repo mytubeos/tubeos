@@ -29,8 +29,14 @@ const subscriptionState = (data, now = new Date()) => {
   if (data.kind !== 'androidpublisher#subscriptionPurchaseV2' || data.lineItems?.length !== 1)
     throw failure('Unsupported Google Play subscription');
   const line = data.lineItems[0];
-  if (!PRODUCTS[line.productId] || line.offerDetails?.basePlanId !== 'monthly')
-    throw failure('Unknown Google Play plan');
+  // Creator's existing Play Console base plan is spelled "montly" (confirmed
+  // by Google's subscriptionsv2 response). Accept that exact legacy ID only
+  // for Creator; keep the canonical monthly ID and other products unchanged.
+  const basePlanId = line.offerDetails?.basePlanId;
+  const knownBasePlan =
+    basePlanId === 'monthly' ||
+    (line.productId === 'vezrin_creator_monthly' && basePlanId === 'montly');
+  if (!PRODUCTS[line.productId] || !knownBasePlan) throw failure('Unknown Google Play plan');
   const expiry = new Date(line.expiryTime);
   const start = new Date(data.startTime);
   const eligible = [

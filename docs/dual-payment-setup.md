@@ -75,9 +75,15 @@ Do not put secrets into GitHub, chat, frontend variables or screenshots. Use
 
 | Product ID (exact)       | Existing Vezrin plan      | Base plan ID |
 | ------------------------ | ------------------------- | ------------ |
-| `vezrin_creator_monthly` | Creator                   | `monthly`    |
+| `vezrin_creator_monthly` | Creator                   | `montly` (existing ID) |
 | `vezrin_pro_monthly`     | Pro                       | `monthly`    |
 | `vezrin_max_monthly`     | Max (`agency` internally) | `monthly`    |
+
+Creator's deployed base plan ID is spelled `montly`, confirmed by the Google
+purchase response on 2026-10-28. The backend accepts this exact ID only for
+Creator, plus the canonical `monthly` ID. Do not delete/recreate the existing
+plan to correct its spelling; existing purchases need their original ID.
+Regression check: `cd backend && node --test tests/unit/play-billing-catalogue.test.cjs`.
 
 2. Give each product exactly **one monthly auto-renewing base plan**, with no
    trials/offers/additional base plans in this release. Set the previously agreed
