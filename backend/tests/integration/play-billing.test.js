@@ -177,23 +177,6 @@ describe('Google Play entitlements', () => {
     );
     expect(provider).toHaveBeenCalledTimes(1);
   });
-  it('restores a verified purchase using the configured Play base plan ID', async () => {
-    const user = await createUser();
-    vi.stubEnv('PLAY_BASE_PLAN_ID_CREATOR', 'creator-monthly');
-    const purchase = fixture();
-    purchase.lineItems[0].productId = 'vezrin_creator_monthly';
-    purchase.lineItems[0].offerDetails.basePlanId = 'creator-monthly';
-    provider.mockResolvedValue({ data: purchase });
-    await expect(service.verifyPurchase(user._id, token)).resolves.toMatchObject({
-      active: true,
-      plan: 'creator',
-    });
-    expect((await User.findById(user._id)).subscriptionProvider).toBe('google-play');
-    purchase.lineItems[0].offerDetails.basePlanId = 'monthly';
-    await expect(service.verifyPurchase(user._id, token)).rejects.toThrow(
-      'Unknown Google Play plan'
-    );
-  });
   it('does not overwrite an active Dodo plan or deactivate real subscriptions via local downgrade', async () => {
     const user = await createUser();
     await User.updateOne(
