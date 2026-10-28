@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { PRODUCTS, expectedBasePlanId } = require('./billing-config');
+const { PRODUCTS } = require('./billing-config');
 const failure = (message, statusCode = 400) => Object.assign(new Error(message), { statusCode });
 const tokenHash = (token) => crypto.createHash('sha256').update(token).digest('hex');
 const validateToken = (token) => {
@@ -29,7 +29,7 @@ const subscriptionState = (data, now = new Date()) => {
   if (data.kind !== 'androidpublisher#subscriptionPurchaseV2' || data.lineItems?.length !== 1)
     throw failure('Unsupported Google Play subscription');
   const line = data.lineItems[0];
-  if (!PRODUCTS[line.productId] || line.offerDetails?.basePlanId !== expectedBasePlanId(line.productId))
+  if (!PRODUCTS[line.productId] || line.offerDetails?.basePlanId !== 'monthly')
     throw failure('Unknown Google Play plan');
   const expiry = new Date(line.expiryTime);
   const start = new Date(data.startTime);
