@@ -189,10 +189,12 @@ export const Pricing = () => {
 
           {/* Header */}
           <div className="text-center mb-12">
-            <p role="status" className="text-sm text-amber mb-4">
-              New paid purchases are temporarily unavailable. Existing plans continue until their
-              expiry.
-            </p>
+            {billing.mode === 'unavailable' && (
+              <p role="status" className="text-sm text-amber mb-4">
+                New paid purchases are temporarily unavailable. Existing plans continue until their
+                expiry.
+              </p>
+            )}
             <h1 className="font-display font-bold text-white text-5xl mb-4">Pricing</h1>
             <p className="text-gray-400 text-lg">Compare features and your current plan.</p>
           </div>

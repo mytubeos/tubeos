@@ -16,8 +16,17 @@ export const BillingControls = ({ billing, user }) => (
           disabled={billing.verifying}
           onClick={() => billing.restore()}
         >
-          {billing.verifying ? 'Checking purchases…' : 'Restore purchases'}
+          {billing.verifying
+            ? 'Checking purchases…'
+            : billing.playCheckError
+              ? 'Retry purchase check'
+              : 'Restore purchases'}
         </button>
+        {billing.playCheckError && (
+          <p role="alert" className="mt-3 text-amber">
+            Purchase check failed: {billing.playCheckError} Please retry here before buying.
+          </p>
+        )}
       </>
     ) : billing.mode === 'web' ? (
       <p>

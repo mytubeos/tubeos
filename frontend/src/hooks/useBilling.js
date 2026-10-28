@@ -18,6 +18,7 @@ export const useBilling = ({ onSuccess } = {}) => {
   const [verifying, setVerifying] = useState(false)
   const [playPurchases, setPlayPurchases] = useState([])
   const [playChecked, setPlayChecked] = useState(false)
+  const [playCheckError, setPlayCheckError] = useState(null)
   const busy = useRef(false)
   const dodo = useDodoCheckout({ onSuccess, enabled: channel.mode === 'web' })
   useEffect(() => {
@@ -38,6 +39,7 @@ export const useBilling = ({ onSuccess } = {}) => {
   useEffect(() => {
     let cancelled = false
     setPlayChecked(false)
+    setPlayCheckError(null)
     paymentAPI
       .getBillingConfig()
       .then((r) => chooseBillingChannel(r.data.data, window.location.origin))
@@ -67,6 +69,7 @@ export const useBilling = ({ onSuccess } = {}) => {
       if (!userId || busy.current || channel.mode !== 'play') return
       busy.current = true
       setVerifying(true)
+      setPlayCheckError(null)
       try {
         const purchases = await channel.service.listPurchases()
         const isSameUser = () =>
@@ -96,6 +99,11 @@ export const useBilling = ({ onSuccess } = {}) => {
           )
       } catch (err) {
         setPlayChecked(false)
+        setPlayCheckError(
+          err.response?.data?.message ||
+            err.message ||
+            'Could not check Google Play purchases. Check your connection and retry.'
+        )
         if (manual)
           toast.error(
             err.response?.data?.message ||
@@ -169,11 +177,16 @@ export const useBilling = ({ onSuccess } = {}) => {
     startCheckout,
     restore,
     playPurchases,
+    playCheckError,
     loadingPlan: loadingPlan || dodo.loadingPlan,
     verifying: verifying || dodo.verifying,
     label: (plan) =>
       channel.mode === 'play' && (hasPaidAccess || hasOpenPlaySubscription(playPurchases))
         ? 'Manage current plan'
+        : channel.mode === 'play' && userId && !playChecked
+          ? playCheckError
+            ? 'Purchase check failed'
+            : 'Checking purchases…'
         : canPurchase(plan)
           ? channel.mode === 'play'
             ? 'Subscribe with Google Play'

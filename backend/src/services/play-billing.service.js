@@ -76,7 +76,28 @@ const verifyPurchase = async (userId, token, { background = false } = {}) => {
     const data = await publisherRequest(
       `purchases/subscriptionsv2/tokens/${encodeURIComponent(token)}`
     );
-    const state = subscriptionState(data);
+    let state;
+    try {
+      state = subscriptionState(data);
+    } catch (err) {
+      if (err.message === 'Unknown Google Play plan') {
+        // Catalogue IDs are safe to log; never log a token, order ID, or account.
+        const safeId = (value) =>
+          typeof value === 'string' && /^[a-zA-Z0-9_.-]{1,100}$/.test(value)
+            ? value
+            : '<missing-or-invalid>';
+        logger.warn('[play-billing] purchase catalogue mismatch', {
+          lineItemCount: Array.isArray(data.lineItems) ? data.lineItems.length : null,
+          items: Array.isArray(data.lineItems)
+            ? data.lineItems.slice(0, 2).map((item) => ({
+                productId: safeId(item?.productId),
+                basePlanId: safeId(item?.offerDetails?.basePlanId),
+              }))
+            : [],
+        });
+      }
+      throw err;
+    }
     // Keep license-test transactions out of production unless explicitly enabled.
     if (data.testPurchase && process.env.PLAY_ALLOW_TEST_PURCHASES !== 'true')
       throw failure('Test purchases are disabled on this server', 403);
