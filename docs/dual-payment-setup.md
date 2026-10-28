@@ -85,10 +85,6 @@ Do not put secrets into GitHub, chat, frontend variables or screenshots. Use
    and base plans. DGAPI/ABH exposes only the first eligible offer, so multiple
    offers are deliberately unsupported. Mid-period upgrades/downgrades are also
    not offered: manage/cancel the existing subscription before another purchase.
-   Set `PLAY_BASE_PLAN_ID_CREATOR`, `PLAY_BASE_PLAN_ID_PRO`, and
-   `PLAY_BASE_PLAN_ID_MAX` to the corresponding exact base plan IDs in Play
-   Console if they are not `monthly`. These backend-only settings allow an
-   already-purchased subscription to verify without accepting an unrelated plan.
 3. Enable the Google Play Android Developer API in the chosen Google Cloud
    project. Create a service account and grant it the required app-specific
    subscription/order-management permissions in Play Console (not broad owner
@@ -122,9 +118,6 @@ Do not put secrets into GitHub, chat, frontend variables or screenshots. Use
 ```dotenv
 PLAY_BILLING_ENABLED=false
 PLAY_ALLOW_TEST_PURCHASES=false
-PLAY_BASE_PLAN_ID_CREATOR=monthly
-PLAY_BASE_PLAN_ID_PRO=monthly
-PLAY_BASE_PLAN_ID_MAX=monthly
 PLAY_SERVICE_ACCOUNT_JSON=
 PLAY_TOKEN_ENCRYPTION_KEY=
 PLAY_RTDN_AUDIENCE=https://api.vezrin.com/api/v1/billing/play/notifications
